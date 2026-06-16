@@ -1,0 +1,62 @@
+name: Package checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  # Pull-request runs cancel each other per PR; main-branch runs cancel only
+  # against later main commits. The `|| github.ref` fallback keeps the group
+  # well-formed on push events where `pull_request.number` is empty.
+  group: pkg-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Flutter analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-flutter
+      - run: flutter --no-version-check analyze lib
+
+  deps:
+    name: Dependency validator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-flutter
+      - run: dart pub global activate dependency_validator
+      - run: dart pub global run dependency_validator
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-flutter
+      - run: flutter --no-version-check test
+
+# ===========================================================================
+# DEFERRED: native plugin CI — add once the recognition code lands.
+#
+# This package's defining guarantee is that iOS links ZERO third-party ML
+# libraries (no GoogleMLKit) — see APPENDIX.md#no-bundling. The Dart jobs above
+# run on ubuntu and don't exercise the native sides at all. When the Swift
+# (Vision) and Kotlin (ML Kit) recognizers + the example app exist, add a
+# macOS-runner job that:
+#   - builds the example for iOS and Android, and
+#   - asserts the no-bundling invariant held, e.g.:
+#       cd example && flutter build ios --config-only --no-codesign
+#       rg -i 'mlkit|googlemlkit|MLImage' ios/Podfile.lock   # expect: NO matches
+# Optionally add a Pigeon-codegen-freshness check (regenerate from
+# pigeons/text_sight.dart and assert lib/src/messages.g.dart is unchanged).
+#
+# Deferred for now: there is no native recognition code to build and no
+# example/ app scaffolded yet, so these jobs would have nothing real to run.
+# ===========================================================================

@@ -1,0 +1,43 @@
+name: Example checks
+
+# NOTE: these jobs require an `example/` app (Flutter plugin demo + no-bundling
+# test harness). The repo is freshly scaffolded and `example/` is not present
+# yet, so this workflow will not pass until the example app is added — it is
+# intentionally in place so the checks activate the moment `example/` lands.
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}-example
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: example
+
+jobs:
+  analyze:
+    name: Flutter analyze
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-flutter
+        with:
+          working-directory: example
+      - run: flutter --no-version-check analyze .
+
+  deps:
+    name: Dependency validator (example)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-flutter
+        with:
+          working-directory: example
+      - run: dart pub global activate dependency_validator
+      - run: dart pub global run dependency_validator
