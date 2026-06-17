@@ -24,11 +24,13 @@ own — the conventions below are applied by hand, the way the [DCM rules](#dcm-
     * [Collection-for / collection-if over `Iterable.map(…).toList()`](#collection-for--collection-if-over-iterablemaptolist)
     * [Library pipeline methods over hand-rolled loops (for data manipulation)](#library-pipeline-methods-over-hand-rolled-loops-for-data-manipulation)
     * [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
+    * [`Future.syncValue` over `Future.value` for known values](#futuresyncvalue-over-futurevalue-for-known-values)
     * [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#listunmodifiable-over-unmodifiablelistview)
     * [`part` / `part of` only when structurally needed](#part--part-of-only-when-structurally-needed)
 - [Comments & dartdoc](#comments--dartdoc)
     * [`@docImport` for dartdoc-only references](#docimport-for-dartdoc-only-references)
 - [DCM rules (applied by hand)](#dcm-rules-applied-by-hand)
+- [Testing](#testing)
 - [Swift (iOS)](#swift-ios)
 - [Kotlin (Android)](#kotlin-android)
 - [Shell scripts](#shell-scripts)
@@ -455,6 +457,15 @@ static call. Relevant whenever the controller fans out concurrent platform-chann
   values and per-slot errors — more useful than the first-error-wins of
   `Future.wait(iterable)`.
 
+<a id="futuresyncvalue-over-futurevalue-for-known-values"></a>
+### `Future.syncValue` over `Future.value` for known values
+
+`Future.syncValue(x)` is the SDK-recommended way to wrap a **known, non-future value** — it sets
+the result synchronously and skips the is-it-a-`Future` check and microtask scheduling that
+`Future.value` does, while still honouring the `Future` contract (`.then` runs in a later
+microtask — it is *not* a synchronously-completing `SynchronousFuture`). Reach for `Future.value`
+only when the input may itself be a `Future`/`FutureOr` (which it unwraps) or may be absent.
+
 <a id="listunmodifiable-over-unmodifiablelistview"></a>
 ### `List.unmodifiable(…)` over `UnmodifiableListView(…)`
 
@@ -538,6 +549,31 @@ of `analysis_options.yaml` and treated as non-negotiable. Apply by hand (or via 
   zero → `.only(...)` listing only the non-zero sides. Applies even when mirroring an
   upstream constant verbatim; if the upstream form is preserved for traceability, record
   it in the constant's dartdoc alongside the simplified value.
+
+---
+
+<a id="testing"></a>
+## Testing
+
+- **Assertions use [`package:checks`](https://pub.dev/packages/checks), not `expect` / matchers.**
+  `check(actual).equals(…)` / `.isA<T>()` / `.deepEquals(…)` / `.isCloseTo(value, epsilon)` /
+  `.isNull()` / `await check(future).completes()` read more fluently and give better failure
+  messages. **Caveat:** the collection checks live on `Subject<Iterable<T>>` and `Subject` is
+  invariant, so to use them on a `List` narrow the subject to `Iterable` first —
+  `check(x).isA<Iterable<Object?>>().deepEquals(…)` (for a dynamic `Object?`) or
+  `check<Iterable<Object?>>(x).length…` (for a statically-typed collection).
+- **Tests are BDD/Cucumber-style via [`bdd_framework`](https://pub.dev/packages/bdd_framework).**
+  Group behaviour under a `BddFeature`, then write each case as
+  `Bdd(feature).scenario(…).given(…).when(…).then(…).and(…).run((ctx) async { … })`. Every
+  scenario **must** start with `.given` (a `BddScenario` has no `.when`). This forces framing each
+  test around an explicit *system-under-test* and reads as living documentation; the console
+  output is Gherkin.
+- **Parameterise inputs with examples and tables — never scatter literals through the body.**
+  Reference values as `<Placeholder>` in the step text and supply them via
+  `.example(val('Key', value), …)` (an examples table / Scenario Outline, one `.example` per row)
+  or a step's `.table('name', row(val(…), …), row(…))` (an inline data table, up to 16 columns per
+  row). Read them back with `ctx.example.val('Key')` / `ctx.table('name').rows`. Inputs live in the
+  table; the body only references them — so the same body covers every row.
 
 ---
 

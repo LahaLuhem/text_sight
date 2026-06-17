@@ -10,9 +10,9 @@ class RecognizedLine {
   /// The recognized text of this line.
   final String text;
 
-  /// Recognition confidence in `[0, 1]`, or `null` when the platform does not
-  /// supply one. Apple Vision provides a per-line value; the ML Kit recognizer
-  /// does not expose a reliable one, so it is `null` there. `null` means
+  /// Recognition confidence in `[0, 1]`, or `null` when the engine supplies none
+  /// for this line. Both Apple Vision and ML Kit provide a per-line value, though
+  /// the scales are not guaranteed comparable across platforms. `null` means
   /// "unknown", not "low" — threshold against an explicit default
   /// (`(line.confidence ?? 1) >= min`), never compare `null` to a bound.
   final double? confidence;

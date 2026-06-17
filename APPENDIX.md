@@ -69,8 +69,8 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 > warnings that motivated this package cannot arise. Includes the rejected path
 > (`flutter_scalable_ocr` → `google_mlkit_text_recognition` as a *Dart* dep, which drags
 > GoogleMLKit into the iOS build), the "no `camera` Dart dep either — native capture per
-> platform" corollary, and the verification recipe (`rg -i 'mlkit' Podfile.lock` → no
-> matches). Cross-refs: [`CODESTYLE.md#swift-ios-macos`](./CODESTYLE.md#swift-ios-macos),
+> platform" corollary, and the verification recipe (`rg -i 'mlkit' example/ios` → no
+> matches; the example is SPM-based, so there is no `Podfile.lock`). Cross-refs: [`CODESTYLE.md#swift-ios-macos`](./CODESTYLE.md#swift-ios-macos),
 > [`CODESTYLE.md#kotlin-android`](./CODESTYLE.md#kotlin-android), and the hard rules in
 > [`.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules).
 
@@ -173,8 +173,9 @@ controller enforces the range, since the `const` `TextSightOptions` can't valida
 constructor. Because ROI is part of the source-agnostic recognizer config it applies uniformly: the
 live driver sets it via the controller; the static driver takes it as an optional parameter
 (full-frame when omitted). On Apple the value goes to `VNImageRequestHandler.regionOfInterest`
-after the same Y-flip (Vision's ROI is also bottom-left); on Android the frame is cropped to
-the ROI before recognition.
+after the same Y-flip (Vision's ROI is also bottom-left). On Android v1 the recognizer runs on
+the full frame and lines whose box center falls outside the ROI are filtered out; a true
+pre-crop of the frame is a future optimization.
 
 **Orientation is an input, not an afterthought.** Recognition silently degrades if it is
 wrong: the Apple side must pass the correct `CGImagePropertyOrientation`, the Android side the
@@ -258,13 +259,13 @@ seam shows in the tree. Each public type gets its own file (per
 
 **Result-model contracts.** The capture-agnostic types the barrel exposes:
 
-- **`RecognizedLine.confidence` is `double?`, range `[0,1]`.** Apple Vision supplies a per-line
-  confidence; ML Kit's public API does not surface a reliable per-line equivalent (to be
-  re-verified against the pinned recognizer version when the Android side lands). `null` means
-  **"this platform did not supply one,"** *not* "low confidence" — never synthesize a value to
-  fill it. A consumer thresholding picks an explicit default (`(line.confidence ?? 1) >= min`)
-  and never compares `null` to a bound. The nullable type also future-proofs the contract: if
-  Android starts supplying confidence later, `null → value` is non-breaking.
+- **`RecognizedLine.confidence` is `double?`, range `[0,1]`.** Both engines supply a per-line
+  confidence — Apple Vision, and (re-verified for the pinned `play-services-mlkit-text-recognition`
+  19.0.1) ML Kit v2 via `Text.Line.getConfidence()`. It is `null` only when the engine omits one
+  for a given line; the two scales are **not guaranteed comparable** across platforms. `null`
+  means **"not supplied,"** *not* "low confidence" — never synthesize a value to fill it. A
+  consumer thresholding picks an explicit default (`(line.confidence ?? 1) >= min`) and never
+  compares `null` to a bound.
 - **`RecognizedLine.elements` is a reserved `List<RecognizedElement>?`.** Word-level elements
   are part of the model shape from v1 but stay **`null` until the feature ships**, so
   populating them later is an additive minor, not a breaking change. `RecognizedElement` is

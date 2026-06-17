@@ -59,8 +59,7 @@ class _ScannerPageState extends State<ScannerPage> {
     if (!mounted) return;
 
     if (!permission.isGranted) {
-      setState(() => _status = _SessionStatus.denied);
-      return;
+      return setState(() => _status = _SessionStatus.denied);
     }
 
     try {

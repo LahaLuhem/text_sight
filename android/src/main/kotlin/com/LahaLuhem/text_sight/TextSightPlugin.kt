@@ -1,38 +1,79 @@
 package com.LahaLuhem.text_sight
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
-import io.flutter.plugin.common.MethodCall
-import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.MethodChannel.MethodCallHandler
-import io.flutter.plugin.common.MethodChannel.Result
+import io.flutter.plugin.common.EventChannel
 
-/** TextSightPlugin */
+/**
+ * The text_sight Android plugin.
+ *
+ * Wires the Pigeon control channel ([TextSightHostApi]), the per-frame captures
+ * [EventChannel], and the preview texture, delegating capture and recognition to
+ * [TextSightCamera]. No recognition library crosses into the Dart pubspec — ML Kit
+ * and CameraX are declared only in build.gradle.kts (the no-bundling contract).
+ */
 class TextSightPlugin :
     FlutterPlugin,
-    MethodCallHandler {
-    // The MethodChannel that will the communication between Flutter and native Android
-    //
-    // This local reference serves to register the plugin with the Flutter Engine and unregister it
-    // when the Flutter Engine is detached from the Activity
-    private lateinit var channel: MethodChannel
+    TextSightHostApi {
+    private var camera: TextSightCamera? = null
 
-    override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "text_sight")
-        channel.setMethodCallHandler(this)
-    }
+    override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
+        TextSightHostApi.setUp(binding.binaryMessenger, this)
 
-    override fun onMethodCall(
-        call: MethodCall,
-        result: Result
-    ) {
-        if (call.method == "getPlatformVersion") {
-            result.success("Android ${android.os.Build.VERSION.RELEASE}")
-        } else {
-            result.notImplemented()
-        }
+        val capturesChannel = EventChannel(binding.binaryMessenger, CAPTURES_CHANNEL_NAME)
+        camera = TextSightCamera(binding.applicationContext, binding.textureRegistry, capturesChannel)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-        channel.setMethodCallHandler(null)
+        TextSightHostApi.setUp(binding.binaryMessenger, null)
+
+        camera?.dispose()
+        camera = null
+    }
+
+    override fun initialize(options: TextSightOptionsMessage, callback: (Result<Long>) -> Unit) {
+        val activeCamera = camera ?: return callback(detached())
+
+        activeCamera.initialize(options, callback)
+    }
+
+    override fun start(callback: (Result<Unit>) -> Unit) {
+        val activeCamera = camera ?: return callback(detached())
+
+        activeCamera.start(callback)
+    }
+
+    override fun stop(callback: (Result<Unit>) -> Unit) {
+        val activeCamera = camera ?: return callback(detached())
+
+        activeCamera.stop(callback)
+    }
+
+    override fun dispose(callback: (Result<Unit>) -> Unit) {
+        val activeCamera = camera ?: return callback(detached())
+
+        activeCamera.disposeSession(callback)
+    }
+
+    override fun setRegionOfInterest(roi: RegionOfInterestMessage?) {
+        camera?.setRegionOfInterest(roi)
+    }
+
+    override fun setRecognitionLevel(level: RecognitionLevelMessage) {
+        // No-op on Android: the ML Kit Latin recognizer exposes no accuracy/latency level.
+    }
+
+    override fun setLanguages(languages: List<String>) {
+        // No-op on Android: the ML Kit Latin recognizer is not language-selectable.
+    }
+
+    override fun setTorchEnabled(enabled: Boolean) {
+        camera?.setTorchEnabled(enabled)
+    }
+
+    private companion object {
+        const val CAPTURES_CHANNEL_NAME = "com.LahaLuhem.text_sight/captures"
+
+        fun <T> detached(): Result<T> =
+            Result.failure(FlutterError("detached", "The plugin is not attached to a Flutter engine."))
     }
 }

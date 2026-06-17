@@ -72,6 +72,13 @@ kotlin {
 }
 
 dependencies {
+    // Recognition + camera live ONLY here — never in the Dart pubspec (no-bundling).
+    // Unbundled ML Kit: model downloads via Google Play Services on first use.
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+    implementation("androidx.camera:camera-core:1.6.1")
+    implementation("androidx.camera:camera-camera2:1.6.1")
+    implementation("androidx.camera:camera-lifecycle:1.6.1")
+
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")
 }
