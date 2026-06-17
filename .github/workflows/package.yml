@@ -53,7 +53,7 @@ jobs:
 #   - builds the example for iOS and Android, and
 #   - asserts the no-bundling invariant held, e.g.:
 #       cd example && flutter build ios --config-only --no-codesign
-#       rg -i 'mlkit|googlemlkit|MLImage' ios/Podfile.lock   # expect: NO matches
+#       rg -i 'mlkit|googlemlkit|MLImage' ios   # expect: NO matches (example uses SPM, no Podfile.lock)
 # Optionally add a Pigeon-codegen-freshness check: regenerate from
 # pigeons/text_sight.dart, run `dart format` on the output, then assert
 # lib/src/platform/messages.g.dart is unchanged. The format step is required —

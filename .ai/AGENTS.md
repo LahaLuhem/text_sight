@@ -222,9 +222,11 @@ sections, markdown conventions — go to [`../CODESTYLE.md`](../CODESTYLE.md).
 - **Mark recommendations with `★`.** Prefix your preferred option in every set with `★` so
   the user can scan and reply by echoing or overriding (e.g. "★ for 1–4, change 5 to B").
 - **Verify the no-bundling actually held.** After adding `text_sight` to the example and
-  building iOS, `rg -i 'mlkit|googlemlkit|MLImage' example/ios/Podfile.lock` must return
-  **no matches**, and no GoogleMLKit pods should appear for iOS. This is the package's core
-  acceptance check — run it whenever the native dependency surface could have shifted.
+  building iOS, `rg -i 'mlkit|googlemlkit|MLImage' example/ios` must return **no matches**, and
+  no ML Kit package may appear in the iOS Swift Package Manager graph (the example is SPM-based,
+  so there is no `Podfile.lock` — the generated `FlutterGeneratedPluginSwiftPackage` manifest is
+  the authoritative iOS dependency list). This is the package's core acceptance check — run it
+  whenever the native dependency surface could have shifted.
 - **Document new user-facing API in the README.** Any new public class, widget, method, or
   configuration option must be added to the README in the same change. Rationale + design
   trade-offs belong in `APPENDIX.md`; the README is the user-facing entry point.

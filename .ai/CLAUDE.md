@@ -155,7 +155,8 @@ is **not** in the routine-edit list. All move together only when the user explic
   emulator and an iOS simulator — or explicitly call out what you did NOT verify (e.g.
   "didn't exercise on iOS — only ran the Android emulator").
 - **No-bundling verified** when the dependency surface could have shifted:
-  `rg -i 'mlkit|googlemlkit|MLImage' example/ios/Podfile.lock` returns no matches.
+  `rg -i 'mlkit|googlemlkit|MLImage' example/ios` returns no matches. The example uses Swift
+  Package Manager (no `Podfile.lock`); the generated iOS SPM manifest must list no ML Kit package.
 - `flutter pub publish --dry-run` clean if the change is publish-relevant. Do **not** bump
   the version or add a CHANGELOG entry to make the dry-run happy — those are release-time
   edits owned by `scripts/release.sh`.
