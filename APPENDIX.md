@@ -15,11 +15,10 @@ technical trade-offs.
 READMEs, [`CODESTYLE.md`](./CODESTYLE.md), and [`.ai/AGENTS.md`](./.ai/AGENTS.md)
 reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
-> **Status (repo-init):** the [symlink section](#ai-files-symlinked) below is final. The
-> remaining sections are **stubs** — each decision is already locked by the build spec,
-> but the full rationale is written as the corresponding implementation lands, so we
-> never document reasoning for code that doesn't exist yet. The anchors are stable now
-> (other docs already link to them); only the bodies grow.
+> **Status:** the symlink, channel-topology, coordinate-normalization, and public-API sections
+> are written. `#no-bundling` and `#federation-deferred` stay stubs — locked decisions whose
+> rationale is filled in when the corresponding code lands. Anchors are stable; only stub bodies
+> grow.
 
 ---
 
@@ -85,14 +84,12 @@ funnelled through one channel:
 
 - **Control + the one-shot recognize → typed codegen `@HostApi`.** The control surface
   (`initialize` / `start` / `stop` / `setRegionOfInterest` / `setRecognitionLevel` /
-  `setLanguages` / `toggleTorch` / `dispose`) is request/response and benefits from a
+  `setLanguages` / `setTorchEnabled` / `dispose`) is request/response and benefits from a
   generated, type-checked Dart↔native boundary. The static one-shot (`recognizeImage` /
   `recognizePath`, when that driver lands) is *also* request/response, so it rides the **same**
   `@HostApi` as an `@async` method returning a `TextSightCapture` — not the results stream
   below. Natively it allocates a transient image handler and touches no camera session,
-  texture, or event sink. _(Which codegen tool — Pigeon or Golubets — is settled in the next
-  step; both are dev-time-only with zero runtime or bundling impact, so this topology holds
-  either way.)_
+  texture, or event sink. _(The codegen tool is **Pigeon** — see below.)_
 - **Live per-frame results → a plain `EventChannel` stream.** A camera delivers ~30 captures a
   second; modelling that as a Pigeon `@FlutterApi` callback fights the codegen's
   request/response grain. An `EventChannel` is Flutter's idiomatic transport for a
@@ -109,6 +106,16 @@ means fighting the wrong tool on the hot path. The split also keeps the two driv
 live and static **share** the `@HostApi` recognizer surface and the result models, but only the
 *live* driver needs the `EventChannel` and the `Texture` — see
 [#public-api-via-single-export-file](#public-api-via-single-export-file).
+
+**Pigeon, not the Golubets fork** (`pigeon: ^27.1.0`, chosen 2026-06-17). Pigeon v27 covers the
+whole control surface this schema needs — a typed `@HostApi`, `@async` methods, and the message
+classes — and as the official Flutter-team tool it is the durable choice for a package others
+depend on. Golubets' genuine additions (user-defined generics, advanced sealed classes, default
+parameter values, true Swift-concurrency / Kotlin-coroutine codegen) go unused by this
+flat-model, hand-written-public-types design. Low-risk and reversible: codegen is dev-time only
+and `messages.g.dart` is committed, so the fallback is simply to freeze it. (Pigeon's own
+`@EventChannelApi` could later type the results stream, but with `Rect`/`Size` models that can't
+cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
 
 **Generated code is committed and never hand-edited.** `messages.g.dart` is checked in (so
 consumers and CI need no codegen step) and regenerated from the schema, never patched — see
@@ -144,10 +151,10 @@ orientation as the normalized boxes** (post-rotation). A consumer maps a normali
 widget space with `imageSize` plus the fit used to display the preview; it never needs the raw
 sensor orientation.
 
-**Region-of-interest uses the same contract.** `RegionOfInterest` is a normalized `[0,1]`
-top-left rect (the same space as the output boxes), not pixels — which is *why* it is a
-dedicated value type with a positive-extent `assert`, not a bare `Rect` that would read as
-pixels. Because ROI is part of the source-agnostic recognizer config it applies uniformly: the
+**Region-of-interest uses the same contract.** The ROI is a `Rect` in the same normalized
+`[0,1]` top-left space as the output boxes (not pixels) — a debug `assert` at the consuming
+controller enforces the range, since the `const` `TextSightOptions` can't validate in its own
+constructor. Because ROI is part of the source-agnostic recognizer config it applies uniformly: the
 live driver sets it via the controller; the static driver takes it as an optional parameter
 (full-frame when omitted). On Apple the value goes to `VNImageRequestHandler.regionOfInterest`
 after the same Y-flip (Vision's ROI is also bottom-left); on Android the frame is cropped to
@@ -159,7 +166,7 @@ wrong: the Apple side must pass the correct `CGImagePropertyOrientation`, the An
 interpreted in its display orientation. Cross-refs:
 [#channel-topology](#channel-topology) (the transport that carries these boxes) and
 [#public-api-via-single-export-file](#public-api-via-single-export-file) (the `RecognizedLine`
-and `RegionOfInterest` types).
+model and the `Rect` ROI).
 
 ---
 
@@ -193,7 +200,7 @@ if a partial export ever becomes necessary.
 ```
 PUBLIC   barrel re-exports — TextSightController · TextSightView · TextSight (one-shot)
          · TextSightCapture · RecognizedLine · RecognizedElement
-         · RecognitionLevel · RegionOfInterest · TextSightOptions
+         · RecognitionLevel · TextSightOptions
    │  both drivers delegate down ↓
 SEAM     TextSightPlatform extends PlatformInterface   (federation boundary; one impl for now)
    │
@@ -217,7 +224,6 @@ lib/
     │   ├── recognized_line.dart
     │   ├── recognized_element.dart
     │   ├── recognition_level.dart
-    │   ├── region_of_interest.dart
     │   └── text_sight_options.dart
     ├── capture/                       the two DRIVERS over the one recognizer
     │   ├── text_sight_controller.dart    live-camera driver (v1)
@@ -229,11 +235,10 @@ lib/
         └── messages.g.dart               generated control channel (later; never hand-edited)
 ```
 
-`recognition/` holds only capture-agnostic types — they carry no notion of where the pixels
-came from. `capture/` puts the two drivers physically together so the "one recognizer, two
-drivers" seam is visible in the tree: `TextSightController` streams live frames; `TextSight`
-recognizes a single still; both delegate to the same platform surface. Each public type gets
-its own file named after it (per [`CODESTYLE.md#naming`](./CODESTYLE.md#naming)).
+`recognition/` holds only capture-agnostic types; `capture/` puts both drivers
+(`TextSightController` live, `TextSight` one-shot) together so the "one recognizer, two drivers"
+seam shows in the tree. Each public type gets its own file (per
+[`CODESTYLE.md#naming`](./CODESTYLE.md#naming)).
 
 **Result-model contracts.** The capture-agnostic types the barrel exposes:
 
@@ -249,27 +254,29 @@ its own file named after it (per [`CODESTYLE.md#naming`](./CODESTYLE.md#naming))
   populating them later is an additive minor, not a breaking change. `RecognizedElement` is
   intentionally minimal — `text` · `boundingBox` · `confidence?`, the same contract as a line,
   one level down.
-- **Both result types are capture-agnostic and immutable**, override `toString`, and expose
-  their collections via `List.unmodifiable` so a callback can neither mutate the package's
-  frame state nor be mutated out from under another consumer.
+- **Both result types are capture-agnostic, immutable, and `const`-constructible**, with
+  `toString`. They hold their lists directly — no defensive copy, since a `const` instance is
+  passed a `const` (immutable) list (see
+  [`CODESTYLE.md`](./CODESTYLE.md#listunmodifiable-over-unmodifiablelistview)).
 
 **Configuration.** One config type, reused across both drivers:
 
 - **`TextSightOptions` is the one source-agnostic recognizer config** — `level` · `languages` ·
   `roi` — accepted by *both* drivers. The live driver takes it on `TextSightController`; the
   static one-shot takes it per call, defaulting `level` to `.accurate` where the live default is
-  `.fast`. Not a per-driver duplicate.
+  `.fast`. Not a per-driver duplicate. `languages` is `Iterable<Locale>`, not raw BCP-47 strings —
+  a closed enum would misstate a platform- and OS-version-dependent capability, so the type
+  stays structured-but-open and maps to tags via `Locale.toLanguageTag()` at the seam.
 - **`torchEnabled` is a controller-only parameter, deliberately *not* in `TextSightOptions`.**
   Torch is a live-session concern; a static image has none, so folding it into the shared
   recognizer config would be a category error. The seam, expressed in the type system:
   recognizer config is shared across drivers, session config is not.
-- **`RegionOfInterest` is a dedicated normalized value type** (with a `fromLTWH` convenience),
-  not a `Rect` — see [#coordinate-normalization](#coordinate-normalization) for why the
-  normalized-vs-pixel distinction earns its own type and its `assert`.
+- **`roi` is a `Rect`** in normalized `[0,1]` top-left space (the same type as the output
+  boxes, not a bespoke twin) — its range is validated by a debug `assert` at the controller
+  (the `const` `TextSightOptions` can't run a check in its own constructor). See
+  [#coordinate-normalization](#coordinate-normalization).
 
-**The static one-shot is a separate driver, not a session mode.**
-`TextSight.recognizeImage` / `.recognizePath` (near-term) return a `Future<TextSightCapture>`
-and require **no** `TextSightController`, camera permission, texture, or live session. They
-share the recognizer and the result models with the live path and nothing else — the
-embodiment of "capture-source is a seam, drivers over one recognizer." They ride the `@HostApi`
-rather than the results stream; see [#channel-topology](#channel-topology).
+**The static one-shot is a separate driver, not a session mode.** `TextSight.recognizeImage` /
+`.recognizePath` (near-term) return a `Future<TextSightCapture>` and need no controller, camera
+permission, texture, or session — they share only the recognizer and result models with the live
+path, and ride the `@HostApi` ([#channel-topology](#channel-topology)).

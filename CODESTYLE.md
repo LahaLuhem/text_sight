@@ -59,6 +59,20 @@ own — the conventions below are applied by hand, the way the [DCM rules](#dcm-
   `T?` and the binding stays put. Loosen to raw `<T>` only when a value genuinely flows
   into an external API that relies on `null` as a sentinel `T` — don't reach for the
   exception speculatively.
+- **Prefer type-pure representations over stringly- or primitively-typed ones.** Use a value's
+  richer domain type — even a built-in one. `languages` is `Iterable<Locale>`, not `List<String>`
+  of BCP-47 tags: `Locale` (from `dart:ui`) carries language/script/region and yields the tag via
+  `toLanguageTag()` at the native boundary. Reach for a structured built-in, then a zero-cost
+  `extension type`, before a bare primitive. **But don't force a *closed enum* onto an open,
+  runtime-variable capability** — the recognizable-language set varies by platform, OS version,
+  and bundled recognizers, so type-purity here is *structured but open*, not *enumerated*. A
+  primitive handed straight to a platform API (a `Texture` id `int`) stays primitive.
+- **Pick the narrowest collection type; `List` is the last resort, not the default.** `Set` for
+  membership/uniqueness, `Iterable` for a sequence only walked (never indexed, added to, or
+  re-materialized), `List` only when you genuinely index or need a materialized result. Inputs
+  lean `Iterable` (`languages` is walked once in priority order); outputs consumers index and
+  count stay `List` (`TextSightCapture.lines`, `RecognizedLine.elements`). Exception: channel
+  transport — the platform codec carries only `List`/`Map`, so Pigeon message fields stay `List`.
 - **No Java ceremony.** No getter-only abstract base classes, no `AbstractFooFactory`,
   no interface-per-class. Use mixins / sealed classes / records / extension types where
   they add clarity, not weight.
@@ -222,15 +236,11 @@ style.
   loudly at construction time:
 
   ```dart
-  const RegionOfInterest({
-    required this.left,
-    required this.top,
-    required this.width,
-    required this.height,
-  }) : assert(
-         width > 0 && height > 0,
-         'Region-of-interest must have positive extent (normalized 0..1).',
-       );
+  TextSightController({TextSightOptions options = const TextSightOptions()})
+    : assert(
+        _isNormalizedRoi(options.roi),
+        'Region-of-interest must be a normalized [0,1] rect with positive extent.',
+      );
   ```
 
   **Why.** A param that gets silently dropped is a footgun: the user sets it, confirms
@@ -239,6 +249,11 @@ style.
   mode, with a message pointing at the fix. Prefer compile-time exclusivity (two named
   constructors) when the invariant can be encoded in the signature; reach for `assert`
   when it can't (cross-parameter conditions, value-range checks).
+
+  A `const` constructor's `assert` can use only constant expressions (no function calls), so a
+  shared validation predicate lives behind a *non-const* constructor — the controller validates
+  the ROI for both `TextSightOptions` and `setRegionOfInterest`, not the `const` options type
+  itself.
 - **Value types override `toString`.** Immutable data classes (`TextSightCapture`,
   `RecognizedLine`, the options/ROI records) implement `toString()` returning
   `'ClassName(field1: value1, field2: value2)'`. The default `Instance of 'ClassName'`
@@ -443,14 +458,17 @@ static call. Relevant whenever the controller fans out concurrent platform-chann
 <a id="listunmodifiable-over-unmodifiablelistview"></a>
 ### `List.unmodifiable(…)` over `UnmodifiableListView(…)`
 
-Default to `List.unmodifiable(…)` for exposing immutable collections (same for
-`Set.unmodifiable` / `Map.unmodifiable`). The constructor *copies*: snapshot semantics,
-decoupled from whatever the caller passed in — so a `TextSightCapture.lines` handed out
-to a callback can't be mutated out from under the consumer, and the consumer can't mutate
-the package's internal frame state. The `…View` only *wraps*: anyone holding the
-underlying collection can mutate it and the view silently follows. Reach for
-`UnmodifiableListView` only when you specifically want read-through visibility into
-private mutable state — rare here.
+When you genuinely need to hand out a defensive copy of mutable internal state — a getter
+exposing a private growable list — use `List.unmodifiable(…)` (same for `Set` / `Map`): it
+*copies* (a snapshot decoupled from the source), whereas `UnmodifiableListView` only *wraps* (a
+holder of the underlying list can still mutate it, and the view follows). Use the view only for
+deliberate read-through visibility into private mutable state — rare here.
+
+**Never inside a value type's constructor**, though: `: lines = List.unmodifiable(lines)` blocks
+a `const` constructor for no gain — the result types (`TextSightCapture`, `RecognizedLine`) are
+package-built from fresh channel data, and a `const` instance is passed a `const` (immutable)
+list anyway. Make the constructor `const`, assign fields directly, and keep leaf types
+(`RecognizedElement`) `const` so the types composing them can be too.
 
 <a id="part-part-of-only-when-structurally-needed"></a>
 ### `part` / `part of` only when structurally needed

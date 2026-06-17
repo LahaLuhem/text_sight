@@ -75,8 +75,7 @@ text_sight/
 │   ├── text_sight.dart            Public entry; `export 'src/…';` only
 │   └── src/                       Private by convention; one public type per file
 │       ├── recognition/           Capture-agnostic core: TextSightCapture, RecognizedLine,
-│       │                          RecognizedElement, RecognitionLevel, RegionOfInterest,
-│       │                          TextSightOptions
+│       │                          RecognizedElement, RecognitionLevel, TextSightOptions
 │       ├── capture/               Two drivers, one recognizer: text_sight_controller.dart
 │       │                          (live) + text_sight.dart (TextSight one-shot static)
 │       ├── view/                  text_sight_view.dart — Texture-backed widget (+ overlay)
