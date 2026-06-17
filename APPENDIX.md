@@ -6,6 +6,7 @@
 - [Coordinate normalization: top-left `[0,1]` in native code](#coordinate-normalization-top-left-01-in-native-code)
 - [iOS capture & recognition strategy: roll-your-own AVCapture + Swift Vision](#ios-capture-strategy)
 - [Federation deferred: one plugin package for v1](#federation-deferred-one-plugin-package-for-v1)
+- [Known limitations, performance, and deferred work](#known-limitations)
 - [Public API funnelled through `lib/text_sight.dart`](#public-api-funnelled-through-libtext_sightdart)
 
 <!-- TOC end -->
@@ -16,10 +17,10 @@ technical trade-offs.
 READMEs, [`CODESTYLE.md`](./CODESTYLE.md), and [`.ai/AGENTS.md`](./.ai/AGENTS.md)
 reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
-> **Status:** the symlink, channel-topology, coordinate-normalization, iOS-capture-strategy, and
-> public-API sections are written. `#no-bundling` and `#federation-deferred` stay stubs — locked
-> decisions whose rationale is filled in when the corresponding code lands. Anchors are stable;
-> only stub bodies grow.
+> **Status:** the symlink, channel-topology, coordinate-normalization, iOS-capture-strategy,
+> known-limitations, and public-API sections are written. `#no-bundling` and `#federation-deferred`
+> stay stubs — locked decisions whose rationale is filled in when the corresponding code lands.
+> Anchors are stable; only stub bodies grow.
 
 ---
 
@@ -244,6 +245,61 @@ performs it, and a unit image size yields the top-left-normalized box directly).
 > platforms or independent per-platform versioning is needed — neither applies yet. The
 > `plugin_platform_interface` dependency is already in place so the boundary can be drawn
 > later without a disruptive restructure.
+
+---
+
+<a id="known-limitations"></a>
+## Known limitations, performance, and deferred work
+
+A running list of what v1 does *not* do well yet — the backlog to work out next. The user-facing
+summary lives in the [README](./README.md#limitations--known-issues); the engineering detail and
+rationale live here.
+
+**Performance — live recognition is single-in-flight with frame back-pressure.** Exactly one
+recognition runs at a time (iOS: one `RecognizeTextRequest` gated by an `isProcessing` flag +
+`alwaysDiscardsLateVideoFrames`; Android: `STRATEGY_KEEP_ONLY_LATEST` + the mandatory
+`imageProxy.close()`). The preview texture updates every frame, but the *recognition* rate is bounded
+by how fast the engine returns — under dense text or on lower-end devices it falls below the camera
+frame rate, and late frames are dropped rather than queued (the intended trade-off: latency over
+backlog). Levers to explore next: raising `minimumTextHeight` / downscaling before recognition, an
+explicit frame-skip cadence, and the Android ROI pre-crop below. Default `RecognitionLevel.fast` for
+live; `.accurate` is materially heavier.
+
+**Region-of-interest is asymmetric.** iOS sets Vision's native `regionOfInterest`, so a smaller box
+actually lowers recognition cost. Android v1 recognizes the full frame and *filters* lines whose
+center falls outside the ROI ([#coordinate-normalization](#coordinate-normalization)) — correct
+results, but **no speed-up**. A true YUV pre-crop on Android is the deferred optimization.
+
+**Platform capability differences (inherent, not bugs).** `recognitionLevel` and `languages` apply on
+iOS (Vision) and are **no-ops on Android** (the ML Kit Latin recognizer exposes neither and reads
+Latin only). Per-line `confidence` is supplied by both, but the scales are **not comparable**. These
+are documented in the [README](./README.md); they are engine properties, not defects.
+
+**iOS rotation & background.** Orientation tracking uses `AVCaptureDevice.RotationCoordinator`
+(iOS 17+) to keep the delivered buffer upright; it is **compile-verified but not yet exercised on a
+physical device** (the Simulator has no camera). Explicit app-background teardown (gotcha 6 — stop the
+session on `didEnterBackground`, restart on foreground) is not implemented: the session relies on
+iOS's automatic capture suspension plus the consumer calling `stop`/`dispose`.
+
+**iOS floor is 18.0.** iOS 13–17 are unsupported until the availability-gated `VNRecognizeTextRequest`
+fallback lands ([#ios-capture-strategy](#ios-capture-strategy)).
+
+**Deferred features (each additive and non-breaking when it lands):**
+
+- **Static one-shot** `TextSight.recognizeImage` / `.recognizePath` over the same `@HostApi` and
+  models — designed-for, not built ([#channel-topology](#channel-topology),
+  [#public-api-via-single-export-file](#public-api-via-single-export-file)).
+- **Word-level `RecognizedElement`s** — `RecognizedLine.elements` ships `null`/reserved; populating it
+  is a minor.
+- **iOS 13–17 hybrid** — `if #available(iOS 18)` → `RecognizeTextRequest`, else
+  `VNRecognizeTextRequest` ([#ios-capture-strategy](#ios-capture-strategy)).
+- **True ROI pre-crop on Android** (the perf lever above).
+- **macOS** — Apple Vision is identical; a shared `darwin/` brings it in cheaply
+  ([#ios-capture-strategy](#ios-capture-strategy)).
+- **Additional Android scripts** (Chinese / Devanagari / Japanese / Korean) — each needs its own ML
+  Kit recognizer + Gradle dependency.
+- **Federation** — split into a platform-interface package + per-platform packages if third parties
+  add platforms ([#federation-deferred](#federation-deferred)).
 
 ---
 

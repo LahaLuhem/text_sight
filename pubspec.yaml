@@ -1,11 +1,18 @@
 name: text_sight
-description: "A new Flutter plugin project."
+description: "Live, on-device text recognition — Apple Vision on iOS, ML Kit on Android. The text-scanning sibling to mobile_scanner."
 version: 0.0.0
-homepage:
+homepage: https://github.com/LahaLuhem/text_sight
+repository: https://github.com/LahaLuhem/text_sight
+topics:
+  - ocr
+  - text-recognition
+  - vision
+  - mlkit
+  - camera
 
 environment:
   sdk: ^3.12.0
-  flutter: ^3.44.0
+  flutter: ">=3.44.0"
 
 
 
@@ -14,6 +21,10 @@ dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.1.8
+  # Annotations used by the Pigeon-generated lib/src/platform/messages.g.dart
+  # (@immutable / @protected / @visibleForTesting); must be a direct dep to publish.
+  # 1.18.0 is the highest the Flutter 3.44 SDK pin allows (1.18.3 exists upstream).
+  meta: ^1.18.0
 
 
 
