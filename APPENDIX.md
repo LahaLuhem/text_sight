@@ -80,33 +80,86 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 <a id="channel-topology"></a>
 ## Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview
 
-> _Stub — to be written alongside `pigeons/text_sight.dart` and the native channel wiring._
->
-> Will document why the three concerns ride three different transports rather than one:
-> the **control API** (initialize / start / stop / set-ROI / set-level / set-languages /
-> toggle-torch / dispose) is typed codegen via **Pigeon** (`@HostApi`); **per-frame
-> results** stream over a plain **`EventChannel`** (a 30fps callback is clunky as a Pigeon
-> `@FlutterApi`); and the **camera preview** is a **`Texture`** via the texture registry
-> (not a codegen concern at all). Also: the Pigeon-vs-Golubets choice (still open — both
-> are dev-time codegen with zero runtime/bundling impact), and why the generated
-> `messages.g.dart` is committed and never hand-edited.
+**Decision.** Three concerns ride three different transports, deliberately, rather than being
+funnelled through one channel:
+
+- **Control + the one-shot recognize → typed codegen `@HostApi`.** The control surface
+  (`initialize` / `start` / `stop` / `setRegionOfInterest` / `setRecognitionLevel` /
+  `setLanguages` / `toggleTorch` / `dispose`) is request/response and benefits from a
+  generated, type-checked Dart↔native boundary. The static one-shot (`recognizeImage` /
+  `recognizePath`, when that driver lands) is *also* request/response, so it rides the **same**
+  `@HostApi` as an `@async` method returning a `TextSightCapture` — not the results stream
+  below. Natively it allocates a transient image handler and touches no camera session,
+  texture, or event sink. _(Which codegen tool — Pigeon or Golubets — is settled in the next
+  step; both are dev-time-only with zero runtime or bundling impact, so this topology holds
+  either way.)_
+- **Live per-frame results → a plain `EventChannel` stream.** A camera delivers ~30 captures a
+  second; modelling that as a Pigeon `@FlutterApi` callback fights the codegen's
+  request/response grain. An `EventChannel` is Flutter's idiomatic transport for a
+  high-frequency native→Dart push; the controller re-exposes it as a
+  `Stream<TextSightCapture>`.
+- **Camera preview → a `Texture`** via the texture registry. Pixels are not a codegen concern
+  at all: the native side renders frames into a `FlutterTexture` and hands Dart only the
+  integer texture id, which `TextSightView` mounts in a `Texture` widget.
+
+**Why split at all.** Each transport matches the *shape* of its traffic — typed
+request/response for control, an unbounded push-stream for results, a raw pixel surface for
+preview. Collapsing them (frames as `@HostApi` return values, or pixels over a method channel)
+means fighting the wrong tool on the hot path. The split also keeps the two drivers honest:
+live and static **share** the `@HostApi` recognizer surface and the result models, but only the
+*live* driver needs the `EventChannel` and the `Texture` — see
+[#public-api-via-single-export-file](#public-api-via-single-export-file).
+
+**Generated code is committed and never hand-edited.** `messages.g.dart` is checked in (so
+consumers and CI need no codegen step) and regenerated from the schema, never patched — see
+[hard rule 7 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules). The bounding-box geometry these
+channels carry is specified in [#coordinate-normalization](#coordinate-normalization).
 
 ---
 
 <a id="coordinate-normalization"></a>
 ## Coordinate normalization: top-left `[0,1]` in native code
 
-> _Stub — to be written alongside the Swift and Kotlin recognizers._
->
-> Will document the unified bounding-box contract and **why the conversion happens
-> natively, not in Dart**: Apple Vision returns normalized boxes with a **bottom-left**
-> origin; ML Kit returns **pixel** rects in the *rotated* image space; Flutter wants
-> **top-left** normalized. Each native side converts to top-left `[0,1]` before crossing
-> the channel, so the Dart overlay painter is platform-agnostic and never branches on
-> platform. Includes the orientation inputs that must be correct or recognition silently
-> degrades (EXIF orientation on iOS, `rotationDegrees` on Android). Cross-refs the
-> per-language style notes in [`CODESTYLE.md#swift-ios-macos`](./CODESTYLE.md#swift-ios-macos)
-> and [`CODESTYLE.md#kotlin-android`](./CODESTYLE.md#kotlin-android).
+**Decision.** Every bounding box that crosses the channel is **normalized to `[0,1]` with a
+top-left origin, converted on the native side** — so the Dart overlay painter is
+platform-agnostic and never branches on platform.
+
+The three coordinate systems that meet here disagree:
+
+- **Apple Vision** returns boxes normalized to `[0,1]` but with a **bottom-left** origin
+  (`VNRecognizedTextObservation.boundingBox`). The Swift side flips Y
+  (`top = 1 - (origin.y + height)`) before sending.
+- **ML Kit** returns **pixel** rects in the *rotated* image space. The Kotlin side divides by
+  the rotated image width/height to normalize.
+- **Flutter** wants top-left normalized, so the painter maps a box onto the preview with one
+  `BoxFit`-style transform.
+
+Doing the conversion natively — each side owns a small named helper (see
+[`CODESTYLE.md#swift-ios-macos`](./CODESTYLE.md#swift-ios-macos) and
+[`CODESTYLE.md#kotlin-android`](./CODESTYLE.md#kotlin-android)) — establishes the unified
+contract *before* the channel, so the Dart layer carries no platform conditionals.
+
+**`TextSightCapture.imageSize`** is the pixel size of the analyzed frame/image **in the same
+orientation as the normalized boxes** (post-rotation). A consumer maps a normalized box into
+widget space with `imageSize` plus the fit used to display the preview; it never needs the raw
+sensor orientation.
+
+**Region-of-interest uses the same contract.** `RegionOfInterest` is a normalized `[0,1]`
+top-left rect (the same space as the output boxes), not pixels — which is *why* it is a
+dedicated value type with a positive-extent `assert`, not a bare `Rect` that would read as
+pixels. Because ROI is part of the source-agnostic recognizer config it applies uniformly: the
+live driver sets it via the controller; the static driver takes it as an optional parameter
+(full-frame when omitted). On Apple the value goes to `VNImageRequestHandler.regionOfInterest`
+after the same Y-flip (Vision's ROI is also bottom-left); on Android the frame is cropped to
+the ROI before recognition.
+
+**Orientation is an input, not an afterthought.** Recognition silently degrades if it is
+wrong: the Apple side must pass the correct `CGImagePropertyOrientation`, the Android side the
+`ImageProxy`'s `rotationDegrees`. The normalization above assumes the image has already been
+interpreted in its display orientation. Cross-refs:
+[#channel-topology](#channel-topology) (the transport that carries these boxes) and
+[#public-api-via-single-export-file](#public-api-via-single-export-file) (the `RecognizedLine`
+and `RegionOfInterest` types).
 
 ---
 
@@ -127,14 +180,96 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 <a id="public-api-via-single-export-file"></a>
 ## Public API funnelled through `lib/text_sight.dart`
 
-> _Stub — to be written as the public surface (`TextSight`, `TextSightController`,
-> `TextSightView`, the result models) takes shape._
->
-> Will document the single-entry convention: `lib/text_sight.dart` is the only file
-> callers import; implementation lives in `lib/src/` and nothing there is meant to be
-> imported directly; the entry file is `export 'src/…';` lines only. Dart has no hard
-> public/private boundary under `lib/`, so this convention is how the ecosystem signals
-> private intent — and it gives one place to audit the public surface before a release.
-> Moving code *within* `lib/src/` is free (private); moving anything into or out of the
-> re-export list is semver-visible (minor for additions, major for removals / signature
-> changes). Prefer `show` over `hide` if a partial export ever becomes necessary.
+**Decision.** `lib/text_sight.dart` is the only file consumers import. It holds
+`export 'src/…';` lines and nothing else; every implementation file lives under `lib/src/` and
+is private by convention. Dart has no hard public/private boundary below `lib/`, so this funnel
+is how the ecosystem signals private intent — and it gives one file to audit before a release.
+Moving code *within* `lib/src/` is free; moving a symbol into or out of the re-export list is
+semver-visible (minor to add, major to remove or change a signature). Prefer `show` over `hide`
+if a partial export ever becomes necessary.
+
+**Layering.** Both drivers funnel down through one federation seam:
+
+```
+PUBLIC   barrel re-exports — TextSightController · TextSightView · TextSight (one-shot)
+         · TextSightCapture · RecognizedLine · RecognizedElement
+         · RecognitionLevel · RegionOfInterest · TextSightOptions
+   │  both drivers delegate down ↓
+SEAM     TextSightPlatform extends PlatformInterface   (federation boundary; one impl for now)
+   │
+IMPL     codegen @HostApi  +  EventChannel  +  TextureRegistry      (lands with native code)
+```
+
+The platform-interface seam is drawn now even though federation is deferred
+([#federation-deferred](#federation-deferred)): both the live controller and the static
+one-shot delegate to `TextSightPlatform.instance`, so a later split into a
+`text_sight_platform_interface` plus per-platform packages is mechanical, not a rewrite.
+
+**Module layout (`lib/src/`).** The recognizer is the core; capture is a seam, not a mode flag.
+The directories make that physical:
+
+```
+lib/
+├── text_sight.dart                   barrel — export 'src/…'; only
+└── src/
+    ├── recognition/                  capture-agnostic CORE — result models + recognizer config
+    │   ├── text_sight_capture.dart
+    │   ├── recognized_line.dart
+    │   ├── recognized_element.dart
+    │   ├── recognition_level.dart
+    │   ├── region_of_interest.dart
+    │   └── text_sight_options.dart
+    ├── capture/                       the two DRIVERS over the one recognizer
+    │   ├── text_sight_controller.dart    live-camera driver (v1)
+    │   └── text_sight.dart               TextSight one-shot static driver (near-term)
+    ├── view/
+    │   └── text_sight_view.dart          Texture-backed widget (+ overlay painter later)
+    └── platform/
+        ├── text_sight_platform.dart      the federation seam
+        └── messages.g.dart               generated control channel (later; never hand-edited)
+```
+
+`recognition/` holds only capture-agnostic types — they carry no notion of where the pixels
+came from. `capture/` puts the two drivers physically together so the "one recognizer, two
+drivers" seam is visible in the tree: `TextSightController` streams live frames; `TextSight`
+recognizes a single still; both delegate to the same platform surface. Each public type gets
+its own file named after it (per [`CODESTYLE.md#naming`](./CODESTYLE.md#naming)).
+
+**Result-model contracts.** The capture-agnostic types the barrel exposes:
+
+- **`RecognizedLine.confidence` is `double?`, range `[0,1]`.** Apple Vision supplies a per-line
+  confidence; ML Kit's public API does not surface a reliable per-line equivalent (to be
+  re-verified against the pinned recognizer version when the Android side lands). `null` means
+  **"this platform did not supply one,"** *not* "low confidence" — never synthesize a value to
+  fill it. A consumer thresholding picks an explicit default (`(line.confidence ?? 1) >= min`)
+  and never compares `null` to a bound. The nullable type also future-proofs the contract: if
+  Android starts supplying confidence later, `null → value` is non-breaking.
+- **`RecognizedLine.elements` is a reserved `List<RecognizedElement>?`.** Word-level elements
+  are part of the model shape from v1 but stay **`null` until the feature ships**, so
+  populating them later is an additive minor, not a breaking change. `RecognizedElement` is
+  intentionally minimal — `text` · `boundingBox` · `confidence?`, the same contract as a line,
+  one level down.
+- **Both result types are capture-agnostic and immutable**, override `toString`, and expose
+  their collections via `List.unmodifiable` so a callback can neither mutate the package's
+  frame state nor be mutated out from under another consumer.
+
+**Configuration.** One config type, reused across both drivers:
+
+- **`TextSightOptions` is the one source-agnostic recognizer config** — `level` · `languages` ·
+  `roi` — accepted by *both* drivers. The live driver takes it on `TextSightController`; the
+  static one-shot takes it per call, defaulting `level` to `.accurate` where the live default is
+  `.fast`. Not a per-driver duplicate.
+- **`torchEnabled` is a controller-only parameter, deliberately *not* in `TextSightOptions`.**
+  Torch is a live-session concern; a static image has none, so folding it into the shared
+  recognizer config would be a category error. The seam, expressed in the type system:
+  recognizer config is shared across drivers, session config is not.
+- **`RegionOfInterest` is a dedicated normalized value type** (with a `fromLTWH` convenience),
+  not a `Rect` — see [#coordinate-normalization](#coordinate-normalization) for why the
+  normalized-vs-pixel distinction earns its own type and its `assert`.
+
+**The static one-shot is a separate driver, not a session mode.**
+`TextSight.recognizeImage` / `.recognizePath` (near-term) return a `Future<TextSightCapture>`
+and require **no** `TextSightController`, camera permission, texture, or live session. They
+share the recognizer and the result models with the live path and nothing else — the
+embodiment of "capture-source is a seam, drivers over one recognizer." They ride the `@HostApi`
+rather than the results stream; see [#channel-topology](#channel-topology).

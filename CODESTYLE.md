@@ -139,10 +139,15 @@ style.
   *both* the inner and outer same-named variable; then document the distinction in the
   **dartdoc on the callback**, not in the parameter name.
 - **Files mirror their primary public symbol.** `TextSightController` lives in
-  `text_sight_controller.dart`; `TextSightView` in `text_sight_view.dart`; the result
-  models in `models.dart`. `file_names` enforces snake_case; the file ↔ symbol pairing
-  is by convention. Pigeon-generated code lives in `messages.g.dart` (the `.g.` marks it
-  generated — never hand-edit it).
+  `text_sight_controller.dart`; `TextSightView` in `text_sight_view.dart`; each result
+  model and config type gets its own file under `src/recognition/` (`TextSightCapture` in
+  `text_sight_capture.dart`, `RecognizedLine` in `recognized_line.dart`, and so on). The
+  `lib/src/` tree groups by concern — `recognition/` (capture-agnostic models + config),
+  `capture/` (the live + static drivers), `view/`, `platform/` — see
+  [`APPENDIX.md#public-api-via-single-export-file`](./APPENDIX.md#public-api-via-single-export-file).
+  `file_names` enforces snake_case; the file ↔ symbol pairing is by convention.
+  Pigeon-generated code lives in `messages.g.dart` (the `.g.` marks it generated — never
+  hand-edit it).
 
 ---
 
@@ -472,10 +477,10 @@ When a file needs a symbol *only* for `[Name]` references in dartdoc (not in cod
 and hides intent. Use Dart's dartdoc-only directive instead:
 
 ```dart
-/// @docImport 'src/text_sight_view.dart';
+/// @docImport 'src/view/text_sight_view.dart';
 library;
 
-import 'src/models.dart'; // Real code import.
+import 'src/recognition/recognized_line.dart'; // Real code import.
 ```
 
 **Why.** A regular `import` declares a runtime dependency. If the only reason is

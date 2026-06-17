@@ -7,23 +7,36 @@ environment:
   sdk: ^3.12.0
   flutter: ^3.44.0
 
+
+
+
 dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.1.8
 
+
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  pigeon: ^27.1.0
+
+
+
 
 flutter:
-plugin:
+  plugin:
     platforms:
       android:
         package: com.LahaLuhem.text_sight
         pluginClass: TextSightPlugin
       ios:
         pluginClass: TextSightPlugin
+
+
+
 
 cider:
   link_template:
