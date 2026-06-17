@@ -29,6 +29,9 @@ final class TextSightCamera: NSObject {
   private var textureId: Int64?
   private var latestPixelBuffer: CVPixelBuffer?
   private var captureDevice: AVCaptureDevice?
+  private var videoDataOutput: AVCaptureVideoDataOutput?
+  private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
+  private var rotationObservation: NSKeyValueObservation?
 
   // Recognizer config, stored as the Pigeon transport types and translated to Vision per frame
   // (a `RecognizeTextRequest` is a cheap value type, so there is no shared mutable request to race).
@@ -155,16 +158,11 @@ final class TextSightCamera: NSObject {
     output.setSampleBufferDelegate(self, queue: captureQueue)
     guard session.canAddOutput(output) else { throw CameraError.cannotAddOutput }
     session.addOutput(output)
-
-    // v1 is portrait-locked: rotate the delivered buffers upright so both the preview texture and
-    // Vision see an upright frame and `.up` orientation suffices. Tracking device rotation (the
-    // landscape case) is a follow-up — it would drive this angle off `UIDevice.orientation`.
-    if let connection = output.connection(with: .video),
-       connection.isVideoRotationAngleSupported(Self.portraitVideoRotationAngle) {
-      connection.videoRotationAngle = Self.portraitVideoRotationAngle
-    }
+    videoDataOutput = output
 
     session.commitConfiguration()
+
+    startTrackingRotation(for: device)
 
     let id = textureRegistry.register(self)
     stateLock.lock()
@@ -176,8 +174,41 @@ final class TextSightCamera: NSObject {
     return id
   }
 
+  /// Drives the video-output rotation off live device orientation via an
+  /// `AVCaptureDevice.RotationCoordinator` (iOS 17+) so the preview texture and Vision always see
+  /// an upright frame — the buffer dimensions (and the per-frame imageWidth/imageHeight) swap with
+  /// orientation, and normalized boxes stay in display space. Observing the *preview* angle keeps
+  /// the displayed texture WYSIWYG; `.up` then suffices for Vision.
+  private func startTrackingRotation(for device: AVCaptureDevice) {
+    let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
+    rotationCoordinator = coordinator
+
+    applyCaptureRotation(coordinator.videoRotationAngleForHorizonLevelPreview)
+    rotationObservation = coordinator.observe(
+      \.videoRotationAngleForHorizonLevelPreview, options: [.new]
+    ) { [weak self] _, change in
+      guard let self, let angle = change.newValue else { return }
+
+      self.sessionQueue.async { self.applyCaptureRotation(angle) }
+    }
+  }
+
+  /// Applies `angle` to the video-output connection when supported, keeping delivered buffers
+  /// upright for the current device orientation.
+  private func applyCaptureRotation(_ angle: CGFloat) {
+    guard let connection = videoDataOutput?.connection(with: .video),
+          connection.isVideoRotationAngleSupported(angle)
+    else { return }
+
+    connection.videoRotationAngle = angle
+  }
+
   /// Releases every per-session resource. Idempotent — safe on dispose and on engine detach.
   private func releaseSession() {
+    rotationObservation?.invalidate()
+    rotationObservation = nil
+    rotationCoordinator = nil
+
     if session.isRunning { session.stopRunning() }
 
     session.beginConfiguration()
@@ -194,6 +225,7 @@ final class TextSightCamera: NSObject {
     stateLock.unlock()
 
     releasedTextureId.map { textureRegistry.unregisterTexture($0) }
+    videoDataOutput = nil
     captureDevice = nil
   }
 
@@ -282,7 +314,6 @@ final class TextSightCamera: NSObject {
     return ["imageWidth": imageWidth, "imageHeight": imageHeight, "lines": lines]
   }
 
-  private static let portraitVideoRotationAngle: CGFloat = 90
   private static let normalizedUnitSize = CGSize(width: 1, height: 1)
 }
 
