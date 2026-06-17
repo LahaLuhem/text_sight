@@ -5,6 +5,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
+import 'pigeon_text_sight_platform.dart';
 
 /// The platform-facing contract both drivers delegate to — the federation seam.
 ///
@@ -13,23 +14,20 @@ import '../recognition/text_sight_options.dart';
 /// so splitting into per-platform packages later is mechanical. The contract is stated in the package's
 /// *public* types — Pigeon is an implementation detail of the concrete subclass and never appears here.
 ///
-/// Methods default to throwing [UnimplementedError] rather than being abstract so a later addition
-/// is non-breaking for existing implementations. No implementation ships in this skeleton.
-/// One registers itself with the native code.
+/// Methods default to throwing [UnimplementedError] rather than being abstract, so adding one later
+/// is non-breaking for any future federated implementation that has not overridden it yet.
+/// [instance] defaults to [PigeonTextSightPlatform]; a federated platform package could later
+/// supply its own via the [instance] setter.
 abstract class TextSightPlatform extends PlatformInterface {
   /// Constructs the interface, passing the verification token to [PlatformInterface].
   TextSightPlatform() : super(token: _token);
 
   static final _token = Object();
 
-  static TextSightPlatform? _instance;
+  static TextSightPlatform _instance = PigeonTextSightPlatform();
 
-  /// The registered implementation.
-  ///
-  /// Throws [UnimplementedError] until a native implementation registers itself — which is the case
-  /// throughout this contracts-only skeleton.
-  static TextSightPlatform get instance =>
-      _instance ?? (throw UnimplementedError(_noRegisteredImplementation));
+  /// The active implementation — [PigeonTextSightPlatform] by default.
+  static TextSightPlatform get instance => _instance;
 
   /// Registers [value] as the platform implementation after verifying it `extends` this class
   /// (the token guards against an `implements`-based fake).
@@ -37,9 +35,6 @@ abstract class TextSightPlatform extends PlatformInterface {
     PlatformInterface.verify(value, _token);
     _instance = value;
   }
-
-  static const _noRegisteredImplementation =
-      'No TextSightPlatform implementation has been registered yet.';
 
   /// Opens the camera with [options] and returns the texture id the preview renders into.
   /// Recognition does not begin until [start] is called.

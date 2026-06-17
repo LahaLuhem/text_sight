@@ -117,6 +117,16 @@ and `messages.g.dart` is committed, so the fallback is simply to freeze it. (Pig
 `@EventChannelApi` could later type the results stream, but with `Rect`/`Size` models that can't
 cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
 
+**The per-frame wire format is a hand-written, self-describing map.** Each event on the captures
+`EventChannel` (`com.LahaLuhem.text_sight/captures`) is a `Map`: top-level `imageWidth` /
+`imageHeight` (doubles, pixels post-rotation) plus `lines`, a `List` of per-line maps —
+`text` (String), `confidence` (double or null), `left` / `top` / `width` / `height` (the box,
+normalized `[0,1]` top-left per [#coordinate-normalization](#coordinate-normalization)), and
+`elements` (null in v1, reserved). `confidence` is null when the platform supplies none (ML Kit);
+`elements` rides the wire as a reserved slot so populating it later is additive. The Dart side
+decodes this in `PigeonTextSightPlatform`; **each native side must emit exactly this shape.**
+Map-based, not positional — adding a key is non-breaking and frames stay legible in logs.
+
 **Generated code is committed and never hand-edited.** `messages.g.dart` is checked in (so
 consumers and CI need no codegen step) and regenerated from the schema, never patched — see
 [hard rule 7 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules). Regeneration is **two steps** —
