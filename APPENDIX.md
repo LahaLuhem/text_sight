@@ -4,6 +4,7 @@
 - [No-bundling: native dependencies never touch the Dart `pubspec.yaml`](#no-bundling-native-dependencies-never-touch-the-dart-pubspecyaml)
 - [Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview](#channel-topology-pigeon-control-api--eventchannel-results--texture-preview)
 - [Coordinate normalization: top-left `[0,1]` in native code](#coordinate-normalization-top-left-01-in-native-code)
+- [iOS capture & recognition strategy: roll-your-own AVCapture + Swift Vision](#ios-capture-strategy)
 - [Federation deferred: one plugin package for v1](#federation-deferred-one-plugin-package-for-v1)
 - [Public API funnelled through `lib/text_sight.dart`](#public-api-funnelled-through-libtext_sightdart)
 
@@ -15,10 +16,10 @@ technical trade-offs.
 READMEs, [`CODESTYLE.md`](./CODESTYLE.md), and [`.ai/AGENTS.md`](./.ai/AGENTS.md)
 reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
-> **Status:** the symlink, channel-topology, coordinate-normalization, and public-API sections
-> are written. `#no-bundling` and `#federation-deferred` stay stubs — locked decisions whose
-> rationale is filled in when the corresponding code lands. Anchors are stable; only stub bodies
-> grow.
+> **Status:** the symlink, channel-topology, coordinate-normalization, iOS-capture-strategy, and
+> public-API sections are written. `#no-bundling` and `#federation-deferred` stay stubs — locked
+> decisions whose rationale is filled in when the corresponding code lands. Anchors are stable;
+> only stub bodies grow.
 
 ---
 
@@ -184,6 +185,51 @@ interpreted in its display orientation. Cross-refs:
 [#channel-topology](#channel-topology) (the transport that carries these boxes) and
 [#public-api-via-single-export-file](#public-api-via-single-export-file) (the `RecognizedLine`
 model and the `Rect` ROI).
+
+---
+
+<a id="ios-capture-strategy"></a>
+## iOS capture & recognition strategy: roll-your-own AVCapture + Swift Vision
+
+**Decision.** The iOS live path is **roll-your-own** `AVCaptureSession` + Vision →
+`FlutterTexture`, mirroring the Android `TextSightCamera`. The recognizer is Vision's **Swift
+`RecognizeTextRequest`** — the WWDC 2024 API — **not** the legacy `VNRecognizeTextRequest`. This
+sets the **iOS deployment floor at 18.0** (`text_sight.podspec` + `Package.swift`); a future macOS
+target would floor at 15.0 (the same API's macOS availability).
+
+**Why roll-your-own, not `DataScannerViewController`.** VisionKit's `DataScannerViewController`
+(iOS 16+, A12+) is turnkey, but it is a UIKit view controller that **owns its own camera preview
+and result overlay**. It cannot render into a `FlutterTexture`, so adopting it would force iOS onto
+a `UiKitView` platform-view path while Android renders to a `Texture` — the two platforms would
+diverge structurally, and the unified contract already built and verified on Android (the captures
+`EventChannel`, the consumer-supplied `overlayBuilder`, the normalized-`Rect` ROI, per-line
+confidence) would not survive. There is also **no turnkey live-text equivalent on Android** to pair
+it with: Google's turnkey, Play-services-delivered scanner UIs are the **Code Scanner** (barcodes
+only) and the **Document Scanner** (a capture-crop-enhance flow returning an image/PDF, not a live
+per-frame OCR stream) — live text on Android is always CameraX + ML Kit wired by hand. A turnkey
+route would therefore be both a worse fit *and* asymmetric. Roll-your-own keeps one architecture
+across platforms and shares a future macOS `darwin/` (Vision is identical there).
+
+**Why the Swift `RecognizeTextRequest`, not `VNRecognizeTextRequest`.** It is the API Apple steers
+new code toward (Swift concurrency / `async`–`await`, `Sendable`, value-typed
+`RecognizedTextObservation`s), and it keeps this package on the vendor-forward stack — the same
+posture that puts Android on CameraX + ML Kit v2 and that the whole no-bundling effort embodies
+(off GoogleMLKit-on-iOS). It runs the **same** Vision text engine as the legacy request, so this is
+a modernity / ergonomics choice, **not** an accuracy or capability gain; `topCandidates(1)`
+confidence and a normalized `regionOfInterest` both carry over. The cost is the iOS 18 floor —
+accepted because supporting iOS 13–17 devices is deliberately deprioritized in favour of the
+current stack.
+
+**Deferred — backwards-compatible hybrid (iOS 13–17).** A future feature can lower the floor back to
+iOS 13 without losing the modern path: gate on `if #available(iOS 18, *)` to use
+`RecognizeTextRequest`, falling back to `VNRecognizeTextRequest` on iOS 13–17. The legacy request is
+**not deprecated**, so the fallback stays valid; both feed the identical per-frame map over the
+captures `EventChannel`, so only the recognizer-construction site branches. It is deferred because
+it roughly doubles the Vision code paths to serve devices this release does not target — additive
+and non-breaking when it lands. Cross-refs: [#channel-topology](#channel-topology) (the wire format
+both paths emit) and [#coordinate-normalization](#coordinate-normalization) (the Y-flip both apply —
+the new Swift API keeps Vision's lower-left origin, so the flip stays; `NormalizedRect.toImageCoordinates(_:origin:.upperLeft)`
+performs it, and a unit image size yields the top-left-normalized box directly).
 
 ---
 

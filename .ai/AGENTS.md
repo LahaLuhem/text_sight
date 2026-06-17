@@ -36,10 +36,14 @@ the package's reason to exist — see [`APPENDIX.md#no-bundling`](../APPENDIX.md
   channel for local use). Dart 3.12 comfortably clears the 3.10 static-dot-shorthand floor
   the code style leans on.
 - **iOS — Swift**, using the system frameworks **Vision** + **AVFoundation** (+ CoreMedia /
-  CoreVideo). `AVCaptureSession` → `VNRecognizeTextRequest`, preview to a `FlutterTexture`.
-  Ships **both** `ios/text_sight.podspec` **and** `ios/text_sight/Package.swift` so host
-  apps on CocoaPods *or* SwiftPM both work — the SPM path is the cleanliness win. Neither
-  declares a third-party dependency.
+  CoreVideo). `AVCaptureSession` → Vision's Swift **`RecognizeTextRequest`** (the WWDC 2024
+  API; **iOS 18.0 deployment floor**), preview to a `FlutterTexture`. The legacy
+  `VNRecognizeTextRequest` (iOS 13+) is intentionally **not** used — an availability-gated
+  fallback to it for iOS 13–17 is a deferred backwards-compat feature
+  ([`APPENDIX.md#ios-capture-strategy`](../APPENDIX.md#ios-capture-strategy)). Ships **both**
+  `ios/text_sight.podspec` **and** `ios/text_sight/Package.swift` so host apps on CocoaPods
+  *or* SwiftPM both work — the SPM path is the cleanliness win. Neither declares a
+  third-party dependency.
 - **Android — Kotlin**, using **CameraX** + **ML Kit text recognition**. `ImageAnalysis`
   (`STRATEGY_KEEP_ONLY_LATEST`) → `TextRecognition` client, preview via `Texture`. ML Kit +
   CameraX are declared **only** in `android/build.gradle.kts`. The module stays on Flutter's
