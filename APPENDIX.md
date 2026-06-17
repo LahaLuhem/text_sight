@@ -119,8 +119,14 @@ cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
 
 **Generated code is committed and never hand-edited.** `messages.g.dart` is checked in (so
 consumers and CI need no codegen step) and regenerated from the schema, never patched — see
-[hard rule 7 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules). The bounding-box geometry these
-channels carry is specified in [#coordinate-normalization](#coordinate-normalization).
+[hard rule 7 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules). Regeneration is **two steps** —
+`dart run pigeon --input pigeons/text_sight.dart` then
+`dart format lib/src/platform/messages.g.dart` — because Pigeon emits ~80-column Dart while the
+project's formatter gate (`page_width: 100`, applied tree-wide) would otherwise flag the output.
+The `dart format` pass is deterministic and mechanical, not a hand-edit, so it does not breach the
+never-patch rule; a freshness check (regenerate-and-diff) must run the same format step before
+comparing. The bounding-box geometry these channels carry is specified in
+[#coordinate-normalization](#coordinate-normalization).
 
 ---
 

@@ -54,8 +54,11 @@ jobs:
 #   - asserts the no-bundling invariant held, e.g.:
 #       cd example && flutter build ios --config-only --no-codesign
 #       rg -i 'mlkit|googlemlkit|MLImage' ios/Podfile.lock   # expect: NO matches
-# Optionally add a Pigeon-codegen-freshness check (regenerate from
-# pigeons/text_sight.dart and assert lib/src/messages.g.dart is unchanged).
+# Optionally add a Pigeon-codegen-freshness check: regenerate from
+# pigeons/text_sight.dart, run `dart format` on the output, then assert
+# lib/src/platform/messages.g.dart is unchanged. The format step is required —
+# Pigeon emits ~80-col Dart and the formatter gate (page_width 100) reformats it,
+# so a raw regenerate-and-diff would always report a spurious change.
 #
 # Deferred for now: there is no native recognition code to build and no
 # example/ app scaffolded yet, so these jobs would have nothing real to run.
