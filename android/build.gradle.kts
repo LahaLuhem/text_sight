@@ -46,6 +46,11 @@ android {
 
     defaultConfig {
         minSdk = 24
+
+        // Bundled into the AAR and merged into every consuming app's R8 config. Keeps ML
+        // Kit's reflectively-resolved classes from being renamed in release builds.
+        // without it the recognizer can't initialize and the plugin fails to attach.
+        consumerProguardFiles("consumer-rules.pro")
     }
 
     testOptions {
