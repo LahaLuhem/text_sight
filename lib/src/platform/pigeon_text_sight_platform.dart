@@ -19,7 +19,7 @@ import 'text_sight_platform.dart';
 /// preview texture id is the return of [initialize]. Registered as
 /// [TextSightPlatform.instance] by default; a future federated platform package
 /// can replace it.
-class PigeonTextSightPlatform extends TextSightPlatform {
+final class PigeonTextSightPlatform extends TextSightPlatform {
   /// The native→Dart per-frame results stream. The name is mirrored verbatim by
   /// the native `EventChannel` registration on each platform.
   static const _capturesChannel = EventChannel('com.LahaLuhem.text_sight/captures');

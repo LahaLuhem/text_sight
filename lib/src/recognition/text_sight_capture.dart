@@ -7,7 +7,7 @@ import 'recognized_line.dart';
 /// Capture-agnostic by design: the same type is delivered by the live stream and by the static one-shot,
 /// carrying no hint of where the pixels came from. Map a line's normalized [RecognizedLine.boundingBox]
 /// into widget space using [imageSize] and whatever fit displays the preview.
-class TextSightCapture {
+final class TextSightCapture {
   /// The recognized lines, in the recognizer's emission order.
   final List<RecognizedLine> lines;
 

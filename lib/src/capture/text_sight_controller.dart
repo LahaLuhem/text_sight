@@ -16,7 +16,7 @@ import '../recognition/text_sight_options.dart';
 /// (or any listener) rebuilds from. Per-frame results arrive on [captures]; the preview renders the
 /// [textureId]. Every call delegates to [TextSightPlatform.instance], so the controller carries
 /// no platform knowledge of its own.
-class TextSightController extends ChangeNotifier {
+final class TextSightController extends ChangeNotifier {
   RecognitionLevel _level;
   Iterable<Locale> _languages;
   Rect? _roi;

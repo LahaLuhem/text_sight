@@ -6,7 +6,7 @@ import 'dart:ui' show Rect;
 /// populating word-level detail later is an additive change, but
 /// `RecognizedLine.elements` stays `null` until that feature ships. The
 /// contract mirrors a line, one level down.
-class RecognizedElement {
+final class RecognizedElement {
   /// The recognized text of this element.
   final String text;
 

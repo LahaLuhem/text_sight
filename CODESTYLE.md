@@ -220,6 +220,16 @@ style.
 <a id="class-structure"></a>
 ## Class structure
 
+- **Default to `final class`; leave a class open only where extension is a designed-in seam.**
+  The data models (`TextSightCapture`, `RecognizedLine`, `RecognizedElement`), the config
+  (`TextSightOptions`), the controller, and the view are all `final` — nothing is meant to
+  subclass or implement them. **Why:** with no external subtype possible, adding a field or
+  method is never a breaking change, so the surface stays evolvable under semver. Seal *before*
+  first publish — relaxing `final` later is non-breaking, tightening *to* it is not, so the
+  default is "seal until a consumer has a real reason to extend." The one deliberately open class
+  is the `TextSightPlatform` federation boundary (per-platform packages subclass it); a pure
+  static namespace is `abstract final class` (`TextSight`). Enums and Pigeon-generated message
+  classes are exempt — already sealed / never hand-edited.
 - **Any class with fields and constructors: fields → constructors → other members.**
   Lets a reader scan the state shape first, then how to construct it, then how to use
   it. Within constructors, unnamed first, then factories. Static helpers go after the
@@ -240,7 +250,7 @@ style.
   ```dart
   TextSightController({TextSightOptions options = const TextSightOptions()})
     : assert(
-        _isNormalizedRoi(options.roi),
+        options.roi.isNormalizedRoi,
         'Region-of-interest must be a normalized [0,1] rect with positive extent.',
       );
   ```
@@ -252,10 +262,11 @@ style.
   constructors) when the invariant can be encoded in the signature; reach for `assert`
   when it can't (cross-parameter conditions, value-range checks).
 
-  A `const` constructor's `assert` can use only constant expressions (no function calls), so a
-  shared validation predicate lives behind a *non-const* constructor — the controller validates
-  the ROI for both `TextSightOptions` and `setRegionOfInterest`, not the `const` options type
-  itself.
+  A `const` constructor's `assert` can use only constant expressions (no method calls), so the
+  shared ROI predicate lives outside the `const` `TextSightOptions` constructor as the
+  `NormalizedRoi` extension (`roi.isNormalizedRoi`). Its consumers validate: the live
+  `TextSightController` (constructor and `setRegionOfInterest`) and the static `TextSight`
+  one-shot — never the `const` options type itself.
 - **Value types override `toString`.** Immutable data classes (`TextSightCapture`,
   `RecognizedLine`, the options/ROI records) implement `toString()` returning
   `'ClassName(field1: value1, field2: value2)'`. The default `Instance of 'ClassName'`

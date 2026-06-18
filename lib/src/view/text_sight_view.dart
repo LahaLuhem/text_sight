@@ -23,7 +23,7 @@ typedef TextSightOverlayBuilder =
 /// The view does not start or stop the session itself; the consumer drives the
 /// controller, so session lifecycle (including pausing on app background) stays
 /// in one place.
-class TextSightView extends StatefulWidget {
+final class TextSightView extends StatefulWidget {
   /// The controller that owns the session this view renders.
   final TextSightController controller;
 

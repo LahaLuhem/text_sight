@@ -9,7 +9,7 @@ import 'recognition_level.dart';
 /// needs: recognition [level], the candidate [languages], and an optional [roi].
 /// Session-only concerns such as the torch deliberately live on the controller, not here:
 /// a still image has no such concept, so folding it in would be a category error.
-class TextSightOptions {
+final class TextSightOptions {
   /// The accuracy/latency trade-off. Defaults to [RecognitionLevel.fast]; the static one-shot driver
   /// overrides it to [RecognitionLevel.accurate], where there is no per-frame latency budget to protect.
   final RecognitionLevel level;

@@ -6,7 +6,7 @@ import 'recognized_element.dart';
 ///
 /// The unit the recognizer emits per detection. Capture-agnostic: it carries no
 /// notion of whether the pixels came from a live frame or a still image.
-class RecognizedLine {
+final class RecognizedLine {
   /// The recognized text of this line.
   final String text;
 
