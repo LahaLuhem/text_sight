@@ -70,6 +70,26 @@ class TextSightPlugin :
         camera?.setTorchEnabled(enabled)
     }
 
+    override fun recognizeImage(
+        bytes: ByteArray,
+        options: TextSightOptionsMessage,
+        callback: (Result<Map<String, Any?>>) -> Unit,
+    ) {
+        val activeCamera = camera ?: return callback(detached())
+
+        activeCamera.recognizeImage(bytes, options, callback)
+    }
+
+    override fun recognizePath(
+        path: String,
+        options: TextSightOptionsMessage,
+        callback: (Result<Map<String, Any?>>) -> Unit,
+    ) {
+        val activeCamera = camera ?: return callback(detached())
+
+        activeCamera.recognizePath(path, options, callback)
+    }
+
     private companion object {
         const val CAPTURES_CHANNEL_NAME = "com.LahaLuhem.text_sight/captures"
 

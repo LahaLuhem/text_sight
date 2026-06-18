@@ -64,6 +64,16 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
   func setTorchEnabled(enabled: Bool) throws {
     camera.setTorchEnabled(enabled: enabled)
   }
+
+  func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage,
+                      completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+    camera.recognizeImage(bytes: bytes, options: options, completion: completion)
+  }
+
+  func recognizePath(path: String, options: TextSightOptionsMessage,
+                     completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+    camera.recognizePath(path: path, options: options, completion: completion)
+  }
 }
 
 private let capturesChannelName = "com.LahaLuhem.text_sight/captures"

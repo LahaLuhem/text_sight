@@ -84,6 +84,10 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.6.1")
     implementation("androidx.camera:camera-lifecycle:1.6.1")
 
+    // Reads still-image EXIF orientation for the one-shot recognizer. Android-only utility (not a
+    // recognition lib) — already transitive via CameraX; declared directly since it's used directly.
+    implementation("androidx.exifinterface:exifinterface:1.4.2")
+
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     testImplementation("org.mockito:mockito-core:5.0.0")
 }

@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreGraphics
 import CoreMedia
 import CoreVideo
 import Flutter
@@ -242,18 +243,7 @@ final class TextSightCamera: NSObject {
 
     let rotation = Self.displayRotation(forCaptureAngle: angle)
 
-    var request = RecognizeTextRequest()
-    request.recognitionLevel = level == .accurate ? .accurate : .fast
-    // Mirror the Dart `RecognitionLevel` enhanced-enum contract: accurate corrects, fast does not.
-    request.usesLanguageCorrection = level == .accurate
-    if !languages.isEmpty {
-      request.recognitionLanguages = languages.map { Locale.Language(identifier: $0) }
-    }
-    if let roi {
-      // Vision's region-of-interest is lower-left normalized; flip the incoming top-left rect.
-      request.regionOfInterest = NormalizedRect(x: roi.left, y: 1 - (roi.top + roi.height),
-                                                width: roi.width, height: roi.height)
-    }
+    let request = Self.makeRequest(level: level, languages: languages, roi: roi)
 
     // The buffer is sensor-oriented; report its display-oriented size (axes swap on a quarter
     // turn) to match the boxes Vision returns in the oriented space.
@@ -281,6 +271,112 @@ final class TextSightCamera: NSObject {
     stateLock.lock()
     isProcessing = false
     stateLock.unlock()
+  }
+
+  /// Builds a recognizer request from a config snapshot — shared by the live path and the static
+  /// one-shot. A `RecognizeTextRequest` is a value type, so each frame/call gets its own.
+  private static func makeRequest(level: RecognitionLevelMessage, languages: [String],
+                                  roi: RegionOfInterestMessage?) -> RecognizeTextRequest {
+    var request = RecognizeTextRequest()
+    request.recognitionLevel = level == .accurate ? .accurate : .fast
+    // Mirror the Dart `RecognitionLevel` enhanced-enum contract: accurate corrects, fast does not.
+    request.usesLanguageCorrection = level == .accurate
+    if !languages.isEmpty {
+      request.recognitionLanguages = languages.map { Locale.Language(identifier: $0) }
+    }
+    if let roi {
+      // Vision's region-of-interest is lower-left normalized; flip the incoming top-left rect.
+      request.regionOfInterest = NormalizedRect(x: roi.left, y: 1 - (roi.top + roi.height),
+                                                width: roi.width, height: roi.height)
+    }
+
+    return request
+  }
+
+  // MARK: Static one-shot recognition (no session, texture, or permission)
+
+  /// Recognizes text in encoded image `bytes`; delegated from the plugin's `TextSightHostApi`.
+  func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage,
+                      completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+    guard let source = CGImageSourceCreateWithData(bytes.data as CFData, nil) else {
+      completion(.failure(PigeonError(code: "decode-failed",
+                                      message: "The image bytes could not be decoded.",
+                                      details: nil)))
+      return
+    }
+
+    recognizeStill(source, options: options, completion: completion)
+  }
+
+  /// Recognizes text in the image file at `path`; delegated from the plugin's `TextSightHostApi`.
+  func recognizePath(path: String, options: TextSightOptionsMessage,
+                     completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+    guard FileManager.default.fileExists(atPath: path) else {
+      completion(.failure(PigeonError(code: "file-not-found",
+                                      message: "No file exists at \(path).", details: nil)))
+      return
+    }
+    guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil) else {
+      completion(.failure(PigeonError(code: "decode-failed",
+                                      message: "The image at \(path) could not be decoded.",
+                                      details: nil)))
+      return
+    }
+
+    recognizeStill(source, options: options, completion: completion)
+  }
+
+  /// Decodes a still from `source` (honouring EXIF orientation), runs a transient recognizer off
+  /// the main thread, and completes on main with the same per-frame map the live path emits —
+  /// `quarterTurns` 0, since a still is already upright. No session, texture, or sink is touched.
+  private func recognizeStill(_ source: CGImageSource, options: TextSightOptionsMessage,
+                              completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+    let request = Self.makeRequest(level: options.level, languages: options.languages,
+                                   roi: options.roi)
+
+    Task {
+      guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+        DispatchQueue.main.async {
+          completion(.failure(PigeonError(code: "decode-failed",
+                                          message: "The image could not be decoded.", details: nil)))
+        }
+        return
+      }
+
+      let orientation = Self.orientation(of: source)
+      // Report the box space (display-oriented): axes swap when EXIF turns the image a quarter.
+      let isQuarterTurned = switch orientation {
+      case .left, .leftMirrored, .right, .rightMirrored: true
+      default: false
+      }
+      let pixelWidth = Double(cgImage.width)
+      let pixelHeight = Double(cgImage.height)
+
+      do {
+        let observations = try await request.perform(on: cgImage, orientation: orientation)
+        let frame = Self.encodeFrame(observations,
+                                     imageWidth: isQuarterTurned ? pixelHeight : pixelWidth,
+                                     imageHeight: isQuarterTurned ? pixelWidth : pixelHeight,
+                                     quarterTurns: 0)
+        DispatchQueue.main.async { completion(.success(frame)) }
+      } catch {
+        DispatchQueue.main.async {
+          completion(.failure(PigeonError(code: "decode-failed",
+                                          message: error.localizedDescription, details: nil)))
+        }
+      }
+    }
+  }
+
+  /// The EXIF orientation stored in `source`, or `.up` when absent.
+  private static func orientation(of source: CGImageSource) -> CGImagePropertyOrientation {
+    guard
+      let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+      let raw = properties[kCGImagePropertyOrientation] as? UInt32,
+      let orientation = CGImagePropertyOrientation(rawValue: raw)
+    else { return .up }
+
+    return orientation
   }
 
   /// Hops to main and emits on the sink read under lock — a sink call from a background thread
