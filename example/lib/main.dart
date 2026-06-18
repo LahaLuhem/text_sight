@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:text_sight/text_sight.dart';
 
@@ -33,7 +35,7 @@ class _ScannerPageState extends State<ScannerPage> {
   final _controller = TextSightController();
   final ValueNotifier<TextSightCapture?> _capture = ValueNotifier(null);
 
-  _SessionStatus _status = _SessionStatus.requesting;
+  _SessionStatus _status = .requesting;
   String? _failure;
 
   @override
@@ -51,7 +53,7 @@ class _ScannerPageState extends State<ScannerPage> {
 
   Future<void> _start() async {
     setState(() {
-      _status = _SessionStatus.requesting;
+      _status = .requesting;
       _failure = null;
     });
 
@@ -59,17 +61,17 @@ class _ScannerPageState extends State<ScannerPage> {
     if (!mounted) return;
 
     if (!permission.isGranted) {
-      return setState(() => _status = _SessionStatus.denied);
+      return setState(() => _status = .denied);
     }
 
     try {
       await _controller.start();
       if (!mounted) return;
-      setState(() => _status = _SessionStatus.ready);
+      setState(() => _status = .ready);
     } on Object catch (error) {
       if (!mounted) return;
       setState(() {
-        _status = _SessionStatus.failed;
+        _status = .failed;
         _failure = error.toString();
       });
     }
@@ -80,7 +82,14 @@ class _ScannerPageState extends State<ScannerPage> {
     appBar: AppBar(
       title: const Text('TextSight'),
       actions: [
-        if (_status == _SessionStatus.ready)
+        IconButton(
+          tooltip: 'One-shot still recognition',
+          icon: const Icon(Icons.image_search_outlined),
+          onPressed: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute<void>(builder: (_) => const _StillRecognitionPage())),
+        ),
+        if (_status == .ready)
           ListenableBuilder(
             listenable: _controller,
             builder: (context, _) => IconButton(
@@ -92,20 +101,20 @@ class _ScannerPageState extends State<ScannerPage> {
       ],
     ),
     body: switch (_status) {
-      _SessionStatus.requesting => const Center(child: CircularProgressIndicator()),
-      _SessionStatus.denied => const _MessageView(
+      .requesting => const Center(child: CircularProgressIndicator()),
+      .denied => const _MessageView(
         icon: Icons.no_photography_outlined,
         message: 'Camera permission is required to recognize text.',
         actionLabel: 'Open settings',
         onAction: openAppSettings,
       ),
-      _SessionStatus.failed => _MessageView(
+      .failed => _MessageView(
         icon: Icons.error_outline,
         message: _failure ?? 'Could not start the camera.',
         actionLabel: 'Retry',
         onAction: _start,
       ),
-      _SessionStatus.ready => _ScannerView(controller: _controller, capture: _capture),
+      .ready => _ScannerView(controller: _controller, capture: _capture),
     },
   );
 }
@@ -119,7 +128,7 @@ class _ScannerView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
+    fit: .expand,
     children: [
       TextSightView(
         controller: controller,
@@ -211,14 +220,129 @@ class _MessageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const .all(24),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: .min,
         spacing: 16,
         children: [
           Icon(icon, size: 48),
-          Text(message, textAlign: TextAlign.center),
+          Text(message, textAlign: .center),
           FilledButton(onPressed: onAction, child: Text(actionLabel)),
+        ],
+      ),
+    ),
+  );
+}
+
+/// A standalone demo of the static one-shot API — no camera, session, or permission.
+///
+/// Recognizes a bundled sample image two ways: from in-memory bytes via
+/// [TextSight.recognizeImage], and from a file path via [TextSight.recognizePath].
+class _StillRecognitionPage extends StatefulWidget {
+  const _StillRecognitionPage();
+
+  @override
+  State<_StillRecognitionPage> createState() => _StillRecognitionPageState();
+}
+
+class _StillRecognitionPageState extends State<_StillRecognitionPage> {
+  static const _asset = 'assets/sample_text.png';
+
+  TextSightCapture? _capture;
+  String? _error;
+  var _busy = false;
+
+  Future<void> _recognize({required bool fromFile}) async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _capture = null;
+    });
+
+    try {
+      final bytes = (await rootBundle.load(_asset)).buffer.asUint8List();
+      final capture = fromFile
+          ? await TextSight.recognizePath(await _writeTempCopy(bytes))
+          : await TextSight.recognizeImage(bytes);
+      if (!mounted) return;
+      setState(() => _capture = capture);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// Writes [bytes] to a temp file so the path-based entry point can be demonstrated.
+  Future<String> _writeTempCopy(Uint8List bytes) async {
+    final file = File('${Directory.systemTemp.path}/text_sight_sample.png');
+    await file.writeAsBytes(bytes);
+
+    return file.path;
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('One-shot recognition')),
+    body: Padding(
+      padding: const .all(16),
+      child: Column(
+        crossAxisAlignment: .stretch,
+        spacing: 16,
+        children: [
+          ColoredBox(
+            color: Colors.white,
+            child: Padding(
+              padding: const .all(8),
+              child: Image.asset(_asset, semanticLabel: 'Sample text', height: 150, fit: .contain),
+            ),
+          ),
+          Row(
+            spacing: 12,
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: _busy ? null : () => _recognize(fromFile: false),
+                  child: const Text('From bytes'),
+                ),
+              ),
+              Expanded(
+                child: FilledButton.tonal(
+                  onPressed: _busy ? null : () => _recognize(fromFile: true),
+                  child: const Text('From file'),
+                ),
+              ),
+            ],
+          ),
+          Expanded(
+            child: switch ((_busy, _error, _capture)) {
+              (true, _, _) => const Center(child: CircularProgressIndicator()),
+              (_, final error?, _) => Center(
+                child: Text('Failed: $error', textAlign: TextAlign.center),
+              ),
+              (_, _, final capture?) => ListView(
+                children: [
+                  Text(
+                    '${capture.lines.length} lines · '
+                    '${capture.imageSize.width.toInt()}×${capture.imageSize.height.toInt()} px · '
+                    'quarterTurns ${capture.quarterTurns}',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  const Divider(),
+                  for (final line in capture.lines)
+                    ListTile(
+                      dense: true,
+                      title: Text(line.text),
+                      subtitle: line.confidence == null
+                          ? null
+                          : Text('confidence ${line.confidence!.toStringAsFixed(2)}'),
+                    ),
+                ],
+              ),
+              _ => const Center(child: Text('Tap a button to recognize the sample image.')),
+            },
+          ),
         ],
       ),
     ),

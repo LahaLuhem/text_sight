@@ -585,6 +585,11 @@ of `analysis_options.yaml` and treated as non-negotiable. Apply by hand (or via 
   or a step's `.table('name', row(val(…), …), row(…))` (an inline data table, up to 16 columns per
   row). Read them back with `ctx.example.val('Key')` / `ctx.table('name').rows`. Inputs live in the
   table; the body only references them — so the same body covers every row.
+- **Integration tests use the same BDD + `checks` style.** The example's on-device tests
+  (`example/integration_test/`) wrap `bdd_framework` scenarios + `check(...)` under
+  `IntegrationTestWidgetsFlutterBinding` — not bare `testWidgets` / `expect`. The example package
+  therefore carries `bdd_framework` + `checks` as dev-dependencies (same versions as the root).
+  Run them with `flutter test integration_test -d <device>`.
 
 ---
 

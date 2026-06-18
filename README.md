@@ -14,6 +14,8 @@ declared only in its Gradle build. No recognition library ever enters your Dart 
 
 - **Live camera recognition** — a `Texture`-backed preview widget with a per-frame stream of
   recognized lines.
+- **Static one-shot** — recognize a still image from bytes or a file path with no camera,
+  session, or permission (`TextSight.recognizeImage` / `.recognizePath`).
 - **Native engines, zero bundling** — Apple Vision (iOS) / ML Kit (Android); nothing to add to
   `pubspec.yaml`.
 - **Bring your own overlay** — `overlayBuilder` hands you each capture; boxes are normalized
@@ -25,7 +27,7 @@ declared only in its Gradle build. No recognition library ever enters your Dart 
 | Platform | Minimum | Engine |
 |----------|---------|--------|
 | iOS      | **18.0**| Apple Vision — Swift `RecognizeTextRequest` |
-| Android  | API 21  | ML Kit Text Recognition v2 (Latin) |
+| Android  | API 24  | ML Kit Text Recognition v2 (Latin) |
 
 > iOS targets 18.0 to use Vision's modern Swift API. Support for iOS 13–17 (via the legacy
 > `VNRecognizeTextRequest`) is on the [roadmap](#roadmap).
@@ -94,8 +96,26 @@ final controller = TextSightController(
 );
 ```
 
+### One-shot (still image)
+
+No camera, session, or permission — hand it encoded bytes or a file path:
+
+```dart
+final capture = await TextSight.recognizeImage(bytes); // PNG/JPEG bytes
+// or: await TextSight.recognizePath('/path/to/photo.jpg');
+
+for (final line in capture.lines) {
+  debugPrint(line.text);
+}
+```
+
+Defaults to `RecognitionLevel.accurate` (a still has no per-frame budget to protect); pass
+`options:` to override. EXIF orientation is honoured natively, so `capture.quarterTurns` is always
+`0`. Throws a `PlatformException` if the image can't be decoded (`decode-failed`) or the path is
+missing (`file-not-found`).
+
 See [`example/`](example/) for a complete app: runtime permission handling, a bounding-box
-overlay, a recognized-text panel, and torch control.
+overlay, a recognized-text panel, torch control, and a one-shot recognition screen.
 
 ## How recognition maps across platforms
 
@@ -120,16 +140,14 @@ overlay, a recognized-text panel, and torch control.
   the camera frame rate (frames are dropped, not queued). Prefer `RecognitionLevel.fast` for
   live; `.accurate` is heavier.
 - **Line-level results only** — word-level `RecognizedLine.elements` is reserved (`null`) for now.
-- **No static one-shot** (image / path) recognition yet — live camera only.
-- The **iOS Simulator has no camera**, so live recognition can only be exercised on a physical
-  device.
+- The **iOS Simulator has no camera**, so *live* recognition needs a physical device — but the
+  static one-shot runs anywhere (it uses no camera).
 
 The engineering detail behind these — and the backlog to work them out — lives in
 [`APPENDIX.md#known-limitations`](APPENDIX.md#known-limitations).
 
 ## Roadmap
 
-- Static one-shot recognition (`TextSight.recognizeImage` / `.recognizePath`).
 - Word-level `RecognizedElement`s.
 - iOS 13–17 support via an availability-gated `VNRecognizeTextRequest` fallback.
 - True region-of-interest pre-crop on Android.

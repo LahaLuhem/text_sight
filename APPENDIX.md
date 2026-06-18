@@ -88,10 +88,11 @@ funnelled through one channel:
   (`initialize` / `start` / `stop` / `setRegionOfInterest` / `setRecognitionLevel` /
   `setLanguages` / `setTorchEnabled` / `dispose`) is request/response and benefits from a
   generated, type-checked Dart↔native boundary. The static one-shot (`recognizeImage` /
-  `recognizePath`, when that driver lands) is *also* request/response, so it rides the **same**
-  `@HostApi` as an `@async` method returning a `TextSightCapture` — not the results stream
-  below. Natively it allocates a transient image handler and touches no camera session,
-  texture, or event sink. _(The codegen tool is **Pigeon** — see below.)_
+  `recognizePath`) is *also* request/response, so it rides the **same** `@HostApi` as two
+  `@async` methods that return the same self-describing per-frame map the results stream uses
+  (decoded Dart-side into a `TextSightCapture`) — not the results stream below; this is why the
+  result models need no Pigeon twin. Natively each allocates a transient image handler and touches
+  no camera session, texture, or event sink. _(The codegen tool is **Pigeon** — see below.)_
 - **Live per-frame results → a plain `EventChannel` stream.** A camera delivers ~30 captures a
   second; modelling that as a Pigeon `@FlutterApi` callback fights the codegen's
   request/response grain. An `EventChannel` is Flutter's idiomatic transport for a
@@ -182,8 +183,10 @@ per-platform branch in Dart**. On Android `quarterTurns` is the `ImageProxy` rot
 rotation into `ImageAnalysis.targetRotation` (a headless plugin session gets no automatic
 orientation updates, so a `DisplayManager.DisplayListener` drives it — without it only portrait is
 right); on iOS it comes from `AVCaptureDevice.RotationCoordinator`, which also selects the
-`CGImagePropertyOrientation` handed to Vision so recognition stays upright. A still image is already
-upright, so the static one-shot reports `0`.
+`CGImagePropertyOrientation` handed to Vision so recognition stays upright. A still image is read in
+its EXIF orientation natively (iOS via `CGImageSource`; Android decodes the bitmap and reads
+`ExifInterface`, passing the rotation to `InputImage`), so it is already upright and the static
+one-shot reports `0`.
 
 **Region-of-interest uses the same contract.** The ROI is a `Rect` in the same normalized
 `[0,1]` top-left space as the output boxes (not pixels) — a debug `assert` at the consuming
@@ -302,9 +305,6 @@ fallback lands ([#ios-capture-strategy](#ios-capture-strategy)).
 
 **Deferred features (each additive and non-breaking when it lands):**
 
-- **Static one-shot** `TextSight.recognizeImage` / `.recognizePath` over the same `@HostApi` and
-  models — designed-for, not built ([#channel-topology](#channel-topology),
-  [#public-api-via-single-export-file](#public-api-via-single-export-file)).
 - **Word-level `RecognizedElement`s** — `RecognizedLine.elements` ships `null`/reserved; populating it
   is a minor.
 - **iOS 13–17 hybrid** — `if #available(iOS 18)` → `RecognizeTextRequest`, else
@@ -362,7 +362,7 @@ lib/
     │   └── text_sight_options.dart
     ├── capture/                       the two DRIVERS over the one recognizer
     │   ├── text_sight_controller.dart    live-camera driver (v1)
-    │   └── text_sight.dart               TextSight one-shot static driver (near-term)
+    │   └── text_sight.dart               TextSight one-shot static driver
     ├── view/
     │   └── text_sight_view.dart          Texture-backed widget (+ overlay painter later)
     └── platform/
@@ -412,6 +412,6 @@ seam shows in the tree. Each public type gets its own file (per
   [#coordinate-normalization](#coordinate-normalization).
 
 **The static one-shot is a separate driver, not a session mode.** `TextSight.recognizeImage` /
-`.recognizePath` (near-term) return a `Future<TextSightCapture>` and need no controller, camera
-permission, texture, or session — they share only the recognizer and result models with the live
-path, and ride the `@HostApi` ([#channel-topology](#channel-topology)).
+`.recognizePath` return a `Future<TextSightCapture>` and need no controller, camera permission,
+texture, or session — they share only the recognizer and result models with the live path, and ride
+the `@HostApi` ([#channel-topology](#channel-topology)).
