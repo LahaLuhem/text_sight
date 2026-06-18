@@ -96,6 +96,8 @@ TextSightCapture _decodeCapture(Object? event) {
       (frameMap['imageWidth']! as num).toDouble(),
       (frameMap['imageHeight']! as num).toDouble(),
     ),
+    // Absent on an already-upright source (e.g. the static one-shot); defaults to no rotation.
+    quarterTurns: (frameMap['quarterTurns'] as num?)?.toInt() ?? 0,
     lines: [for (final rawLine in rawLines) _decodeLine(rawLine)],
   );
 }

@@ -121,7 +121,9 @@ cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
 
 **The per-frame wire format is a hand-written, self-describing map.** Each event on the captures
 `EventChannel` (`com.LahaLuhem.text_sight/captures`) is a `Map`: top-level `imageWidth` /
-`imageHeight` (doubles, pixels post-rotation) plus `lines`, a `List` of per-line maps —
+`imageHeight` (doubles, pixels post-rotation), `quarterTurns` (int — clockwise quarter-turns to
+rotate the raw preview texture to display-upright, per [#coordinate-normalization](#coordinate-normalization)),
+plus `lines`, a `List` of per-line maps —
 `text` (String), `confidence` (double or null), `left` / `top` / `width` / `height` (the box,
 normalized `[0,1]` top-left per [#coordinate-normalization](#coordinate-normalization)), and
 `elements` (null in v1, reserved). `confidence` is null when the platform supplies none (ML Kit);
@@ -168,6 +170,18 @@ contract *before* the channel, so the Dart layer carries no platform conditional
 orientation as the normalized boxes** (post-rotation). A consumer maps a normalized box into
 widget space with `imageSize` plus the fit used to display the preview; it never needs the raw
 sensor orientation.
+
+**The preview texture is the one thing not pre-rotated.** Boxes and `imageSize` are reported in
+display orientation, but the live preview is handed to the texture in the camera's *raw* (sensor)
+orientation — rotating frames natively is either costly or unreliable across the two capture stacks
+(CameraX `Preview` → `SurfaceProducer` doesn't transform a raw surface, and an
+`AVCaptureVideoDataOutput` connection rotation is fiddly). Each frame therefore carries
+`quarterTurns`: the clockwise quarter-turns `TextSightView` applies via a `RotatedBox` to bring the
+texture into the same display orientation the boxes already use — so the overlay aligns **without a
+per-platform branch in Dart**. On Android `quarterTurns` is the `ImageProxy` rotation ÷ 90; on iOS it
+comes from `AVCaptureDevice.RotationCoordinator`, which also selects the `CGImagePropertyOrientation`
+handed to Vision so recognition stays upright. A still image is already upright, so the static
+one-shot reports `0`.
 
 **Region-of-interest uses the same contract.** The ROI is a `Rect` in the same normalized
 `[0,1]` top-left space as the output boxes (not pixels) — a debug `assert` at the consuming

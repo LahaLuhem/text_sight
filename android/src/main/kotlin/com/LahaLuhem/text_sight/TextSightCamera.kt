@@ -4,8 +4,11 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Rect
+import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
+import android.view.Display
+import android.view.Surface
 import androidx.annotation.OptIn
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
@@ -43,6 +46,7 @@ internal class TextSightCamera(
     capturesChannel: EventChannel,
 ) : EventChannel.StreamHandler {
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
     private val analysisExecutor = Executors.newSingleThreadExecutor()
     private val recognizer: TextRecognizer =
         TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
@@ -56,8 +60,27 @@ internal class TextSightCamera(
     private var regionOfInterest: RegionOfInterestMessage? = null
     private var isRecognizing = false
 
+    /**
+     * Keeps [ImageAnalysis]'s target rotation in step with the live display rotation, so the
+     * reported quarter-turns ([ImageProxy] rotationDegrees / 90) track the device in every
+     * orientation. The headless session has no Activity to do this automatically, so without it
+     * the rotation hint is stuck at the bind-time default and only portrait looks right.
+     */
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) = Unit
+
+        override fun onDisplayRemoved(displayId: Int) = Unit
+
+        override fun onDisplayChanged(displayId: Int) {
+            if (displayId == Display.DEFAULT_DISPLAY) {
+                imageAnalysis?.targetRotation = currentRotation()
+            }
+        }
+    }
+
     init {
         capturesChannel.setStreamHandler(this)
+        displayManager.registerDisplayListener(displayListener, mainHandler)
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink?) {
@@ -131,6 +154,7 @@ internal class TextSightCamera(
 
     /** Releases every per-engine resource. Called when the plugin detaches from the engine. */
     fun dispose() {
+        displayManager.unregisterDisplayListener(displayListener)
         releaseSession()
         lifecycleOwner.destroy()
         recognizer.close()
@@ -147,6 +171,10 @@ internal class TextSightCamera(
         }
     }
 
+    /** The live display rotation as a `Surface.ROTATION_*`, driving [ImageAnalysis]'s target rotation. */
+    private fun currentRotation(): Int =
+        displayManager.getDisplay(Display.DEFAULT_DISPLAY)?.rotation ?: Surface.ROTATION_0
+
     private fun bindUseCases() {
         val provider = cameraProvider ?: return
         val producer = surfaceProducer ?: return
@@ -162,6 +190,7 @@ internal class TextSightCamera(
 
         val analysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .setTargetRotation(currentRotation())
             .build()
         imageAnalysis = analysis
 
@@ -193,13 +222,18 @@ internal class TextSightCamera(
 
         recognizer.process(InputImage.fromMediaImage(mediaImage, rotationDegrees))
             .addOnSuccessListener(analysisExecutor) { visionText ->
-                val frame = encodeFrame(visionText, imageWidth, imageHeight)
+                val frame = encodeFrame(visionText, imageWidth, imageHeight, rotationDegrees / 90)
                 mainHandler.post { eventSink?.success(frame) }
             }
             .addOnCompleteListener { imageProxy.close() }
     }
 
-    private fun encodeFrame(visionText: Text, imageWidth: Int, imageHeight: Int): Map<String, Any?> {
+    private fun encodeFrame(
+        visionText: Text,
+        imageWidth: Int,
+        imageHeight: Int,
+        quarterTurns: Int,
+    ): Map<String, Any?> {
         val width = imageWidth.toDouble()
         val height = imageHeight.toDouble()
 
@@ -214,7 +248,12 @@ internal class TextSightCamera(
                 encodeLine(line, boundingBox, width, height)
             }
 
-        return mapOf("imageWidth" to width, "imageHeight" to height, "lines" to lines)
+        return mapOf(
+            "imageWidth" to width,
+            "imageHeight" to height,
+            "quarterTurns" to quarterTurns,
+            "lines" to lines,
+        )
     }
 
     private fun encodeLine(

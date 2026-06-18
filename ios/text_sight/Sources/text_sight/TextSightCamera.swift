@@ -2,6 +2,7 @@ import AVFoundation
 import CoreMedia
 import CoreVideo
 import Flutter
+import ImageIO
 import Vision
 
 /// Owns the `AVCaptureSession`, the Vision recognizer, and the preview texture for one live
@@ -29,9 +30,13 @@ final class TextSightCamera: NSObject {
   private var textureId: Int64?
   private var latestPixelBuffer: CVPixelBuffer?
   private var captureDevice: AVCaptureDevice?
-  private var videoDataOutput: AVCaptureVideoDataOutput?
   private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
   private var rotationObservation: NSKeyValueObservation?
+
+  /// Clockwise degrees (from the rotation coordinator) to rotate the sensor buffer upright. The
+  /// buffer is delivered unrotated; this drives the Vision orientation and the reported
+  /// `quarterTurns` that `TextSightView` applies to the preview texture.
+  private var currentRotationAngle: CGFloat = 0
 
   // Recognizer config, stored as the Pigeon transport types and translated to Vision per frame
   // (a `RecognizeTextRequest` is a cheap value type, so there is no shared mutable request to race).
@@ -158,7 +163,6 @@ final class TextSightCamera: NSObject {
     output.setSampleBufferDelegate(self, queue: captureQueue)
     guard session.canAddOutput(output) else { throw CameraError.cannotAddOutput }
     session.addOutput(output)
-    videoDataOutput = output
 
     session.commitConfiguration()
 
@@ -174,33 +178,29 @@ final class TextSightCamera: NSObject {
     return id
   }
 
-  /// Drives the video-output rotation off live device orientation via an
-  /// `AVCaptureDevice.RotationCoordinator` (iOS 17+) so the preview texture and Vision always see
-  /// an upright frame — the buffer dimensions (and the per-frame imageWidth/imageHeight) swap with
-  /// orientation, and normalized boxes stay in display space. Observing the *preview* angle keeps
-  /// the displayed texture WYSIWYG; `.up` then suffices for Vision.
+  /// Tracks the device→upright rotation via an `AVCaptureDevice.RotationCoordinator` (iOS 17+).
+  /// The buffer itself is delivered unrotated — cheaper, and it avoids relying on data-output
+  /// rotation; instead the angle is reported to Dart as `quarterTurns` (so `TextSightView` rotates
+  /// the preview texture) and is used to orient Vision so recognition stays upright and boxes come
+  /// out display-oriented.
   private func startTrackingRotation(for device: AVCaptureDevice) {
     let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
     rotationCoordinator = coordinator
 
-    applyCaptureRotation(coordinator.videoRotationAngleForHorizonLevelPreview)
+    updateRotationAngle(coordinator.videoRotationAngleForHorizonLevelCapture)
     rotationObservation = coordinator.observe(
-      \.videoRotationAngleForHorizonLevelPreview, options: [.new]
+      \.videoRotationAngleForHorizonLevelCapture, options: [.new]
     ) { [weak self] _, change in
       guard let self, let angle = change.newValue else { return }
 
-      self.sessionQueue.async { self.applyCaptureRotation(angle) }
+      self.updateRotationAngle(angle)
     }
   }
 
-  /// Applies `angle` to the video-output connection when supported, keeping delivered buffers
-  /// upright for the current device orientation.
-  private func applyCaptureRotation(_ angle: CGFloat) {
-    guard let connection = videoDataOutput?.connection(with: .video),
-          connection.isVideoRotationAngleSupported(angle)
-    else { return }
-
-    connection.videoRotationAngle = angle
+  private func updateRotationAngle(_ angle: CGFloat) {
+    stateLock.lock()
+    currentRotationAngle = angle
+    stateLock.unlock()
   }
 
   /// Releases every per-session resource. Idempotent — safe on dispose and on engine detach.
@@ -225,7 +225,6 @@ final class TextSightCamera: NSObject {
     stateLock.unlock()
 
     releasedTextureId.map { textureRegistry.unregisterTexture($0) }
-    videoDataOutput = nil
     captureDevice = nil
   }
 
@@ -238,7 +237,10 @@ final class TextSightCamera: NSObject {
     let level = recognitionLevel
     let languages = recognitionLanguages
     let roi = regionOfInterest
+    let angle = currentRotationAngle
     stateLock.unlock()
+
+    let rotation = Self.displayRotation(forCaptureAngle: angle)
 
     var request = RecognizeTextRequest()
     request.recognitionLevel = level == .accurate ? .accurate : .fast
@@ -253,17 +255,24 @@ final class TextSightCamera: NSObject {
                                                 width: roi.width, height: roi.height)
     }
 
-    let imageWidth = Double(CVPixelBufferGetWidth(pixelBuffer))
-    let imageHeight = Double(CVPixelBufferGetHeight(pixelBuffer))
+    // The buffer is sensor-oriented; report its display-oriented size (axes swap on a quarter
+    // turn) to match the boxes Vision returns in the oriented space.
+    let bufferWidth = Double(CVPixelBufferGetWidth(pixelBuffer))
+    let bufferHeight = Double(CVPixelBufferGetHeight(pixelBuffer))
+    let imageWidth = rotation.isQuarterTurned ? bufferHeight : bufferWidth
+    let imageHeight = rotation.isQuarterTurned ? bufferWidth : bufferHeight
 
     Task { [weak self] in
       defer { self?.finishProcessing() }
 
       // Drop a single failed frame rather than tearing down the session (CODESTYLE: `try?`).
-      guard let observations = try? await request.perform(on: pixelBuffer, orientation: .up)
+      guard
+        let observations = try? await request.perform(on: pixelBuffer,
+                                                       orientation: rotation.orientation)
       else { return }
 
-      let frame = Self.encodeFrame(observations, imageWidth: imageWidth, imageHeight: imageHeight)
+      let frame = Self.encodeFrame(observations, imageWidth: imageWidth, imageHeight: imageHeight,
+                                   quarterTurns: rotation.quarterTurns)
       self?.emit(frame)
     }
   }
@@ -291,7 +300,8 @@ final class TextSightCamera: NSObject {
   /// Encodes observations into the self-describing per-frame map — byte-identical to the shape
   /// the Android side emits over `com.LahaLuhem.text_sight/captures`.
   private static func encodeFrame(_ observations: [RecognizedTextObservation],
-                                  imageWidth: Double, imageHeight: Double) -> [String: Any] {
+                                  imageWidth: Double, imageHeight: Double,
+                                  quarterTurns: Int) -> [String: Any] {
     let lines = observations.compactMap { observation -> [String: Any]? in
       guard let candidate = observation.topCandidates(1).first else { return nil }
 
@@ -311,7 +321,26 @@ final class TextSightCamera: NSObject {
       ]
     }
 
-    return ["imageWidth": imageWidth, "imageHeight": imageHeight, "lines": lines]
+    return [
+      "imageWidth": imageWidth,
+      "imageHeight": imageHeight,
+      "quarterTurns": quarterTurns,
+      "lines": lines,
+    ]
+  }
+
+  /// Maps the coordinator's clockwise-to-upright `angle` (degrees) to the preview quarter-turns
+  /// (clockwise, for Flutter's `RotatedBox`), the matching Vision orientation for the *unrotated*
+  /// buffer, and whether the axes swap. If the on-device preview comes out rotated the wrong way,
+  /// this single mapping (the angle↔orientation convention) is the knob to adjust.
+  private static func displayRotation(forCaptureAngle angle: CGFloat)
+    -> (quarterTurns: Int, orientation: CGImagePropertyOrientation, isQuarterTurned: Bool) {
+    switch (Int(angle.rounded()) % 360 + 360) % 360 {
+    case 90: return (1, .left, true)
+    case 180: return (2, .down, false)
+    case 270: return (3, .right, true)
+    default: return (0, .up, false)
+    }
   }
 
   private static let normalizedUnitSize = CGSize(width: 1, height: 1)

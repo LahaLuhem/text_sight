@@ -89,7 +89,12 @@ class _TextSightViewState extends State<TextSightView> {
       return Stack(
         fit: .expand,
         children: [
-          Texture(textureId: textureId),
+          // The preview texture is delivered in the camera's raw orientation; rotate it to
+          // display-upright. The overlay stays unrotated — its boxes are already display-oriented.
+          RotatedBox(
+            quarterTurns: capture?.quarterTurns ?? 0,
+            child: Texture(textureId: textureId),
+          ),
           if (overlayBuilder != null && capture != null)
             LayoutBuilder(
               builder: (context, constraints) => overlayBuilder(context, capture, constraints),
@@ -101,6 +106,14 @@ class _TextSightViewState extends State<TextSightView> {
 
   void _subscribe() => _subscription = widget.controller.captures.listen((capture) {
     widget.onResult?.call(capture);
-    if (widget.overlayBuilder != null) setState(() => _capture = capture);
+
+    // Rebuild for the overlay (every frame) or when the preview rotation changes; otherwise keep
+    // the latest capture without a rebuild — an unchanged rotation has nothing new to paint.
+    final rotationChanged = capture.quarterTurns != _capture?.quarterTurns;
+    if (widget.overlayBuilder != null || rotationChanged) {
+      setState(() => _capture = capture);
+    } else {
+      _capture = capture;
+    }
   });
 }

@@ -199,18 +199,21 @@ void main() {
       )
       .when('the platform receives the first capture')
       .then('the capture size is <imageWidth> by <imageHeight>')
+      .and('the capture reports quarterTurns <quarterTurns>')
       .and('each decoded line matches the lines table (text, confidence, box)')
-      .example(val('imageWidth', 1920), val('imageHeight', 1080))
+      .example(val('imageWidth', 1920), val('imageHeight', 1080), val('quarterTurns', 1))
       .run((ctx) async {
         final platform = PigeonTextSightPlatform();
         final imageWidth = ctx.example.val('imageWidth') as int;
         final imageHeight = ctx.example.val('imageHeight') as int;
+        final quarterTurns = ctx.example.val('quarterTurns') as int;
         final lineRows = ctx.table('lines').rows;
 
         _mockCaptures(messenger, <Object?>[
           <Object?, Object?>{
             'imageWidth': imageWidth.toDouble(),
             'imageHeight': imageHeight.toDouble(),
+            'quarterTurns': quarterTurns,
             'lines': [for (final lineRow in lineRows) _wireLine(lineRow)],
           },
         ]);
@@ -218,6 +221,7 @@ void main() {
         final capture = await platform.captures.first;
 
         check(capture.imageSize).equals(Size(imageWidth.toDouble(), imageHeight.toDouble()));
+        check(capture.quarterTurns).equals(quarterTurns);
         check<Iterable<Object?>>(capture.lines).length.equals(lineRows.length);
 
         for (final (index, expected) in lineRows.indexed) {
@@ -240,6 +244,7 @@ void main() {
       .given('the camera emits one frame sized <imageWidth> by <imageHeight> with no lines')
       .when('the platform receives the first capture')
       .then('the capture has no lines, sized <imageWidth> by <imageHeight>')
+      .and('quarterTurns defaults to 0 when the frame omits it')
       .example(val('imageWidth', 640), val('imageHeight', 480))
       .run((ctx) async {
         final platform = PigeonTextSightPlatform();
@@ -258,6 +263,8 @@ void main() {
 
         check<Iterable<Object?>>(capture.lines).isEmpty();
         check(capture.imageSize).equals(Size(imageWidth.toDouble(), imageHeight.toDouble()));
+        // quarterTurns is absent from this frame map → defaults to 0.
+        check(capture.quarterTurns).equals(0);
       });
 }
 
