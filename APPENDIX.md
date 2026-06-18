@@ -178,10 +178,12 @@ orientation — rotating frames natively is either costly or unreliable across t
 `AVCaptureVideoDataOutput` connection rotation is fiddly). Each frame therefore carries
 `quarterTurns`: the clockwise quarter-turns `TextSightView` applies via a `RotatedBox` to bring the
 texture into the same display orientation the boxes already use — so the overlay aligns **without a
-per-platform branch in Dart**. On Android `quarterTurns` is the `ImageProxy` rotation ÷ 90; on iOS it
-comes from `AVCaptureDevice.RotationCoordinator`, which also selects the `CGImagePropertyOrientation`
-handed to Vision so recognition stays upright. A still image is already upright, so the static
-one-shot reports `0`.
+per-platform branch in Dart**. On Android `quarterTurns` is the `ImageProxy` rotation ÷ 90, kept live by mirroring the display
+rotation into `ImageAnalysis.targetRotation` (a headless plugin session gets no automatic
+orientation updates, so a `DisplayManager.DisplayListener` drives it — without it only portrait is
+right); on iOS it comes from `AVCaptureDevice.RotationCoordinator`, which also selects the
+`CGImagePropertyOrientation` handed to Vision so recognition stays upright. A still image is already
+upright, so the static one-shot reports `0`.
 
 **Region-of-interest uses the same contract.** The ROI is a `Rect` in the same normalized
 `[0,1]` top-left space as the output boxes (not pixels) — a debug `assert` at the consuming

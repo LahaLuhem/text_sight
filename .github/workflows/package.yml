@@ -42,24 +42,66 @@ jobs:
       - uses: ./.github/actions/setup-flutter
       - run: flutter --no-version-check test
 
-# ===========================================================================
-# DEFERRED: native plugin CI — add once the recognition code lands.
-#
-# This package's defining guarantee is that iOS links ZERO third-party ML
-# libraries (no GoogleMLKit) — see APPENDIX.md#no-bundling. The Dart jobs above
-# run on ubuntu and don't exercise the native sides at all. When the Swift
-# (Vision) and Kotlin (ML Kit) recognizers + the example app exist, add a
-# macOS-runner job that:
-#   - builds the example for iOS and Android, and
-#   - asserts the no-bundling invariant held, e.g.:
-#       cd example && flutter build ios --config-only --no-codesign
-#       rg -i 'mlkit|googlemlkit|MLImage' ios   # expect: NO matches (example uses SPM, no Podfile.lock)
-# Optionally add a Pigeon-codegen-freshness check: regenerate from
-# pigeons/text_sight.dart, run `dart format` on the output, then assert
-# lib/src/platform/messages.g.dart is unchanged. The format step is required —
-# Pigeon emits ~80-col Dart and the formatter gate (page_width 100) reformats it,
-# so a raw regenerate-and-diff would always report a spurious change.
-#
-# Deferred for now: there is no native recognition code to build and no
-# example/ app scaffolded yet, so these jobs would have nothing real to run.
-# ===========================================================================
+  # --- Native plugin CI -----------------------------------------------------
+  # The package's defining guarantee is that iOS links ZERO third-party ML
+  # libraries (no GoogleMLKit) — APPENDIX.md#no-bundling. The Dart jobs above
+  # never touch the native sides, so these build the example app per platform.
+
+  android-example:
+    name: Android example build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: ./.github/actions/setup-flutter
+        with:
+          working-directory: example
+      # --release so R8 runs over the Kotlin + ML Kit deps and the Kotlin compiles.
+      # (Runtime R8 breakage — e.g. missing keep rules in consumer-rules.pro — only
+      # shows when the app runs, so catching that fully would need an emulator smoke
+      # test; this guards compile- and shrink-time regressions.)
+      - run: flutter --no-version-check build apk --release
+        working-directory: example
+
+  ios-example:
+    name: iOS example build + no-bundling
+    # macOS runners cost ~10x Linux, so only build iOS on pull requests.
+    if: github.event_name == 'pull_request'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-flutter
+        with:
+          working-directory: example
+      # Full build (no signing) so the Swift compiles and the SPM graph is generated.
+      - run: flutter --no-version-check build ios --release --no-codesign
+        working-directory: example
+      # No-bundling: no ML Kit anywhere under example/ios — sources AND the generated
+      # SPM manifest (FlutterGeneratedPluginSwiftPackage). grep (not rg) so the
+      # gitignored generated path is scanned; -I skips built binaries.
+      - name: Assert no ML Kit on the iOS side
+        run: |
+          if grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios; then
+            echo "::error::ML Kit found under example/ios — no-bundling invariant (APPENDIX.md#no-bundling) broken."
+            exit 1
+          fi
+
+  pigeon-freshness:
+    name: Pigeon codegen freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-flutter
+      # Regenerate, then format the Dart output (Pigeon emits ~80-col; the gate is
+      # 100) — the repo's two-step regen — then assert nothing changed.
+      - run: dart run pigeon --input pigeons/text_sight.dart
+      - run: dart format lib/src/platform/messages.g.dart
+      - name: Assert generated code is up to date
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Pigeon output is stale — run: dart run pigeon --input pigeons/text_sight.dart && dart format lib/src/platform/messages.g.dart"
+            exit 1
+          fi
