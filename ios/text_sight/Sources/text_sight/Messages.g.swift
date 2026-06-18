@@ -361,6 +361,10 @@ protocol TextSightHostApi {
   func setLanguages(languages: [String]) throws
   /// Turns the camera torch on or off.
   func setTorchEnabled(enabled: Bool) throws
+  /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
+  func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage, completion: @escaping (Result<[String: Any?], Error>) -> Void)
+  /// Recognizes text in the image at file [path], honouring [options].
+  func recognizePath(path: String, options: TextSightOptionsMessage, completion: @escaping (Result<[String: Any?], Error>) -> Void)
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -498,6 +502,44 @@ class TextSightHostApiSetup {
       }
     } else {
       setTorchEnabledChannel.setMessageHandler(nil)
+    }
+    /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
+    let recognizeImageChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.recognizeImage\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      recognizeImageChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let bytesArg = args[0] as! FlutterStandardTypedData
+        let optionsArg = args[1] as! TextSightOptionsMessage
+        api.recognizeImage(bytes: bytesArg, options: optionsArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      recognizeImageChannel.setMessageHandler(nil)
+    }
+    /// Recognizes text in the image at file [path], honouring [options].
+    let recognizePathChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.recognizePath\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      recognizePathChannel.setMessageHandler { message, reply in
+        let args = message as! [Any?]
+        let pathArg = args[0] as! String
+        let optionsArg = args[1] as! TextSightOptionsMessage
+        api.recognizePath(path: pathArg, options: optionsArg) { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      recognizePathChannel.setMessageHandler(nil)
     }
   }
 }

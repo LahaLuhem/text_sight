@@ -6,6 +6,7 @@
 /// recognizer and models.
 library;
 
+export 'src/capture/text_sight.dart';
 export 'src/capture/text_sight_controller.dart';
 export 'src/recognition/recognition_level.dart';
 export 'src/recognition/recognized_element.dart';

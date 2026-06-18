@@ -1,3 +1,4 @@
+import 'dart:typed_data' show Uint8List;
 import 'dart:ui' show Locale, Rect;
 
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -69,4 +70,16 @@ abstract class TextSightPlatform extends PlatformInterface {
   /// The live per-frame results stream, backed by a plain `EventChannel`.
   Stream<TextSightCapture> get captures =>
       throw UnimplementedError('captures has not been implemented.');
+
+  // Static one-shot driver — no camera session, texture, or permission. Both return a capture
+  // whose `quarterTurns` is 0 (a still is upright), built from the same recognizer and models
+  // as the live path.
+
+  /// Recognizes text in the encoded still-image [bytes] using [options].
+  Future<TextSightCapture> recognizeImage(Uint8List bytes, TextSightOptions options) =>
+      throw UnimplementedError('recognizeImage() has not been implemented.');
+
+  /// Recognizes text in the still image at [path] using [options].
+  Future<TextSightCapture> recognizePath(String path, TextSightOptions options) =>
+      throw UnimplementedError('recognizePath() has not been implemented.');
 }

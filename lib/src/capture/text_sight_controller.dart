@@ -4,6 +4,7 @@ import 'dart:ui' show Locale, Rect;
 import 'package:flutter/foundation.dart';
 
 import '../platform/text_sight_platform.dart';
+import '../recognition/normalized_roi.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
@@ -29,7 +30,7 @@ class TextSightController extends ChangeNotifier {
     TextSightOptions options = const TextSightOptions(),
     bool torchEnabled = false,
   }) : assert(
-         _isNormalizedRoi(options.roi),
+         options.roi.isNormalizedRoi,
          'Region-of-interest must be a normalized [0,1] rect with positive extent.',
        ),
        _level = options.level,
@@ -97,7 +98,7 @@ class TextSightController extends ChangeNotifier {
   /// Restricts recognition to [roi], or clears it (whole frame) when `null`.
   Future<void> setRegionOfInterest(Rect? roi) async {
     assert(
-      _isNormalizedRoi(roi),
+      roi.isNormalizedRoi,
       'Region-of-interest must be a normalized [0,1] rect with positive extent.',
     );
     await TextSightPlatform.instance.setRegionOfInterest(roi);
@@ -119,13 +120,3 @@ class TextSightController extends ChangeNotifier {
     super.dispose();
   }
 }
-
-/// Whether [roi] is a valid region-of-interest: null, or a normalized `[0, 1]` rect with positive extent.
-bool _isNormalizedRoi(Rect? roi) =>
-    roi == null ||
-    (roi.left >= 0 &&
-        roi.top >= 0 &&
-        roi.right <= 1 &&
-        roi.bottom <= 1 &&
-        roi.width > 0 &&
-        roi.height > 0);

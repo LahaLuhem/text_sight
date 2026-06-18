@@ -369,6 +369,10 @@ interface TextSightHostApi {
   fun setLanguages(languages: List<String>)
   /** Turns the camera torch on or off. */
   fun setTorchEnabled(enabled: Boolean)
+  /** Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options]. */
+  fun recognizeImage(bytes: ByteArray, options: TextSightOptionsMessage, callback: (Result<Map<String, Any?>>) -> Unit)
+  /** Recognizes text in the image at file [path], honouring [options]. */
+  fun recognizePath(path: String, options: TextSightOptionsMessage, callback: (Result<Map<String, Any?>>) -> Unit)
 
   companion object {
     /** The codec used by TextSightHostApi. */
@@ -517,6 +521,48 @@ interface TextSightHostApi {
               MessagesPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.recognizeImage$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val bytesArg = args[0] as ByteArray
+            val optionsArg = args[1] as TextSightOptionsMessage
+            api.recognizeImage(bytesArg, optionsArg) { result: Result<Map<String, Any?>> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.recognizePath$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { message, reply ->
+            val args = message as List<Any?>
+            val pathArg = args[0] as String
+            val optionsArg = args[1] as TextSightOptionsMessage
+            api.recognizePath(pathArg, optionsArg) { result: Result<Map<String, Any?>> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
           }
         } else {
           channel.setMessageHandler(null)

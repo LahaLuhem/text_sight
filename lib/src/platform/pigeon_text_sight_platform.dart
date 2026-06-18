@@ -58,6 +58,14 @@ class PigeonTextSightPlatform extends TextSightPlatform {
 
   @override
   Stream<TextSightCapture> get captures => _captures;
+
+  @override
+  Future<TextSightCapture> recognizeImage(Uint8List bytes, TextSightOptions options) async =>
+      _decodeCapture(await _hostApi.recognizeImage(bytes, options._toMessage()));
+
+  @override
+  Future<TextSightCapture> recognizePath(String path, TextSightOptions options) async =>
+      _decodeCapture(await _hostApi.recognizePath(path, options._toMessage()));
 }
 
 /// Maps the public recognizer config to its Pigeon transport twin.
@@ -71,8 +79,8 @@ extension on TextSightOptions {
 
 extension on RecognitionLevel {
   RecognitionLevelMessage _toMessage() => switch (this) {
-    RecognitionLevel.fast => RecognitionLevelMessage.fast,
-    RecognitionLevel.accurate => RecognitionLevelMessage.accurate,
+    .fast => .fast,
+    .accurate => .accurate,
   };
 }
 
@@ -98,7 +106,7 @@ TextSightCapture _decodeCapture(Object? event) {
     ),
     // Absent on an already-upright source (e.g. the static one-shot); defaults to no rotation.
     quarterTurns: (frameMap['quarterTurns'] as num?)?.toInt() ?? 0,
-    lines: [for (final rawLine in rawLines) _decodeLine(rawLine)],
+    lines: rawLines.map(_decodeLine).toList(growable: false),
   );
 }
 

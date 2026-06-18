@@ -20,6 +20,7 @@ void main() {
 
   final control = BddFeature('TextSight control channel');
   final captures = BddFeature('TextSight captures stream');
+  final oneShot = BddFeature('TextSight one-shot recognition');
 
   Bdd(control)
       .scenario('Recognition level is sent as its Pigeon twin')
@@ -266,6 +267,91 @@ void main() {
         // quarterTurns is absent from this frame map → defaults to 0.
         check(capture.quarterTurns).equals(0);
       });
+
+  Bdd(oneShot)
+      .scenario('recognizeImage sends the bytes and mapped options, then decodes the reply')
+      .given('a host that replies with a still-image capture sized <imageWidth> by <imageHeight>')
+      .when('recognizeImage is called with bytes and the <level> level')
+      .then('the host receives the bytes and an options twin carrying <twin>')
+      .and('the decoded capture is sized <imageWidth> by <imageHeight>, quarterTurns 0, one line')
+      .example(
+        val('level', RecognitionLevel.accurate),
+        val('twin', RecognitionLevelMessage.accurate),
+        val('imageWidth', 800),
+        val('imageHeight', 600),
+      )
+      .run((ctx) async {
+        final platform = PigeonTextSightPlatform();
+        final imageWidth = ctx.example.val('imageWidth') as int;
+        final imageHeight = ctx.example.val('imageHeight') as int;
+        final bytes = Uint8List.fromList(const [0, 1, 2, 3, 4]);
+        final call = _mockHostMethod(
+          messenger,
+          'recognizeImage',
+          reply: _stillReply(imageWidth, imageHeight),
+        );
+
+        final capture = await platform.recognizeImage(
+          bytes,
+          TextSightOptions(level: ctx.example.val('level') as RecognitionLevel),
+        );
+
+        final payload = call.payload! as List<Object?>;
+        check<Iterable<int>>(payload.first! as Uint8List).deepEquals(bytes);
+        check(
+          (payload[1]! as TextSightOptionsMessage).level,
+        ).equals(ctx.example.val('twin') as RecognitionLevelMessage);
+        check(capture.imageSize).equals(Size(imageWidth.toDouble(), imageHeight.toDouble()));
+        check(capture.quarterTurns).equals(0);
+        check<Iterable<Object?>>(capture.lines).length.equals(1);
+        check(capture.lines.single.text).equals('STILL');
+      });
+
+  Bdd(oneShot)
+      .scenario('recognizePath sends the path and mapped options, then decodes the reply')
+      .given('a host that replies with a still-image capture sized <imageWidth> by <imageHeight>')
+      .when('recognizePath is called with the path <path>')
+      .then('the host receives <path> and an accurate options twin')
+      .and('the decoded capture is sized <imageWidth> by <imageHeight> with quarterTurns 0')
+      .example(val('path', '/tmp/sign.jpg'), val('imageWidth', 1024), val('imageHeight', 768))
+      .run((ctx) async {
+        final platform = PigeonTextSightPlatform();
+        final path = ctx.example.val('path') as String;
+        final imageWidth = ctx.example.val('imageWidth') as int;
+        final imageHeight = ctx.example.val('imageHeight') as int;
+        final call = _mockHostMethod(
+          messenger,
+          'recognizePath',
+          reply: _stillReply(imageWidth, imageHeight),
+        );
+
+        final capture = await platform.recognizePath(
+          path,
+          const TextSightOptions(level: RecognitionLevel.accurate),
+        );
+
+        final payload = call.payload! as List<Object?>;
+        check(payload.first).equals(path);
+        check(
+          (payload[1]! as TextSightOptionsMessage).level,
+        ).equals(RecognitionLevelMessage.accurate);
+        check(capture.imageSize).equals(Size(imageWidth.toDouble(), imageHeight.toDouble()));
+        check(capture.quarterTurns).equals(0);
+      });
+
+  Bdd(oneShot)
+      .scenario('TextSight.recognizeImage defaults the recognition level to accurate')
+      .given('the default platform instance talking to a mocked host')
+      .when('TextSight.recognizeImage is called without options')
+      .then('the host receives an options twin whose level is accurate')
+      .run((_) async {
+        final call = _mockHostMethod(messenger, 'recognizeImage', reply: _stillReply(1, 1));
+
+        await TextSight.recognizeImage(Uint8List.fromList(const [9]));
+
+        final options = (call.payload! as List<Object?>)[1]! as TextSightOptionsMessage;
+        check(options.level).equals(RecognitionLevelMessage.accurate);
+      });
 }
 
 /// Records the decoded argument payload a mocked host method receives.
@@ -316,4 +402,23 @@ Map<String, Object?> _wireLine(BddTableValues row) => <String, Object?>{
   'width': row.val('width'),
   'height': row.val('height'),
   'elements': null,
+};
+
+/// A one-shot host reply: the same captures wire map a single upright line would
+/// produce (`quarterTurns` 0), sized [imageWidth] by [imageHeight].
+Map<String, Object?> _stillReply(int imageWidth, int imageHeight) => <String, Object?>{
+  'imageWidth': imageWidth.toDouble(),
+  'imageHeight': imageHeight.toDouble(),
+  'quarterTurns': 0,
+  'lines': <Object?>[
+    <String, Object?>{
+      'text': 'STILL',
+      'confidence': 0.9,
+      'left': 0.1,
+      'top': 0.1,
+      'width': 0.5,
+      'height': 0.1,
+      'elements': null,
+    },
+  ],
 };

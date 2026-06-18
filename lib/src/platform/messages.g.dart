@@ -387,4 +387,47 @@ class TextSightHostApi {
 
     _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
   }
+
+  /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
+  Future<Map<String, Object?>> recognizeImage(
+    Uint8List bytes,
+    TextSightOptionsMessage options,
+  ) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.text_sight.TextSightHostApi.recognizeImage$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[bytes, options]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return (pigeonVar_replyValue! as Map<Object?, Object?>).cast<String, Object?>();
+  }
+
+  /// Recognizes text in the image at file [path], honouring [options].
+  Future<Map<String, Object?>> recognizePath(String path, TextSightOptionsMessage options) async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.text_sight.TextSightHostApi.recognizePath$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[path, options]);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return (pigeonVar_replyValue! as Map<Object?, Object?>).cast<String, Object?>();
+  }
 }

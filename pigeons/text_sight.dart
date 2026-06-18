@@ -80,4 +80,17 @@ abstract class TextSightHostApi {
 
   /// Turns the camera torch on or off.
   void setTorchEnabled(bool enabled);
+
+  // Static one-shot driver — no camera session, texture, or permission. Each call runs a
+  // transient native recognizer over a still image and returns the same self-describing
+  // per-frame map the captures EventChannel emits (decoded Dart-side by `_decodeCapture`), so
+  // the result models need no Pigeon twin. `quarterTurns` is 0 — a still is already upright.
+
+  /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
+  @async
+  Map<String, Object?> recognizeImage(Uint8List bytes, TextSightOptionsMessage options);
+
+  /// Recognizes text in the image at file [path], honouring [options].
+  @async
+  Map<String, Object?> recognizePath(String path, TextSightOptionsMessage options);
 }
