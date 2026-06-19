@@ -6,6 +6,11 @@
 # Test sources.
 test/
 
+# Benchmark suite — maintainer-only codec micro-benchmark. Imports nothing
+# shippable (works on plain-Dart stand-ins, not lib/), and ships nothing to
+# downstream users. Excluded entirely. See benchmark/README.md.
+benchmark/
+
 # Local-dev config — consumer machines have their own.
 .fvmrc
 analysis_options.yaml

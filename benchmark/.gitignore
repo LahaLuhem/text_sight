@@ -1,0 +1,8 @@
+# AOT-compiled benchmark executables — produced by `dart compile exe`.
+# Reproducible from source; not tracked.
+build/
+
+# Per-machine, per-clone run outputs. Cross-machine perf comparison is
+# misleading (CPU, GC tuning, OS scheduler all differ), so nothing here is
+# committed — capture your own baseline locally before measuring a delta.
+results-local/

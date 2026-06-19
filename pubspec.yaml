@@ -31,6 +31,12 @@ dev_dependencies:
   pigeon: ^27.1.0
   checks: ^0.3.1
   bdd_framework: ^4.0.7
+  # Maintainer-only — the `benchmark/` codec micro-benchmark (excluded from the
+  # published tarball via .pubignore). `standard_message_codec` is the pure-Dart
+  # extraction of Flutter's platform-channel codec, so the benches run as plain
+  # `dart compile exe` with no Flutter binding.
+  benchmark_harness: ^2.4.0
+  standard_message_codec: ^0.0.1+5
 
 
 
