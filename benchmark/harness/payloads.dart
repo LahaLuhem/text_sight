@@ -1,9 +1,13 @@
+// The profile enum is intentionally defined before the file's main type, for
+// enum-first readability.
+// ignore_for_file: prefer-match-file-name
+
 import 'dart:math';
 
 import 'bench_capture.dart';
 
-/// Realistic OCR-frame profiles, parameterised by rough line count and text
-/// length. Each value is a representative use case the suite reports on.
+/// Realistic OCR-frame profiles, parameterised by rough line count and text.
+/// Each value is a representative use case the suite reports on.
 enum PayloadProfile {
   /// A street sign or label: a few short lines.
   sign(minLines: 1, maxLines: 3, minTextLen: 3, maxTextLen: 14),
@@ -43,18 +47,18 @@ enum PayloadProfile {
 /// produces byte-identical payloads — a prerequisite for comparable numbers.
 abstract final class Payloads {
   /// Line counts swept to chart how each candidate scales with frame size.
-  static const sweepLineCounts = <int>[1, 5, 10, 25, 50, 100];
+  static const sweepLineCounts = [1, 5, 10, 25, 50, 100];
 
   static const _confidenceChance = 0.9;
   static const _alphabet = 'abcdefghijklmnopqrstuvwxyz      ';
 
   /// Builds a fixed-size frame of [lineCount] lines (the scaling sweep).
   static BenchCapture sweep(int lineCount) =>
-      _build(Random(0x51770000 + lineCount), lineCount, minTextLen: 12, maxTextLen: 24);
+      _build(Random(lineCount + 0x51770000), lineCount, minTextLen: 12, maxTextLen: 24);
 
   /// Builds a frame matching [profile] (a realistic use case).
   static BenchCapture profile(PayloadProfile profile) {
-    final rng = Random(0x51760000 + profile.index);
+    final rng = Random(profile.index + 0x51760000);
     final span = profile.maxLines - profile.minLines + 1;
     final lineCount = profile.minLines + rng.nextInt(span);
 
@@ -72,11 +76,11 @@ abstract final class Payloads {
       for (var i = 0; i < lineCount; i++)
         BenchLine(
           text: _text(rng, minTextLen + rng.nextInt(textSpan)),
-          confidence: rng.nextDouble() < _confidenceChance ? 0.5 + rng.nextDouble() / 2.0 : null,
+          confidence: rng.nextDouble() < _confidenceChance ? rng.nextDouble() / 2.0 + 0.5 : null,
           left: rng.nextDouble() * 0.9,
           top: rng.nextDouble() * 0.95,
-          width: 0.05 + rng.nextDouble() * 0.35,
-          height: 0.01 + rng.nextDouble() * 0.04,
+          width: rng.nextDouble() * 0.35 + 0.05,
+          height: rng.nextDouble() * 0.04 + 0.01,
         ),
     ];
 

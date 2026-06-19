@@ -1,6 +1,8 @@
+// Shared ergonomics
+// ignore_for_file: prefer-match-file-name, prefer-first
+
 // Multiple candidate codecs share this file by design — the comparison set is
 // the unit, not one class per file.
-// ignore_for_file: prefer-match-file-name
 
 import 'dart:convert';
 import 'dart:typed_data';

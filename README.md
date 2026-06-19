@@ -129,6 +129,29 @@ overlay, a recognized-text panel, torch control, and a one-shot recognition scre
 - **Region of interest** is a normalized `Rect`: iOS restricts Vision to it; Android recognizes
   the full frame and filters lines whose center falls outside it.
 
+## Performance
+
+Each recognition pass crosses from native to Dart as a small per-frame payload over an
+`EventChannel`. Decoding it is the only transport work on the Dart UI isolate — and it's
+**microseconds**: even a dense ~127-line frame decodes in ~55 µs, well under 1% of a 60 fps
+frame budget. The native recognizer's inference, not the result transport, sets the pace.
+
+> **Scope.** These measure the pure-Dart codec only — *not* native (Vision / ML Kit) inference
+> or end-to-end frame latency, which dominate. They bound the per-frame transport cost, nothing
+> more.
+
+![Per-frame decode cost vs frame size](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/decode_vs_lines.png)
+
+![Encoded payload size vs frame size](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/wire_bytes_vs_lines.png)
+
+![Decode cost per realistic OCR profile](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/profile_decode_bars.png)
+
+`map_std` is the encoding that ships today. The leaner candidates (`list_std`, `pigeon`,
+`packed_*`) are a **work-in-progress** evaluation of a possible transport change — the deltas are
+large in percentage terms but tiny in absolute µs, so whether it's worth doing (and by which
+mechanism) is still **TBD**. Methodology and the full numbers live in
+[`benchmark/`](benchmark/README.md).
+
 ## Limitations & known issues
 
 - **iOS 18+ only** for now (the iOS 13–17 path is on the roadmap).

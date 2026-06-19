@@ -3,10 +3,10 @@
 Reproducible benchmarks used to decide perf questions with data, not vibes —
 specifically: **is changing the per-frame result wire representation worth it?**
 
-> **Status: Phase 0 — measurement core.** The Dart codec micro-benchmark below
-> runs and emits JSON. The Python orchestration + chart/report layer (mirroring
-> the sibling `better_internet_connectivity_checker/benchmark`) is **not built
-> yet** — it lands in Phase 1 only if the numbers justify the machinery.
+> **Layers built:** the Dart codec micro-benchmark (emits JSON) and the Python
+> `report` layer (charts + `SUMMARY.md`, under `python/`). There is **no
+> `compare` layer** — no before/after transport exists to diff yet; it lands if
+> a transport change is ever pursued.
 
 ## What this measures — and what it does not
 
@@ -50,6 +50,8 @@ benchmark/
 ├── README.md                  this file
 ├── harness/                   bench_capture · payloads · capture_codec · result_writer · scenario_args
 ├── micro/codec_roundtrip.dart benchmark_harness entrypoint; emits result JSON + a stdout summary
+├── python/                    uv-managed orchestrator: build · run · report (+ tests)
+├── reports/                   committed charts (PNG) + SUMMARY.md
 ├── build/                     AOT exes (gitignored)
 └── results-local/             per-machine run outputs (gitignored)
 ```
@@ -59,24 +61,33 @@ The whole directory is excluded from the published pub.dev tarball via
 
 ## Running
 
-Requires the Dart SDK matching [`.fvmrc`](../.fvmrc) and `dart pub get` at the
-repo root (pulls `benchmark_harness` + `standard_message_codec` from
-`dev_dependencies`).
+Requires the Dart SDK matching [`.fvmrc`](../.fvmrc) (+ `dart pub get` at the
+repo root, for `benchmark_harness` + `standard_message_codec`) and
+[`uv`](https://docs.astral.sh/uv/) for the Python orchestrator.
 
 ```bash
-# AOT compile — deterministic warmup, unlike `dart run`.
-dart compile exe benchmark/micro/codec_roundtrip.dart -o benchmark/build/codec_roundtrip
+cd benchmark/python
+uv sync                                   # one-time: create .venv, install + lock deps
 
-# Run. N=1 for a quick look; bump for a stable distribution.
-benchmark/build/codec_roundtrip \
-  --iterations 10 \
-  --output benchmark/results-local/current/codec_roundtrip.json \
-  --git-sha "$(git rev-parse --short HEAD)" \
-  --package-version 0.0.0
+uv run python run.py build                # AOT-compile (deterministic warmup, unlike `dart run`)
+uv run python run.py run --iterations 10  # execute; writes results-local/current/codec_roundtrip.json
+uv run python run.py report ../results-local/current/codec_roundtrip.json   # charts + SUMMARY.md -> reports/
+
+uv run ruff check . && uv run pytest      # lint + test the orchestrator
 ```
 
-A median table prints to stdout; the full per-iteration records land in the
-`--output` JSON for the (future) Python analysis layer.
+The Dart binary also runs standalone (a median table prints to stdout):
+
+```bash
+benchmark/build/codec_roundtrip --iterations 1 \
+  --output benchmark/results-local/current/codec_roundtrip.json \
+  --git-sha "$(git rev-parse --short HEAD)" --package-version 0.0.0
+```
+
+`report` writes to the committed `reports/` by default; pass `--out` for an
+ad-hoc snapshot. **Capture N≥10 (ideally 30) on a quiet machine before
+committing the canonical charts** — `reports/` is a deliberate, maintainer-only
+refresh, like the sibling suite.
 
 ## Methodology
 

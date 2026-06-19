@@ -12,6 +12,10 @@
 /// microseconds per one encode / decode, not per the harness default of ten.
 library;
 
+// This is an executable benchmark entrypoint with only private helper classes,
+// so no public class matches the file name.
+// ignore_for_file: prefer-match-file-name
+
 import 'dart:io';
 import 'dart:typed_data';
 
