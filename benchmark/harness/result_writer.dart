@@ -65,7 +65,7 @@ final class ResultWriter {
     required Map<String, List<num>> samples,
     required Map<String, num> summary,
   }) {
-    final record = <String, Object?>{
+    final record = {
       'benchmark': benchmark,
       'candidate': candidate,
       'payload': payload,
@@ -98,5 +98,5 @@ final class ResultWriter {
 void forceGc() {
   // ~8 MB of immediately-unreachable garbage to provoke a young-gen sweep.
   // ignore: unused_local_variable
-  final pressure = List<List<int>>.generate(64, (_) => List<int>.filled(16384, 0));
+  final pressure = List.generate(64, (_) => List<int>.filled(16384, 0));
 }

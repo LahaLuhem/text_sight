@@ -8,8 +8,10 @@
 /// Decode is the headline: in production only the decode runs on the Dart UI
 /// isolate per frame (the encode happens natively).
 ///
-/// `exercise()` is overridden to a single `run()` so `measure()` returns
-/// microseconds per one encode / decode, not per the harness default of ten.
+/// Each bench's `exercise()` is one `run()`, and `_measure` runs a bounded
+/// window ([_measureMillis]) instead of `benchmark_harness`'s fixed 2 s
+/// `.measure()` — keeping the 100-cell × N matrix tractable — returning
+/// microseconds per one encode / decode.
 library;
 
 // This is an executable benchmark entrypoint with only private helper classes,
@@ -43,14 +45,11 @@ Future<void> main(List<String> argv) async {
     gitSha: args.gitSha,
   );
 
-  final cases = <_Case>[];
-  for (final count in Payloads.sweepLineCounts) {
-    cases.add((payload: 'sweep', lineCount: count, capture: Payloads.sweep(count)));
-  }
-  for (final profile in PayloadProfile.values) {
-    final capture = Payloads.profile(profile);
-    cases.add((payload: profile.name, lineCount: capture.lines.length, capture: capture));
-  }
+  final cases = [
+    for (final count in Payloads.sweepLineCounts)
+      (payload: 'sweep', lineCount: count, capture: Payloads.sweep(count)),
+    for (final profile in PayloadProfile.values) _profileCase(profile),
+  ];
 
   final rows = <_Row>[];
   for (var i = 0; i < args.iterations; i++) {
@@ -58,19 +57,19 @@ Future<void> main(List<String> argv) async {
       for (final codec in allCodecs) {
         forceGc();
         final encoded = codec.encode(benchCase.capture);
-        final encodeUs = _EncodeBench(codec, benchCase.capture).measure();
-        final decodeUs = _DecodeBench(codec, encoded).measure();
+        final encodeUs = _measure(_EncodeBench(codec, benchCase.capture));
+        final decodeUs = _measure(_DecodeBench(codec, encoded));
 
         writer.writeRecord(
           iteration: i,
           candidate: codec.name,
           payload: benchCase.payload,
           lineCount: benchCase.lineCount,
-          samples: <String, List<num>>{
-            'decode_microseconds': <num>[decodeUs],
-            'encode_microseconds': <num>[encodeUs],
+          samples: {
+            'decode_microseconds': [decodeUs],
+            'encode_microseconds': [encodeUs],
           },
-          summary: <String, num>{
+          summary: {
             'decode_microseconds': decodeUs,
             'encode_microseconds': encodeUs,
             'wire_bytes': encoded.length,
@@ -89,6 +88,33 @@ Future<void> main(List<String> argv) async {
 
   await writer.close();
   _printSummary(rows);
+}
+
+/// One profile case: generates the capture once, then derives its label fields.
+_Case _profileCase(PayloadProfile profile) {
+  final capture = Payloads.profile(profile);
+
+  return (payload: profile.name, lineCount: capture.lines.length, capture: capture);
+}
+
+/// Per-measurement window, in milliseconds. `benchmark_harness`'s `.measure()`
+/// hardcodes 2 s; for these sub-microsecond ops that over-samples and makes the
+/// 100-cell × N matrix cost ~2 s per cell. A shorter window still averages many
+/// runs per point; the N outer iterations supply the distribution. Lower for
+/// speed, raise for steadier per-point estimates.
+const _warmupMillis = 100;
+const _measureMillis = 500;
+
+/// Runs [bench] over one bounded window, returning microseconds per `run()`.
+/// Mirrors `BenchmarkBase.measure()` but with the shorter [_measureMillis]
+/// window, warming caches first (result discarded).
+double _measure(BenchmarkBase bench) {
+  bench.setup();
+  BenchmarkBase.measureFor(bench.exercise, _warmupMillis);
+  final score = BenchmarkBase.measureFor(bench.exercise, _measureMillis);
+  bench.teardown();
+
+  return score;
 }
 
 /// Decodes a fixed encoded buffer per `run()`. The result feeds a checksum so
@@ -144,22 +170,22 @@ void _printSummary(List<_Row> rows) {
 
   final groups = <String, List<_Row>>{};
   for (final row in rows) {
-    groups.putIfAbsent('${row.payload}|${row.lineCount}', () => <_Row>[]).add(row);
+    groups.putIfAbsent('${row.payload}|${row.lineCount}', () => []).add(row);
   }
 
   for (final entry in groups.entries) {
     final decodeByCandidate = <String, List<double>>{};
     final bytesByCandidate = <String, int>{};
     for (final row in entry.value) {
-      decodeByCandidate.putIfAbsent(row.candidate, () => <double>[]).add(row.decodeUs);
+      decodeByCandidate.putIfAbsent(row.candidate, () => []).add(row.decodeUs);
       bytesByCandidate[row.candidate] = row.bytes;
     }
 
-    final baseDecode = _median(decodeByCandidate['map_std'] ?? const <double>[]);
+    final baseDecode = _median(decodeByCandidate['map_std'] ?? const []);
     final baseBytes = bytesByCandidate['map_std'] ?? 0;
     buffer.writeln(entry.key.replaceFirst('|', '  ·  lines='));
     for (final codec in allCodecs) {
-      final decode = _median(decodeByCandidate[codec.name] ?? const <double>[]);
+      final decode = _median(decodeByCandidate[codec.name] ?? const []);
       final bytes = bytesByCandidate[codec.name] ?? 0;
       final decodeCell = '${decode.toStringAsFixed(2)}µs'.padLeft(11);
       final bytesCell = '${bytes}B'.padLeft(8);

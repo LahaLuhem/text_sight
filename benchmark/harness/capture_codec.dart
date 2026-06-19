@@ -1,8 +1,7 @@
 // Shared ergonomics
 // ignore_for_file: prefer-match-file-name, prefer-first
 
-// Multiple candidate codecs share this file by design — the comparison set is
-// the unit, not one class per file.
+// Multiple candidate codecs share this file by design — the comparison set is the unit, not one class per file.
 
 import 'dart:convert';
 import 'dart:typed_data';
@@ -32,9 +31,8 @@ const allCodecs = <CaptureCodec>[
   PackedCodec(name: 'packed_f64', floatBytes: 8),
 ];
 
-/// Baseline: today's wire — a `Map` with a string key per field, through
-/// Flutter's `StandardMessageCodec`. Decode mirrors `_decodeCapture` /
-/// `_decodeLine` exactly (cast each value via `num`).
+/// Baseline: today's wire — a `Map` with a string key per field, through Flutter's `StandardMessageCodec`.
+/// Decode mirrors `_decodeCapture` / `_decodeLine` exactly (cast each value via `num`).
 final class MapStdCodec implements CaptureCodec {
   /// Creates the codec.
   const MapStdCodec();
@@ -46,13 +44,13 @@ final class MapStdCodec implements CaptureCodec {
 
   @override
   Uint8List encode(BenchCapture capture) {
-    final message = <String, Object?>{
+    final message = {
       'imageWidth': capture.imageWidth,
       'imageHeight': capture.imageHeight,
       'quarterTurns': capture.quarterTurns,
-      'lines': <Object?>[
+      'lines': [
         for (final line in capture.lines)
-          <String, Object?>{
+          {
             'text': line.text,
             'confidence': line.confidence,
             'left': line.left,
@@ -76,7 +74,9 @@ final class MapStdCodec implements CaptureCodec {
       imageWidth: (frameMap['imageWidth']! as num).toDouble(),
       imageHeight: (frameMap['imageHeight']! as num).toDouble(),
       quarterTurns: (frameMap['quarterTurns']! as num).toInt(),
-      lines: <BenchLine>[for (final raw in rawLines) _decodeLine(raw! as Map<Object?, Object?>)],
+      lines: rawLines
+          .map((raw) => _decodeLine(raw! as Map<Object?, Object?>))
+          .toList(growable: false),
     );
   }
 
@@ -102,13 +102,13 @@ final class ListStdCodec implements CaptureCodec {
 
   @override
   Uint8List encode(BenchCapture capture) {
-    final message = <Object?>[
+    final message = [
       capture.imageWidth,
       capture.imageHeight,
       capture.quarterTurns,
-      <Object?>[
+      [
         for (final line in capture.lines)
-          <Object?>[line.text, line.confidence, line.left, line.top, line.width, line.height],
+          [line.text, line.confidence, line.left, line.top, line.width, line.height],
       ],
     ];
 
@@ -125,7 +125,7 @@ final class ListStdCodec implements CaptureCodec {
       imageWidth: (frame[0]! as num).toDouble(),
       imageHeight: (frame[1]! as num).toDouble(),
       quarterTurns: (frame[2]! as num).toInt(),
-      lines: <BenchLine>[for (final raw in rawLines) _decodeLine(raw! as List<Object?>)],
+      lines: rawLines.map((raw) => _decodeLine(raw! as List<Object?>)).toList(growable: false),
     );
   }
 
@@ -174,7 +174,7 @@ final class _PigeonCodec extends StandardMessageCodec {
     switch (value) {
       case final BenchLine line:
         buffer.putUint8(_lineType);
-        super.writeValue(buffer, <Object?>[
+        super.writeValue(buffer, [
           line.text,
           line.confidence,
           line.left,
@@ -184,7 +184,7 @@ final class _PigeonCodec extends StandardMessageCodec {
         ]);
       case final BenchCapture capture:
         buffer.putUint8(_captureType);
-        super.writeValue(buffer, <Object?>[
+        super.writeValue(buffer, [
           capture.imageWidth,
           capture.imageHeight,
           capture.quarterTurns,
@@ -219,7 +219,9 @@ final class _PigeonCodec extends StandardMessageCodec {
             imageWidth: (fields[0]! as num).toDouble(),
             imageHeight: (fields[1]! as num).toDouble(),
             quarterTurns: (fields[2]! as num).toInt(),
-            lines: <BenchLine>[for (final raw in fields[3]! as List<Object?>) raw! as BenchLine],
+            lines: (fields[3]! as List<Object?>)
+                .map((raw) => raw! as BenchLine)
+                .toList(growable: false),
           );
         }
       default:
@@ -271,7 +273,7 @@ final class PackedCodec implements CaptureCodec {
     final imageHeight = reader.readFloat();
     final quarterTurns = reader.readUint8();
     final lineCount = reader.readUint32();
-    final lines = <BenchLine>[for (var i = 0; i < lineCount; i++) _readLine(reader)];
+    final lines = List.generate(lineCount, (_) => _readLine(reader), growable: false);
 
     return BenchCapture(
       imageWidth: imageWidth,

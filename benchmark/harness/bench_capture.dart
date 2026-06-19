@@ -10,8 +10,7 @@
 /// flat doubles here.
 library;
 
-/// One recognition pass: the analyzed-image size, a display-rotation hint, and
-/// the recognized [lines].
+/// One recognition pass: the analyzed-image size, a display-rotation hint, and the recognized [lines].
 final class BenchCapture {
   /// Creates a capture.
   const BenchCapture({
@@ -34,8 +33,8 @@ final class BenchCapture {
   final List<BenchLine> lines;
 }
 
-/// One recognized line: its [text], optional [confidence], and a normalized
-/// (`[0, 1]`, top-left origin) bounding box as four flat doubles.
+/// One recognized line: its [text], optional [confidence], and a normalized (`[0, 1]`, top-left origin)
+/// bounding box as four flat doubles.
 final class BenchLine {
   /// Creates a line.
   const BenchLine({

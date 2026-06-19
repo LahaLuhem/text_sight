@@ -49,16 +49,38 @@ abstract final class Payloads {
   /// Line counts swept to chart how each candidate scales with frame size.
   static const sweepLineCounts = [1, 5, 10, 25, 50, 100];
 
+  // --- Synthetic-payload distribution: tunable generation hyperparameters. ---
+  // Box values are normalized fractions; a min plus a span gives the uniform
+  // draw range. Changing any of these reshapes the payloads — re-capture
+  // baselines afterwards.
   static const _confidenceChance = 0.9;
+  static const _minConfidence = 0.5;
+  static const _confidenceSpan = 0.5;
+  static const _maxLeftFraction = 0.9;
+  static const _maxTopFraction = 0.95;
+  static const _minWidthFraction = 0.05;
+  static const _widthSpanFraction = 0.35;
+  static const _minHeightFraction = 0.01;
+  static const _heightSpanFraction = 0.04;
+  static const double _imageWidth = 1080;
+  static const double _imageHeight = 1920;
+  static const _sweepMinTextLen = 12;
+  static const _sweepMaxTextLen = 24;
+  static const _sweepSeedBase = 0x51770000;
+  static const _profileSeedBase = 0x51760000;
   static const _alphabet = 'abcdefghijklmnopqrstuvwxyz      ';
 
   /// Builds a fixed-size frame of [lineCount] lines (the scaling sweep).
-  static BenchCapture sweep(int lineCount) =>
-      _build(Random(lineCount + 0x51770000), lineCount, minTextLen: 12, maxTextLen: 24);
+  static BenchCapture sweep(int lineCount) => _build(
+    Random(lineCount + _sweepSeedBase),
+    lineCount,
+    minTextLen: _sweepMinTextLen,
+    maxTextLen: _sweepMaxTextLen,
+  );
 
   /// Builds a frame matching [profile] (a realistic use case).
   static BenchCapture profile(PayloadProfile profile) {
-    final rng = Random(profile.index + 0x51760000);
+    final rng = Random(profile.index + _profileSeedBase);
     final span = profile.maxLines - profile.minLines + 1;
     final lineCount = profile.minLines + rng.nextInt(span);
 
@@ -72,27 +94,31 @@ abstract final class Payloads {
     required int maxTextLen,
   }) {
     final textSpan = maxTextLen - minTextLen + 1;
-    final lines = <BenchLine>[
-      for (var i = 0; i < lineCount; i++)
-        BenchLine(
-          text: _text(rng, minTextLen + rng.nextInt(textSpan)),
-          confidence: rng.nextDouble() < _confidenceChance ? rng.nextDouble() / 2.0 + 0.5 : null,
-          left: rng.nextDouble() * 0.9,
-          top: rng.nextDouble() * 0.95,
-          width: rng.nextDouble() * 0.35 + 0.05,
-          height: rng.nextDouble() * 0.04 + 0.01,
-        ),
-    ];
+    // Materialized once on purpose — lines are rng-derived and re-read by every
+    // codec each iteration, so a lazy re-generating Iterable would re-draw per pass.
+    final lines = List.generate(
+      lineCount,
+      (_) => BenchLine(
+        text: _text(rng, minTextLen + rng.nextInt(textSpan)),
+        confidence: rng.nextDouble() >= _confidenceChance
+            ? null
+            : rng.nextDouble() * _confidenceSpan + _minConfidence,
+        left: rng.nextDouble() * _maxLeftFraction,
+        top: rng.nextDouble() * _maxTopFraction,
+        width: rng.nextDouble() * _widthSpanFraction + _minWidthFraction,
+        height: rng.nextDouble() * _heightSpanFraction + _minHeightFraction,
+      ),
+      growable: false,
+    );
 
-    return BenchCapture(imageWidth: 1080, imageHeight: 1920, quarterTurns: 0, lines: lines);
+    return BenchCapture(
+      imageWidth: _imageWidth,
+      imageHeight: _imageHeight,
+      quarterTurns: 0,
+      lines: lines,
+    );
   }
 
-  static String _text(Random rng, int length) {
-    final buffer = StringBuffer();
-    for (var i = 0; i < length; i++) {
-      buffer.write(_alphabet[rng.nextInt(_alphabet.length)]);
-    }
-
-    return buffer.toString();
-  }
+  static String _text(Random rng, int length) =>
+      Iterable.generate(length, (_) => _alphabet[rng.nextInt(_alphabet.length)]).join();
 }

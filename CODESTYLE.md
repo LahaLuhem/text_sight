@@ -435,8 +435,8 @@ with an imperative loop plus a mutable accumulator obscures the intent (and
 re-implements a method the SDK already ships).
 
 Prefer the `dart:core` `Iterable` / `Set` / `Map` methods — `where`, `whereType<T>()`,
-`map`, `expand`, `fold`, `Map.fromEntries`, `followedBy` — over a `for` loop that pushes
-into a growable collection:
+`map`, `expand`, `fold`, `Map.fromEntries`, `followedBy`, `Iterable.generate` — over a
+`for` loop that pushes into a growable collection:
 
 ```dart
 // Prefer — states the intent directly:
@@ -444,6 +444,15 @@ final highConfidenceText = capture.lines
         .where((line) => (line.confidence ?? 1) >= minConfidence)
         .map((line) => line.text)
         .join('\n');
+```
+
+*Generating* a sequence from a count and then reducing it follows the same rule — a
+`StringBuffer` (or any collection) seeded and filled in a `for` loop is the string-building
+case of "a pipeline wearing a loop's clothes":
+
+```dart
+// Prefer — the data pipeline reads start-to-finish, and stays lazy until `.join()`:
+final text = Iterable.generate(length, (_) => alphabet[random.nextInt(alphabet.length)]).join();
 ```
 
 **Boundary:** building a widget `children:` list or any data literal → collection-for.
