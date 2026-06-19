@@ -1,0 +1,27 @@
+# AGENTS.md — `example/`
+
+Tool-agnostic brief for the runnable demo app under `example/`. Library-package
+conventions live in the parent [`AGENTS.md`](../../.ai/AGENTS.md); example-specific
+code style (MVVM, naming, widget composition, …) lives in
+[`CODESTYLE.md`](../CODESTYLE.md). Read both before working in this subdirectory.
+
+## Scope
+- Runnable showcase of `text_sight` — exercises live camera OCR and the static
+  one-shot recognizer against a real device, and demonstrates recommended usage.
+- **Also the no-bundling test harness.** The iOS side must keep linking zero
+  third-party ML libraries; after touching native or dependencies, re-check
+  `rg -i 'mlkit|googlemlkit|MLImage' example/ios` returns nothing and the generated
+  iOS SPM manifest lists no ML Kit package (see the parent
+  [`APPENDIX.md#no-bundling`](../../APPENDIX.md#no-bundling)). Example dependencies
+  are UI-only and pure-Dart for this reason.
+- Not published to pub.dev. No semver discipline. Freely depends on Flutter.
+- Layout: each feature is a pair under `lib/features/<feature>/` —
+  `<feature>_view.dart` + `<feature>_view_model.dart`; shared widgets, constants, and
+  platform shims live under `lib/features/core/`. The MVVM scaffold uses
+  [pmvvm](https://pub.dev/packages/pmvvm); see
+  [`CODESTYLE.md#mvvm`](../CODESTYLE.md#mvvm) for the conventions that govern how the
+  pair is wired.
+- Navigation: a landing hub (`HomeView`) pushes each feature screen with
+  `Navigator.push(MaterialPageRoute)` — no routing package, no tabs. A full-screen
+  camera preview owns its own route, and entering/leaving it maps cleanly to the
+  controller's `start()` / `dispose()` lifecycle.
