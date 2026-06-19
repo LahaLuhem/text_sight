@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-import '../core/widgets/core_widgets.dart';
+import '/features/core/widgets/core_widgets.dart';
 
 /// Recognizer-config playground (level + ROI) on a still. Fleshed out in a later step.
 class PlaygroundView extends StatelessWidget {

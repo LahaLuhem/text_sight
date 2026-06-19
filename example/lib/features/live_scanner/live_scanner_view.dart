@@ -6,9 +6,8 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 import 'package:text_sight/text_sight.dart';
 
-import '../core/data/constants/core_constants.dart';
-import '../core/widgets/core_widgets.dart';
-import 'data/enums/session_status.dart';
+import '/features/core/data/constants/core_constants.dart';
+import '/features/core/widgets/core_widgets.dart';
 import 'live_scanner_view_model.dart';
 
 /// Live camera OCR: the preview with a confidence-coloured box overlay, a torch
@@ -25,8 +24,8 @@ class LiveScannerView extends StatelessWidget {
         child: ValueListenableBuilder(
           valueListenable: viewModel.sessionStatusListenable,
           builder: (context, status, _) => switch (status) {
-            SessionStatus.requesting => const Center(child: PlatformProgressIndicator()),
-            SessionStatus.denied => _MessageView(
+            .requesting => const Center(child: PlatformProgressIndicator()),
+            .denied => _MessageView(
               icon: Icon(
                 context.platformIcon(
                   material: Icons.no_photography_outlined,
@@ -38,7 +37,7 @@ class LiveScannerView extends StatelessWidget {
               actionLabel: 'Open settings',
               onAction: openAppSettings,
             ),
-            SessionStatus.failed => _MessageView(
+            .failed => _MessageView(
               icon: Icon(
                 context.platformIcon(
                   material: Icons.error_outline,
@@ -50,7 +49,7 @@ class LiveScannerView extends StatelessWidget {
               actionLabel: 'Retry',
               onAction: viewModel.onRetryPressed,
             ),
-            SessionStatus.ready => _ScannerView(viewModel: viewModel),
+            .ready => _ScannerView(viewModel: viewModel),
           },
         ),
       ),
@@ -127,19 +126,7 @@ class _RecognizedTextPanel extends StatelessWidget {
             : ListView(
                 padding: const .all(8),
                 shrinkWrap: true,
-                children: [
-                  for (final line in lines)
-                    Padding(
-                      padding: const .symmetric(horizontal: 8, vertical: 4),
-                      child: Row(
-                        spacing: 8,
-                        children: [
-                          Expanded(child: Text(line.text)),
-                          ConfidenceChip(confidence: line.confidence),
-                        ],
-                      ),
-                    ),
-                ],
+                children: [for (final line in lines) RecognizedLineRow(line: line)],
               ),
       ),
     );

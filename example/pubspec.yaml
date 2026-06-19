@@ -2,18 +2,22 @@ name: example
 description: "Showcase app for the text_sight plugin — live and one-shot on-device text recognition."
 # Prevents accidental `flutter pub publish` of the demo.
 publish_to: 'none'
-
 version: 1.0.0+1
 
+
+
+
 environment:
-  sdk: ^3.12.2
+  sdk: ^3.12.0
+
+
+
 
 dependencies:
   flutter:
     sdk: flutter
   text_sight:
     path: ../
-
   # MVVM + platform-adaptive showcase stack — mirrors the sibling package examples
   # (platform_adaptive_widgets, better_internet_connectivity_checker). All pure-Dart/Flutter:
   # nothing here links a native ML/camera library, so the iOS no-bundling check still holds.
@@ -26,17 +30,51 @@ dependencies:
   cupertino_icons: ^1.0.9 # iOS nav-bar back chevron glyph under PlatformApp
   permission_handler: ^12.0.3 # runtime camera permission for the live scanner
 
+
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
-  # BDD-style integration tests, matching the package's unit tests (same versions).
+  build_runner: ^2.15.0
   bdd_framework: ^4.0.7
   checks: ^0.3.1
-  flutter_lints: ^6.0.0
+  flutter_gen_runner: 5.14.1
+
+
+
 
 flutter:
   uses-material-design: true
   assets:
     - assets/sample_text.png
+
+
+
+
+flutter_gen:
+  output: lib/features/core/data/constants/assets/
+  line_length: 100
+  parse_metadata: true
+  integrations:
+    image: true
+    flutter_svg: true
+    rive: false
+    lottie: true
+  assets:
+    enabled: true
+    outputs:
+      package_parameter_enabled: false
+      style: dot-delimiter
+      class_name: ConstMedia
+  fonts:
+    enabled: true
+    outputs:
+      class_name: ConstFonts
+  colors:
+    enabled: false
+    inputs: []
+    outputs:
+      class_name: ConstColors
