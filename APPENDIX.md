@@ -194,9 +194,11 @@ controller enforces the range, since the `const` `TextSightOptions` can't valida
 constructor. Because ROI is part of the source-agnostic recognizer config it applies uniformly: the
 live driver sets it via the controller; the static driver takes it as an optional parameter
 (full-frame when omitted). On Apple the value goes to `VNImageRequestHandler.regionOfInterest`
-after the same Y-flip (Vision's ROI is also bottom-left). On Android v1 the recognizer runs on
-the full frame and lines whose box center falls outside the ROI are filtered out; a true
-pre-crop of the frame is a future optimization.
+after the same Y-flip (Vision's ROI is also bottom-left). On Android the static one-shot **crops** the
+upright bitmap to the ROI, so ML Kit reads only that region — a true crop (like iOS) that also
+isolates partial-line text. The **live** stream still runs full-frame and drops lines whose box
+center falls outside the ROI (cropping every frame would cost too much); a true YUV pre-crop there
+is a future optimization.
 
 **Orientation is an input, not an afterthought.** Recognition silently degrades if it is
 wrong: the Apple side must pass the correct `CGImagePropertyOrientation`, the Android side the
@@ -281,13 +283,14 @@ recognition runs at a time (iOS: one `RecognizeTextRequest` gated by an `isProce
 by how fast the engine returns — under dense text or on lower-end devices it falls below the camera
 frame rate, and late frames are dropped rather than queued (the intended trade-off: latency over
 backlog). Levers to explore next: raising `minimumTextHeight` / downscaling before recognition, an
-explicit frame-skip cadence, and the Android ROI pre-crop below. Default `RecognitionLevel.fast` for
+explicit frame-skip cadence, and the Android live-ROI pre-crop below. Default `RecognitionLevel.fast` for
 live; `.accurate` is materially heavier.
 
 **Region-of-interest is asymmetric.** iOS sets Vision's native `regionOfInterest`, so a smaller box
-actually lowers recognition cost. Android v1 recognizes the full frame and *filters* lines whose
+actually lowers recognition cost. Android's one-shot now **crops** to the ROI, so a smaller box
+lowers cost there too; the **live** stream still recognizes the full frame and *filters* lines whose
 center falls outside the ROI ([#coordinate-normalization](#coordinate-normalization)) — correct
-results, but **no speed-up**. A true YUV pre-crop on Android is the deferred optimization.
+results, but **no speed-up**. A true YUV pre-crop on the live path is the deferred optimization.
 
 **Platform capability differences (inherent, not bugs).** `recognitionLevel` and `languages` apply on
 iOS (Vision) and are **no-ops on Android** (the ML Kit Latin recognizer exposes neither and reads
@@ -309,7 +312,7 @@ fallback lands ([#ios-capture-strategy](#ios-capture-strategy)).
   is a minor.
 - **iOS 13–17 hybrid** — `if #available(iOS 18)` → `RecognizeTextRequest`, else
   `VNRecognizeTextRequest` ([#ios-capture-strategy](#ios-capture-strategy)).
-- **True ROI pre-crop on Android** (the perf lever above).
+- **True ROI pre-crop on the Android *live* path** (the perf lever above; the one-shot already crops).
 - **macOS** — Apple Vision is identical; a shared `darwin/` brings it in cheaply
   ([#ios-capture-strategy](#ios-capture-strategy)).
 - **Additional Android scripts** (Chinese / Devanagari / Japanese / Korean) — each needs its own ML

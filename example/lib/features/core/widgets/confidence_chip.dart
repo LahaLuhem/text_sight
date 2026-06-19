@@ -16,7 +16,7 @@ class ConfidenceChip extends StatelessWidget {
     final value = confidence;
 
     return PlatformChip(
-      label: Text(value == null ? '—' : value.toStringAsFixed(2)),
+      label: Text(value == null ? '—' : '${(value * 100).toStringAsFixed(2)}%'),
       backgroundColor: color.withValues(alpha: ConstTheme.confidenceFillAlpha),
       side: BorderSide(color: color),
     );

@@ -126,8 +126,10 @@ overlay, a recognized-text panel, torch control, and a one-shot recognition scre
   synthesized.
 - **`recognitionLevel` and `languages`** apply on iOS (Vision). On Android the ML Kit Latin
   recognizer ignores them (Latin only).
-- **Region of interest** is a normalized `Rect`: iOS restricts Vision to it; Android recognizes
-  the full frame and filters lines whose center falls outside it.
+- **Region of interest** is a normalized `Rect`. iOS restricts Vision to it (live and still). On
+  Android the one-shot **crops** to it — a true region, like iOS — while the live stream recognizes
+  the full frame and keeps only lines whose **center** falls inside it (cropping every frame would
+  cost too much).
 
 ## Performance
 
