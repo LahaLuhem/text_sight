@@ -49,9 +49,7 @@ class PlaygroundView extends StatelessWidget {
               builder: (context, result, _) => RecognitionResultView(
                 result: result,
                 idleHint: 'Recognize to see what the current settings find.',
-                emptyHint:
-                    'No lines matched the region. Widen the box or center it on a line — on '
-                    'Android, a line counts only when its center is inside the box.',
+                emptyHint: 'No text found in that region — try moving the box over some text.',
               ),
             ),
           ],

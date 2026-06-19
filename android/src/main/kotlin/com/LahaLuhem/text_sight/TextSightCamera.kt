@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.os.Handler
@@ -34,6 +35,7 @@ import io.flutter.view.TextureRegistry
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.concurrent.Executors
+import kotlin.math.roundToInt
 
 /**
  * Owns the CameraX session, the ML Kit recognizer, and the preview texture for one
@@ -205,8 +207,10 @@ internal class TextSightCamera(
 
     /**
      * Recognizes [bitmap], rotated upright by [rotationDegrees] (its EXIF orientation), with a
-     * transient pass over the shared recognizer. Completes on the main thread with the same
-     * per-frame map the live path emits — quarterTurns 0, since a still is already upright.
+     * transient pass over the shared recognizer. When [roi] is set, the upright bitmap is cropped
+     * to it first so ML Kit reads only that region — a true crop, unlike the live path's
+     * center-containment filter. Completes on the main thread with the same per-frame map the live
+     * path emits — quarterTurns 0, since a still is already upright.
      */
     private fun recognizeStill(
         bitmap: Bitmap,
@@ -218,9 +222,31 @@ internal class TextSightCamera(
         val imageWidth = if (isQuarterTurned) bitmap.height else bitmap.width
         val imageHeight = if (isQuarterTurned) bitmap.width else bitmap.height
 
-        recognizer.process(InputImage.fromBitmap(bitmap, rotationDegrees))
+        // With an ROI, crop the upright bitmap so ML Kit reads only that region: a true crop that
+        // isolates partial-line text (matching iOS Vision) and recognizes fewer pixels — unlike the
+        // live path, where cropping every frame would cost too much. The crop's origin offsets the
+        // recognized boxes back into full-image coordinates.
+        val crop = roi?.toPixelRect(imageWidth, imageHeight)
+        val input = if (crop == null) {
+            InputImage.fromBitmap(bitmap, rotationDegrees)
+        } else {
+            val upright = bitmap.uprightBy(rotationDegrees)
+            InputImage.fromBitmap(
+                Bitmap.createBitmap(upright, crop.left, crop.top, crop.width(), crop.height()),
+                0,
+            )
+        }
+
+        recognizer.process(input)
             .addOnSuccessListener(analysisExecutor) { visionText ->
-                val frame = encodeFrame(visionText, imageWidth, imageHeight, 0, roi)
+                val frame = encodeFrame(
+                    visionText,
+                    imageWidth,
+                    imageHeight,
+                    0,
+                    offsetX = crop?.left ?: 0,
+                    offsetY = crop?.top ?: 0,
+                )
                 mainHandler.post { callback(Result.success(frame)) }
             }
             .addOnFailureListener(analysisExecutor) { error ->
@@ -313,7 +339,9 @@ internal class TextSightCamera(
         imageWidth: Int,
         imageHeight: Int,
         quarterTurns: Int,
-        roi: RegionOfInterestMessage?,
+        roi: RegionOfInterestMessage? = null,
+        offsetX: Int = 0,
+        offsetY: Int = 0,
     ): Map<String, Any?> {
         val width = imageWidth.toDouble()
         val height = imageHeight.toDouble()
@@ -326,7 +354,7 @@ internal class TextSightCamera(
                     return@mapNotNull null
                 }
 
-                encodeLine(line, boundingBox, width, height)
+                encodeLine(line, boundingBox, width, height, offsetX, offsetY)
             }
 
         return mapOf(
@@ -342,14 +370,17 @@ internal class TextSightCamera(
         boundingBox: Rect,
         imageWidth: Double,
         imageHeight: Double,
+        offsetX: Int,
+        offsetY: Int,
     ): Map<String, Any?> =
         mapOf(
             "text" to line.text,
             // ML Kit v2 supplies a per-line confidence (null for a line that lacks one);
             // forwarded as-is per the RecognizedLine.confidence contract.
             "confidence" to line.confidence?.toDouble(),
-            "left" to boundingBox.left / imageWidth,
-            "top" to boundingBox.top / imageHeight,
+            // The crop origin (0 on the live path) maps boxes back into full-image coordinates.
+            "left" to (boundingBox.left + offsetX) / imageWidth,
+            "top" to (boundingBox.top + offsetY) / imageHeight,
             "width" to boundingBox.width() / imageWidth,
             "height" to boundingBox.height() / imageHeight,
             // Word-level elements are reserved for a future additive release.
@@ -384,6 +415,25 @@ private fun Rect.centerWithin(
         centerX <= roi.left + roi.width &&
         centerY >= roi.top &&
         centerY <= roi.top + roi.height
+}
+
+/** This bitmap rotated clockwise [rotationDegrees]° to upright; the same instance when 0. */
+private fun Bitmap.uprightBy(rotationDegrees: Int): Bitmap {
+    if (rotationDegrees == 0) return this
+
+    val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
+
+    return Bitmap.createBitmap(this, 0, 0, width, height, matrix, true)
+}
+
+/** [roi] (normalized [0, 1] top-left) as a pixel [Rect] clamped inside the image, never empty. */
+private fun RegionOfInterestMessage.toPixelRect(imageWidth: Int, imageHeight: Int): Rect {
+    val pixelLeft = (left * imageWidth).roundToInt().coerceIn(0, imageWidth - 1)
+    val pixelTop = (top * imageHeight).roundToInt().coerceIn(0, imageHeight - 1)
+    val pixelRight = ((left + width) * imageWidth).roundToInt().coerceIn(pixelLeft + 1, imageWidth)
+    val pixelBottom = ((top + height) * imageHeight).roundToInt().coerceIn(pixelTop + 1, imageHeight)
+
+    return Rect(pixelLeft, pixelTop, pixelRight, pixelBottom)
 }
 
 /** A [LifecycleOwner] driven manually so CameraX can bind without an Activity. */
