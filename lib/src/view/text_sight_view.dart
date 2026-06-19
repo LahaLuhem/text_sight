@@ -17,8 +17,9 @@ typedef TextSightOverlayBuilder =
 /// Renders the controller's [TextSightController.textureId] and rebuilds as the
 /// session state changes. Each [TextSightCapture] is delivered to [onResult]
 /// (for consumers that only need the text) and to [overlayBuilder] (for drawing
-/// boxes over the preview). Before a texture exists — the controller's
-/// [TextSightController.start] has not run yet — [placeholderBuilder] is shown.
+/// boxes over the preview). Until the first capture arrives — while
+/// [TextSightController.start] opens the camera and the first frame is recognized —
+/// [placeholderBuilder] is shown (the preview's upright rotation rides the capture).
 ///
 /// The view does not start or stop the session itself; the consumer drives the
 /// controller, so session lifecycle (including pausing on app background) stays
@@ -33,7 +34,8 @@ final class TextSightView extends StatefulWidget {
   /// Builds an overlay stacked over the preview from the latest capture.
   final TextSightOverlayBuilder? overlayBuilder;
 
-  /// Builds what shows before a preview texture is available.
+  /// Builds what shows until the first capture arrives (camera opening, first frame not yet
+  /// recognized) — including before [TextSightController.start].
   final WidgetBuilder? placeholderBuilder;
 
   /// Creates a view bound to [controller].
@@ -79,12 +81,14 @@ class _TextSightViewState extends State<TextSightView> {
     listenable: widget.controller,
     builder: (context, _) {
       final textureId = widget.controller.textureId;
-      if (textureId == null) {
+      final capture = _capture;
+      // Hold the placeholder until the first capture: the preview texture is raw and its upright
+      // rotation rides `quarterTurns` on the capture, so showing it sooner flashes it mis-rotated.
+      if (textureId == null || capture == null) {
         return widget.placeholderBuilder?.call(context) ?? const SizedBox.shrink();
       }
 
       final overlayBuilder = widget.overlayBuilder;
-      final capture = _capture;
 
       return Stack(
         fit: .expand,
@@ -92,10 +96,10 @@ class _TextSightViewState extends State<TextSightView> {
           // The preview texture is delivered in the camera's raw orientation; rotate it to
           // display-upright. The overlay stays unrotated — its boxes are already display-oriented.
           RotatedBox(
-            quarterTurns: capture?.quarterTurns ?? 0,
+            quarterTurns: capture.quarterTurns,
             child: Texture(textureId: textureId),
           ),
-          if (overlayBuilder != null && capture != null)
+          if (overlayBuilder != null)
             LayoutBuilder(
               builder: (context, constraints) => overlayBuilder(context, capture, constraints),
             ),
