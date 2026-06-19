@@ -6,6 +6,7 @@ Each heading below carries an explicit `<a id="…">` anchor. Link by anchor, no
 heading text, so renames don't break callers.
 
 - [MVVM architecture](#mvvm-architecture)
+- [Imports](#imports)
 - [Reactivity (ValueNotifier-first)](#reactivity-valuenotifier-first)
 - [Naming](#naming)
     * [Boolean fields — modal verbs](#boolean-fields-modal-verbs)
@@ -28,6 +29,23 @@ The example uses [pmvvm](https://pub.dev/packages/pmvvm) —
 Cross-feature shared widgets, constants, and platform shims live under
 `lib/features/core/`. The landing hub (`features/core/views/home_view.dart`) pushes
 each feature with `Navigator.push(MaterialPageRoute)`.
+
+---
+
+<a id="imports"></a>
+## Imports
+
+- **Cross-feature imports use the package-root-absolute form `'/features/…'`, never
+  `'../…'` relative** — a feature importing the shared `core`, or another feature's screen.
+  They read the same from anywhere and survive a file move. For `core`'s widgets and
+  constants, import the barrel: `import '/features/core/widgets/core_widgets.dart';`.
+- **Within a feature — including `core` itself — imports are relative**: a view importing
+  its own `<feature>_view_model.dart`, a feature importing its own `data/…`, or a `core`
+  file importing a sibling `core` file directly
+  (`import '../widgets/platform/platform_card.dart';`, *not* the barrel — a module needn't
+  round-trip through its own export list).
+- Import `platform_adaptive_widgets` and `platform_icons` wholesale; see
+  [Platform-adaptive widgets](#platform-adaptive-widgets) for the `show` exceptions.
 
 ---
 
