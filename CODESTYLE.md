@@ -113,6 +113,11 @@ style.
   genre conventions: single-letter loop counters (`i`, `j`), `e` in `catch (e)`,
   `(a, b)` in symmetric comparator pairs, `x`/`y` for coordinates (and these recur in
   the bounding-box math).
+- **No `get` / `set` method prefixes.** Dart has language-level getters and setters, so a
+  `getFoo()` / `setFoo()` *method* reads as a Java-ism. Sync, side-effect-free state is a
+  getter (`foo`), or a setter (`set foo(…)`) if writable. A mutation that *can't* be a setter
+  — async or side-effecting (a setter can't be awaited, nor surface an error) — takes the verb
+  for what it does: `updateRegionOfInterest(roi)`, **not** `setRegionOfInterest(roi)`.
 - **Local-variable names carry a concise type-suffix.** Dart is strongly typed, but a
   reader without IDE inlay-hints can't see the inferred type — the *name* has to do
   that work. Suffix a local with what it *is* so the next reader doesn't have to scroll

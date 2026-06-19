@@ -42,6 +42,11 @@ final capture = await TextSight.recognizeImage(bytes); // or .recognizePath('/ph
 Either way, boxes come back normalized `[0, 1]` from the top-left, identical on both platforms, so
 your overlay never has to know which engine drew them.
 
+Want a scan-box? Hand the controller a **region of interest** —
+`TextSightController(options: TextSightOptions(roi: Rect.fromLTWH(0.1, 0.4, 0.8, 0.2)))` — or change
+it, the recognition level, or the torch while the session runs. It applies to the live preview and
+the one-shot alike.
+
 The [`example/`](example/) app is where to look next — a live overlay, torch, region-of-interest,
 permission handling, and the one-shot screen, all wired up and ready to crib from.
 

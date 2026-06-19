@@ -11,7 +11,7 @@ Live, on-device text recognition — Apple Vision on iOS, ML Kit on Android. The
                        DESC
   s.homepage         = 'https://github.com/LahaLuhem/text_sight'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'LahaLuhem' => 'm.ahal@didata.org' }
+  s.author           = { 'LahaLuhem' => 'github.reply.wb869@aleeas.com' }
   s.source           = { :path => '.' }
   s.source_files = 'text_sight/Sources/text_sight/**/*'
   s.dependency 'Flutter'

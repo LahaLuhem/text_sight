@@ -52,20 +52,20 @@ abstract class TextSightPlatform extends PlatformInterface {
   Future<void> dispose() => throw UnimplementedError('dispose() has not been implemented.');
 
   /// Restricts recognition to [roi], or clears it (whole frame) when `null`.
-  Future<void> setRegionOfInterest(Rect? roi) =>
-      throw UnimplementedError('setRegionOfInterest() has not been implemented.');
+  Future<void> updateRegionOfInterest(Rect? roi) =>
+      throw UnimplementedError('updateRegionOfInterest() has not been implemented.');
 
   /// Switches the accuracy/latency [level] of the running recognizer.
-  Future<void> setRecognitionLevel(RecognitionLevel level) =>
-      throw UnimplementedError('setRecognitionLevel() has not been implemented.');
+  Future<void> updateRecognitionLevel(RecognitionLevel level) =>
+      throw UnimplementedError('updateRecognitionLevel() has not been implemented.');
 
   /// Updates the preferred recognition [languages] (mapped to BCP-47 tags natively).
-  Future<void> setLanguages(Iterable<Locale> languages) =>
-      throw UnimplementedError('setLanguages() has not been implemented.');
+  Future<void> updateLanguages(Iterable<Locale> languages) =>
+      throw UnimplementedError('updateLanguages() has not been implemented.');
 
   /// Turns the camera torch on or off when the device has one.
-  Future<void> setTorchEnabled({required bool enabled}) =>
-      throw UnimplementedError('setTorchEnabled() has not been implemented.');
+  Future<void> updateTorchEnabled({required bool enabled}) =>
+      throw UnimplementedError('updateTorchEnabled() has not been implemented.');
 
   /// The live per-frame results stream, backed by a plain `EventChannel`.
   Stream<TextSightCapture> get captures =>

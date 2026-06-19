@@ -43,18 +43,18 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
   Future<void> dispose() => _hostApi.dispose();
 
   @override
-  Future<void> setRegionOfInterest(Rect? roi) => _hostApi.setRegionOfInterest(roi?._toMessage());
+  Future<void> updateRegionOfInterest(Rect? roi) => _hostApi.setRegionOfInterest(roi?._toMessage());
 
   @override
-  Future<void> setRecognitionLevel(RecognitionLevel level) =>
+  Future<void> updateRecognitionLevel(RecognitionLevel level) =>
       _hostApi.setRecognitionLevel(level._toMessage());
 
   @override
-  Future<void> setLanguages(Iterable<Locale> languages) =>
+  Future<void> updateLanguages(Iterable<Locale> languages) =>
       _hostApi.setLanguages(languages._toLanguageTags());
 
   @override
-  Future<void> setTorchEnabled({required bool enabled}) => _hostApi.setTorchEnabled(enabled);
+  Future<void> updateTorchEnabled({required bool enabled}) => _hostApi.setTorchEnabled(enabled);
 
   @override
   Stream<TextSightCapture> get captures => _captures;

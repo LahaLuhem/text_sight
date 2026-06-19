@@ -43,7 +43,7 @@ final class LiveScannerViewModel extends ViewModel {
 
   Future<void> onTorchToggled() async {
     final next = !_shouldEnableTorchNotifier.value;
-    await _controller.setTorchEnabled(enabled: next);
+    await _controller.updateTorchEnabled(enabled: next);
     _shouldEnableTorchNotifier.value = next;
   }
 

@@ -81,34 +81,34 @@ final class TextSightController extends ChangeNotifier {
   }
 
   /// Switches the accuracy/latency [level] of the running recognizer.
-  Future<void> setRecognitionLevel(RecognitionLevel level) async {
-    await TextSightPlatform.instance.setRecognitionLevel(level);
+  Future<void> updateRecognitionLevel(RecognitionLevel level) async {
+    await TextSightPlatform.instance.updateRecognitionLevel(level);
     _level = level;
     notifyListeners();
   }
 
   /// Replaces the preferred recognition [languages], most-preferred first.
-  Future<void> setLanguages(Iterable<Locale> languages) async {
+  Future<void> updateLanguages(Iterable<Locale> languages) async {
     final selected = languages.toList(growable: false);
-    await TextSightPlatform.instance.setLanguages(selected);
+    await TextSightPlatform.instance.updateLanguages(selected);
     _languages = selected;
     notifyListeners();
   }
 
   /// Restricts recognition to [roi], or clears it (whole frame) when `null`.
-  Future<void> setRegionOfInterest(Rect? roi) async {
+  Future<void> updateRegionOfInterest(Rect? roi) async {
     assert(
       roi.isNormalizedRoi,
       'Region-of-interest must be a normalized [0,1] rect with positive extent.',
     );
-    await TextSightPlatform.instance.setRegionOfInterest(roi);
+    await TextSightPlatform.instance.updateRegionOfInterest(roi);
     _roi = roi;
     notifyListeners();
   }
 
   /// Requests the camera torch on or off (no-op on devices without one).
-  Future<void> setTorchEnabled({required bool enabled}) async {
-    await TextSightPlatform.instance.setTorchEnabled(enabled: enabled);
+  Future<void> updateTorchEnabled({required bool enabled}) async {
+    await TextSightPlatform.instance.updateTorchEnabled(enabled: enabled);
     _isTorchEnabled = enabled;
     notifyListeners();
   }

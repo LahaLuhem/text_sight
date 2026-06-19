@@ -25,7 +25,7 @@ void main() {
   Bdd(control)
       .scenario('Recognition level is sent as its Pigeon twin')
       .given('a platform talking to a mocked host')
-      .when('setRecognitionLevel is called with the <level> level')
+      .when('updateRecognitionLevel is called with the <level> level')
       .then('the host receives the <twin> message')
       .example(val('level', RecognitionLevel.fast), val('twin', RecognitionLevelMessage.fast))
       .example(
@@ -36,7 +36,7 @@ void main() {
         final platform = PigeonTextSightPlatform();
         final call = _mockHostMethod(messenger, 'setRecognitionLevel');
 
-        await platform.setRecognitionLevel(ctx.example.val('level') as RecognitionLevel);
+        await platform.updateRecognitionLevel(ctx.example.val('level') as RecognitionLevel);
 
         check(call.payload).isA<Iterable<Object?>>().deepEquals(<Object?>[ctx.example.val('twin')]);
       });
@@ -44,7 +44,7 @@ void main() {
   Bdd(control)
       .scenario('Torch state is forwarded to the host')
       .given('a platform talking to a mocked host')
-      .when('setTorchEnabled is called with <enabled>')
+      .when('updateTorchEnabled is called with <enabled>')
       .then('the host receives <enabled>')
       .example(val('enabled', true))
       .example(val('enabled', false))
@@ -53,7 +53,7 @@ void main() {
         final call = _mockHostMethod(messenger, 'setTorchEnabled');
         final enabled = ctx.example.val('enabled') as bool;
 
-        await platform.setTorchEnabled(enabled: enabled);
+        await platform.updateTorchEnabled(enabled: enabled);
 
         check(call.payload).isA<Iterable<Object?>>().deepEquals(<Object?>[enabled]);
       });
@@ -61,7 +61,7 @@ void main() {
   Bdd(control)
       .scenario('Locales are mapped to BCP-47 tags, in preference order')
       .given('a platform talking to a mocked host')
-      .when('setLanguages is called with <locales>')
+      .when('updateLanguages is called with <locales>')
       .then('the host receives <tags>')
       .example(
         val('locales', const [
@@ -74,7 +74,7 @@ void main() {
         final platform = PigeonTextSightPlatform();
         final call = _mockHostMethod(messenger, 'setLanguages');
 
-        await platform.setLanguages(ctx.example.val('locales') as Iterable<Locale>);
+        await platform.updateLanguages(ctx.example.val('locales') as Iterable<Locale>);
 
         check(call.payload).isA<Iterable<Object?>>().deepEquals(<Object?>[ctx.example.val('tags')]);
       });
@@ -82,7 +82,7 @@ void main() {
   Bdd(control)
       .scenario('A region-of-interest rect is mapped to its twin')
       .given('a platform talking to a mocked host')
-      .when('setRegionOfInterest is called with the rect <roi>')
+      .when('updateRegionOfInterest is called with the rect <roi>')
       .then('the host receives a twin with <left>, <top>, <width>, <height>')
       .example(
         val('roi', const Rect.fromLTWH(0.1, 0.2, 0.3, 0.4)),
@@ -95,7 +95,7 @@ void main() {
         final platform = PigeonTextSightPlatform();
         final call = _mockHostMethod(messenger, 'setRegionOfInterest');
 
-        await platform.setRegionOfInterest(ctx.example.val('roi') as Rect);
+        await platform.updateRegionOfInterest(ctx.example.val('roi') as Rect);
 
         final roi = (call.payload! as List<Object?>).single! as RegionOfInterestMessage;
         check(roi.left).isCloseTo(ctx.example.val('left') as double, _floatTolerance);
@@ -107,13 +107,13 @@ void main() {
   Bdd(control)
       .scenario('A null region-of-interest clears the scan box (whole frame)')
       .given('a platform talking to a mocked host')
-      .when('setRegionOfInterest is called with null')
+      .when('updateRegionOfInterest is called with null')
       .then('the host receives null')
       .run((_) async {
         final platform = PigeonTextSightPlatform();
         final call = _mockHostMethod(messenger, 'setRegionOfInterest');
 
-        await platform.setRegionOfInterest(null);
+        await platform.updateRegionOfInterest(null);
 
         check(call.payload).isA<Iterable<Object?>>().deepEquals(<Object?>[null]);
       });
