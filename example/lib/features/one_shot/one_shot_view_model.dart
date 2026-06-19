@@ -5,19 +5,16 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:pmvvm/pmvvm.dart';
 import 'package:text_sight/text_sight.dart';
 
-import '../core/data/constants/core_constants.dart';
-
-/// The outcome of one recognition: a `capture` on success or an `error` message on
-/// failure (mutually exclusive; both null before the first run).
-typedef OneShotResult = ({TextSightCapture? capture, String? error});
+import '/features/core/data/constants/core_constants.dart';
+import '/features/core/data/recognition_result.dart';
 
 /// Recognizes a bundled sample image through both static entry points — no camera,
 /// session, or permission. The in-flight gate lives on the view's
 /// `AsyncIconActionButton`, so there is no busy flag here.
 final class OneShotViewModel extends ViewModel {
-  final _resultNotifier = ValueNotifier<OneShotResult?>(null);
+  final _resultNotifier = ValueNotifier<RecognitionResult?>(null);
 
-  ValueListenable<OneShotResult?> get resultListenable => _resultNotifier;
+  ValueListenable<RecognitionResult?> get resultListenable => _resultNotifier;
 
   Future<void> onRecognizeBytesPressed() => _run(() async {
     final bytes = (await rootBundle.load(ConstMedia.sampleText.keyName)).buffer.asUint8List();

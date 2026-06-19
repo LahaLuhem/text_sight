@@ -6,4 +6,5 @@ export 'confidence_chip.dart';
 export 'demo_intro.dart';
 export 'platform/platform_card.dart';
 export 'platform/platform_chip.dart';
+export 'recognition_result_view.dart';
 export 'recognized_line_row.dart';
