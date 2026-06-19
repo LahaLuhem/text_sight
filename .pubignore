@@ -5,6 +5,7 @@
 
 # Test sources.
 test/
+integration_test/
 
 # Benchmark suite — maintainer-only codec micro-benchmark. Imports nothing
 # shippable (works on plain-Dart stand-ins, not lib/), and ships nothing to

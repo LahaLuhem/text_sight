@@ -5,13 +5,13 @@
 Pod::Spec.new do |s|
   s.name             = 'text_sight'
   s.version          = '0.0.1'
-  s.summary          = 'A new Flutter plugin project.'
+  s.summary          = 'Live, on-device text recognition — Apple Vision on iOS, ML Kit on Android.'
   s.description      = <<-DESC
-A new Flutter plugin project.
+Live, on-device text recognition — Apple Vision on iOS, ML Kit on Android. The text-scanning sibling to mobile_scanner.
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://github.com/LahaLuhem/text_sight'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'email@example.com' }
+  s.author           = { 'LahaLuhem' => 'm.ahal@didata.org' }
   s.source           = { :path => '.' }
   s.source_files = 'text_sight/Sources/text_sight/**/*'
   s.dependency 'Flutter'

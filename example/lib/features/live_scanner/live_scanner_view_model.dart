@@ -48,7 +48,7 @@ final class LiveScannerViewModel extends ViewModel {
   }
 
   Future<void> _start() async {
-    _sessionStatusNotifier.value = SessionStatus.requesting;
+    _sessionStatusNotifier.value = .requesting;
 
     final permission = await Permission.camera.request();
     if (!permission.isGranted) {
