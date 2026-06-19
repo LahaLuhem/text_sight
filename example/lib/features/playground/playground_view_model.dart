@@ -8,21 +8,24 @@ import 'package:text_sight/text_sight.dart';
 import '/features/core/data/constants/core_constants.dart';
 import '/features/core/data/recognition_result.dart';
 
-/// The region-of-interest knobs: whether recognition is restricted, and the centered
-/// box's normalized width and height.
-typedef RoiConfig = ({bool restrict, double width, double height});
+/// The region-of-interest knobs: whether recognition is restricted, and the normalized,
+/// top-left box it is restricted to (dragged directly on the preview).
+typedef RoiConfig = ({bool restrict, Rect rect});
 
 /// Runs the same bundled still through the recognizer with whatever level and
 /// region-of-interest the knobs currently hold, so their effect can be compared.
 final class PlaygroundViewModel extends ViewModel {
+  static const _minRoiSize = 0.15;
+
   final _levelNotifier = ValueNotifier(RecognitionLevel.accurate);
-  final _roiConfigNotifier = ValueNotifier<RoiConfig>((restrict: false, width: 0.8, height: 0.4));
+  final _roiConfigNotifier = ValueNotifier<RoiConfig>((
+    restrict: false,
+    rect: const Rect.fromLTWH(0.1, 0.3, 0.8, 0.4),
+  ));
   final _resultNotifier = ValueNotifier<RecognitionResult?>(null);
 
-  /// The centered ROI rect for [config], or null when unrestricted (whole frame).
-  static Rect? roiOf(RoiConfig config) => config.restrict
-      ? Rect.fromLTWH((1 - config.width) / 2, (1 - config.height) / 2, config.width, config.height)
-      : null;
+  /// The active ROI rect for [config], or null when unrestricted (whole frame).
+  static Rect? roiOf(RoiConfig config) => config.restrict ? config.rect : null;
 
   ValueListenable<RecognitionLevel> get levelListenable => _levelNotifier;
 
@@ -36,9 +39,7 @@ final class PlaygroundViewModel extends ViewModel {
 
   void onRestrictToggled({required bool value}) => _updateRoi(restrict: value);
 
-  void onRoiWidthChanged(double value) => _updateRoi(width: value);
-
-  void onRoiHeightChanged(double value) => _updateRoi(height: value);
+  void onRoiRectChanged(Rect rect) => _updateRoi(rect: _clampRoi(rect));
 
   Future<void> onRecognizePressed() async {
     try {
@@ -56,12 +57,22 @@ final class PlaygroundViewModel extends ViewModel {
     }
   }
 
-  void _updateRoi({bool? restrict, double? width, double? height}) {
+  void _updateRoi({bool? restrict, Rect? rect}) {
     final config = _roiConfigNotifier.value;
-    _roiConfigNotifier.value = (
-      restrict: restrict ?? config.restrict,
-      width: width ?? config.width,
-      height: height ?? config.height,
+    _roiConfigNotifier.value = (restrict: restrict ?? config.restrict, rect: rect ?? config.rect);
+  }
+
+  /// Clamps [rect] to the unit square with a [_minRoiSize] floor, preserving its dimensions where
+  /// it can — so dragging the box into an edge slides it back in rather than shrinking it.
+  static Rect _clampRoi(Rect rect) {
+    final width = rect.width.clamp(_minRoiSize, 1.0);
+    final height = rect.height.clamp(_minRoiSize, 1.0);
+
+    return Rect.fromLTWH(
+      rect.left.clamp(0.0, 1.0 - width),
+      rect.top.clamp(0.0, 1.0 - height),
+      width,
+      height,
     );
   }
 

@@ -49,6 +49,9 @@ class PlaygroundView extends StatelessWidget {
               builder: (context, result, _) => RecognitionResultView(
                 result: result,
                 idleHint: 'Recognize to see what the current settings find.',
+                emptyHint:
+                    'No lines matched the region. Widen the box or center it on a line — on '
+                    'Android, a line counts only when its center is inside the box.',
               ),
             ),
           ],
@@ -58,7 +61,7 @@ class PlaygroundView extends StatelessWidget {
   );
 }
 
-/// The sample image with the live region-of-interest box drawn over it.
+/// The sample image with the draggable region-of-interest box drawn over it.
 class _SamplePreview extends StatelessWidget {
   final PlaygroundViewModel viewModel;
 
@@ -72,14 +75,10 @@ class _SamplePreview extends StatelessWidget {
         aspectRatio: ConstMedia.sampleText.size!.aspectRatio,
         child: ValueListenableBuilder(
           valueListenable: viewModel.roiConfigListenable,
-          builder: (context, config, _) => Stack(
-            fit: .expand,
-            children: [
-              ConstMedia.sampleText.image(fit: .cover),
-              CustomPaint(
-                painter: _RoiPainter(PlaygroundViewModel.roiOf(config), ConstTheme.green(context)),
-              ),
-            ],
+          builder: (context, config, _) => _RoiEditor(
+            config: config,
+            color: ConstTheme.green(context),
+            onRectChanged: viewModel.onRoiRectChanged,
           ),
         ),
       ),
@@ -112,7 +111,7 @@ class _LevelControl extends StatelessWidget {
   );
 }
 
-/// The region-of-interest toggle and the centered box's width/height sliders.
+/// The region-of-interest toggle, with a hint pointing at the draggable box while it is active.
 class _RoiControls extends StatelessWidget {
   final PlaygroundViewModel viewModel;
 
@@ -136,75 +135,157 @@ class _RoiControls extends StatelessWidget {
             ),
           ],
         ),
-        _SliderRow(
-          label: 'Width',
-          value: config.width,
-          isEnabled: config.restrict,
-          onChanged: viewModel.onRoiWidthChanged,
-        ),
-        _SliderRow(
-          label: 'Height',
-          value: config.height,
-          isEnabled: config.restrict,
-          onChanged: viewModel.onRoiHeightChanged,
-        ),
+        if (config.restrict)
+          Text(
+            'Drag the box to move it, or a corner to resize.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
       ],
     ),
   );
 }
 
-/// A labelled slider row with its current value.
-class _SliderRow extends StatelessWidget {
-  final String label;
-  final double value;
-  final bool isEnabled;
-  final ValueChanged<double> onChanged;
+/// The sample image with a directly-manipulated region-of-interest box: drag the interior to move
+/// it, drag a corner handle to resize. Inert (just the image) while recognition is unrestricted.
+/// The box itself is view-model-owned state; only the in-progress drag is view-local.
+class _RoiEditor extends StatefulWidget {
+  final RoiConfig config;
+  final Color color;
+  final ValueChanged<Rect> onRectChanged;
 
-  const _SliderRow({
-    required this.label,
-    required this.value,
-    required this.isEnabled,
-    required this.onChanged,
-  });
+  const _RoiEditor({required this.config, required this.color, required this.onRectChanged});
 
   @override
-  Widget build(BuildContext context) => Row(
-    spacing: 8,
-    children: [
-      SizedBox(width: 56, child: Text(label)),
-      Expanded(
-        child: PlatformSlider(value: value, min: 0.2, isEnabled: isEnabled, onChanged: onChanged),
-      ),
-      SizedBox(width: 40, child: Text(value.toStringAsFixed(2), textAlign: .end)),
-    ],
-  );
+  State<_RoiEditor> createState() => _RoiEditorState();
 }
 
-/// Strokes the active region-of-interest over the sample image.
+class _RoiEditorState extends State<_RoiEditor> {
+  /// The drag in progress: the grabbed corner (null ⇒ moving the whole box), with the box and
+  /// pointer captured at touch-down. Pure presentation state — observed by nothing but the
+  /// gesture handlers (the box is painted from the view model), so it never triggers a rebuild.
+  ({_Corner? corner, Rect startRect, Offset startPointer})? _drag;
+
+  /// Slop around a corner, in logical pixels, that still grabs its resize handle.
+  static const _handleHitRadius = 24.0;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final size = constraints.biggest;
+
+      return GestureDetector(
+        onPanDown: (details) => _onPanDown(details.localPosition, size),
+        onPanUpdate: (details) => _onPanUpdate(details.localPosition, size),
+        onPanEnd: (_) => _drag = null,
+        onPanCancel: () => _drag = null,
+        child: Stack(
+          fit: .expand,
+          children: [
+            ConstMedia.sampleText.image(fit: .cover),
+            CustomPaint(
+              painter: _RoiPainter(PlaygroundViewModel.roiOf(widget.config), widget.color),
+            ),
+          ],
+        ),
+      );
+    },
+  );
+
+  /// Hit-tests the touch-down point — done here, not in `onPanStart`, because by the time a pan is
+  /// recognized the finger has drifted off a small corner handle, so the resize grab would miss.
+  void _onPanDown(Offset localPosition, Size size) {
+    final rect = PlaygroundViewModel.roiOf(widget.config);
+    if (rect == null) return; // Unrestricted: the box is hidden and inert.
+
+    final boxPx = _toPx(rect, size);
+    final corner = _grabbedCorner(localPosition, boxPx);
+    if (corner != null || boxPx.contains(localPosition)) {
+      _drag = (corner: corner, startRect: rect, startPointer: _toNorm(localPosition, size));
+    }
+  }
+
+  void _onPanUpdate(Offset localPosition, Size size) {
+    final drag = _drag;
+    if (drag == null) return;
+
+    final pointer = _toNorm(localPosition, size);
+    final corner = drag.corner;
+    final next = corner == null
+        ? drag.startRect.shift(pointer - drag.startPointer)
+        : Rect.fromPoints(_anchorOf(drag.startRect, corner), _clampToUnit(pointer));
+    widget.onRectChanged(next);
+  }
+
+  /// The corner whose handle sits within [_handleHitRadius] of [localPosition], else null.
+  _Corner? _grabbedCorner(Offset localPosition, Rect boxPx) {
+    for (final (corner, at) in [
+      (_Corner.topLeft, boxPx.topLeft),
+      (_Corner.topRight, boxPx.topRight),
+      (_Corner.bottomLeft, boxPx.bottomLeft),
+      (_Corner.bottomRight, boxPx.bottomRight),
+    ]) {
+      if ((localPosition - at).distance <= _handleHitRadius) return corner;
+    }
+
+    return null;
+  }
+
+  /// The normalized corner diagonally opposite [corner] — the fixed anchor while resizing.
+  static Offset _anchorOf(Rect rect, _Corner corner) => switch (corner) {
+    _Corner.topLeft => rect.bottomRight,
+    _Corner.topRight => rect.bottomLeft,
+    _Corner.bottomLeft => rect.topRight,
+    _Corner.bottomRight => rect.topLeft,
+  };
+
+  static Offset _toNorm(Offset px, Size size) => Offset(px.dx / size.width, px.dy / size.height);
+
+  static Rect _toPx(Rect rect, Size size) => Rect.fromLTWH(
+    rect.left * size.width,
+    rect.top * size.height,
+    rect.width * size.width,
+    rect.height * size.height,
+  );
+
+  static Offset _clampToUnit(Offset point) =>
+      Offset(point.dx.clamp(0.0, 1.0), point.dy.clamp(0.0, 1.0));
+}
+
+/// A corner of the region-of-interest box, identifying which resize handle a drag grabbed.
+enum _Corner { topLeft, topRight, bottomLeft, bottomRight }
+
+/// Strokes the active region-of-interest over the sample image, with a dot at each draggable
+/// corner. Draws nothing when [roi] is null (recognition unrestricted).
 class _RoiPainter extends CustomPainter {
   final Rect? roi;
   final Color color;
 
   _RoiPainter(this.roi, this.color);
 
+  static const _handleRadius = 6.0;
+
   @override
   void paint(Canvas canvas, Size size) {
     final roi = this.roi;
     if (roi == null) return;
 
+    final boxPx = Rect.fromLTWH(
+      roi.left * size.width,
+      roi.top * size.height,
+      roi.width * size.width,
+      roi.height * size.height,
+    );
+
     final stroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..color = color;
-    canvas.drawRect(
-      Rect.fromLTWH(
-        roi.left * size.width,
-        roi.top * size.height,
-        roi.width * size.width,
-        roi.height * size.height,
-      ),
-      stroke,
-    );
+    canvas.drawRect(boxPx, stroke);
+
+    final handle = Paint()..color = color;
+    for (final corner in [boxPx.topLeft, boxPx.topRight, boxPx.bottomLeft, boxPx.bottomRight]) {
+      canvas.drawCircle(corner, _handleRadius, handle);
+    }
   }
 
   @override

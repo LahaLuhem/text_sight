@@ -6,14 +6,20 @@ import '../data/recognition_result.dart';
 import 'platform/platform_card.dart';
 import 'recognized_line_row.dart';
 
-/// Renders a [RecognitionResult]: an [idleHint] before the first run, the recognized
-/// lines (with a one-line summary) on success, or the error message on failure. Shared
-/// by the one-shot and playground demos.
+/// Renders a [RecognitionResult]: an [idleHint] before the first run, the recognized lines (with
+/// a one-line summary) on success — or [emptyHint] when the capture has no lines — and the error
+/// message on failure. Shared by the one-shot and playground demos.
 class RecognitionResultView extends StatelessWidget {
   final RecognitionResult? result;
   final String idleHint;
+  final String emptyHint;
 
-  const RecognitionResultView({required this.result, required this.idleHint, super.key});
+  const RecognitionResultView({
+    required this.result,
+    required this.idleHint,
+    this.emptyHint = 'No text recognized.',
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,17 +28,19 @@ class RecognitionResultView extends StatelessWidget {
 
     final (:capture, :error) = result;
     if (error != null) return _MessageCard('Failed: $error');
-    if (capture != null) return _CaptureCard(capture: capture);
+    if (capture != null) return _CaptureCard(capture: capture, emptyHint: emptyHint);
 
     return const _MessageCard('No text found.');
   }
 }
 
-/// The recognized lines plus a one-line summary (count, image size, quarter-turns).
+/// The recognized lines plus a one-line summary (count, image size, quarter-turns), or [emptyHint]
+/// when recognition succeeded but matched no lines.
 class _CaptureCard extends StatelessWidget {
   final TextSightCapture capture;
+  final String emptyHint;
 
-  const _CaptureCard({required this.capture});
+  const _CaptureCard({required this.capture, required this.emptyHint});
 
   @override
   Widget build(BuildContext context) => PlatformCard(
@@ -48,7 +56,10 @@ class _CaptureCard extends StatelessWidget {
             'quarterTurns ${capture.quarterTurns}',
             style: Theme.of(context).textTheme.labelMedium,
           ),
-          for (final line in capture.lines) RecognizedLineRow(line: line),
+          if (capture.lines.isEmpty)
+            Text(emptyHint)
+          else
+            for (final line in capture.lines) RecognizedLineRow(line: line),
         ],
       ),
     ),
