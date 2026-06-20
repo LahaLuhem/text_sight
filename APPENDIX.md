@@ -8,6 +8,7 @@
 - [Federation deferred: one plugin package for v1](#federation-deferred-one-plugin-package-for-v1)
 - [Known limitations, performance, and deferred work](#known-limitations)
 - [Public API funnelled through `lib/text_sight.dart`](#public-api-funnelled-through-libtext_sightdart)
+- [Developing the Android module standalone in Android Studio](#android-standalone-dev)
 
 <!-- TOC end -->
 
@@ -418,3 +419,52 @@ seam shows in the tree. Each public type gets its own file (per
 `.recognizePath` return a `Future<TextSightCapture>` and need no controller, camera permission,
 texture, or session — they share only the recognizer and result models with the live path, and ride
 the `@HostApi` ([#channel-topology](#channel-topology)).
+
+---
+
+<a id="android-standalone-dev"></a>
+## Developing the Android module standalone in Android Studio
+
+**Decision.** The plugin's `android/` carries a little **standalone-development scaffolding** so it
+can be opened directly in Android Studio (`File > Open > android/`) with full symbol resolution —
+including `io.flutter.*`. This is *not* Flutter's default plugin layout; `flutter create
+--template=plugin` produces an `android/` that resolves only inside an app build. The additions:
+
+- **`android/settings.gradle.kts`** — a `pluginManagement {}` block pinning the AGP + Kotlin plugin
+  versions, so `plugins { id("com.android.library") }` resolves when `android/` is the Gradle root.
+- **`android/gradle.properties`** — mirrors the Flutter app template (`newDsl=false`,
+  `builtInKotlin=false`) so standalone Kotlin handling matches the in-app build.
+- **`android/build.gradle.kts`** — an `if (project == rootProject)` block that adds the Flutter
+  engine embedding (`io.flutter:flutter_embedding_debug:1.0.0-<engine.version>`) as `compileOnly`,
+  reading the version from the pinned SDK so it tracks the channel rather than being hardcoded.
+- the **Gradle wrapper** (`gradlew`, `gradle/wrapper/`).
+
+**Why Flutter doesn't do this for you.** A plugin's `android/` is a library module that Flutter only
+ever builds as a *subproject* of a host app (`FlutterAppPluginLoaderPlugin` does
+`settings.include(":<plugin>")`). In that context the app supplies AGP/Kotlin — the plugin's
+`settings.gradle.kts` is ignored as a subproject — and `dev.flutter.flutter-gradle-plugin`, applied
+**only by apps**, injects the engine. So Flutter's supported way to develop plugin native code is to
+open **`example/android`**, where everything resolves out of the box. The bare `android/` folder is
+off that path: nothing provides `io.flutter`, and the engine is versioned by hash and meant to come
+from the consuming app — so the template declares neither AGP versions nor the engine. Making it
+resolve standalone requires coupling to a specific engine version (the `engine.version` read above),
+which Flutter avoids baking into every generated plugin.
+
+**Why it's safe for consumers.** Every addition is read **only when `android/` is the Gradle root**:
+a subproject's `settings.gradle.kts` and root `gradle.properties` are ignored in an app build, and
+the engine block is guarded by `project == rootProject` (false in-app). The whole lot is also
+excluded from the published package via [`.pubignore`](./.pubignore) — a consuming app builds the
+plugin with its own Gradle and never sees it. Both paths are verified to compile `lib` + the unit
+tests: `example/android` (in-app) and `android/` standalone, with the engine resolving standalone
+and the guard skipping it in-app.
+
+**Wrapper hygiene.** The wrapper is committed (standard Gradle practice — it pins the Gradle version
+for reproducible builds; see the `!/gradle/wrapper/gradle-wrapper.jar` un-ignore in
+`android/.gitignore`) but `.pubignore`d, so contributors get zero-setup standalone builds while the
+tarball stays lean. `android/local.properties` (gitignored) must set `flutter.sdk` for the engine to
+resolve standalone; the build logs a one-line hint if it's missing (app builds never need it).
+
+**Cost / fallback.** Off the supported path, the setup tracks the engine version (automatically, via
+`engine.version`) and ships a few `.pubignore`d dev-only files, in exchange for a lean plugin-only
+IDE window instead of the full example app. If it ever becomes a maintenance drag, the fallback is
+the supported path: delete the scaffolding and open `example/android`.

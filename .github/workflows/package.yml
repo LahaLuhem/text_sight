@@ -23,7 +23,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-flutter
-      - run: flutter --no-version-check analyze lib
+      # example/ resolves its own deps and is analyzed by example.yml, so it is not included here.
+      - run: flutter --no-version-check analyze --fatal-infos lib test pigeons
+
+  format:
+    name: Dart format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-flutter
+      # Whole repo; enforces analysis_options' formatter.page_width: 100. dart format needs no
+      # resolved deps, so one root run covers lib/test/pigeons AND example/.
+      - run: dart format --output=none --set-exit-if-changed .
+
+  dcm:
+    name: DCM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-flutter
+      - uses: CQLabs/setup-dcm@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # The dart_code_metrics rules in analysis_options aren't run by `flutter analyze`
+      # (CLAUDE.md's definition of done calls them out). `oss` ci-key/email = DCM's free
+      # open-source mode, so no license secret is needed. Same scope as the analyze gate.
+      - run: dcm analyze lib test pigeons --ci-key=oss --email=oss --fatal-style --fatal-warnings
 
   deps:
     name: Dependency validator
@@ -48,7 +73,7 @@ jobs:
   # never touch the native sides, so these build the example app per platform.
 
   android-example:
-    name: Android example build
+    name: Android example build + unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,9 +90,15 @@ jobs:
       # test; this guards compile- and shrink-time regressions.)
       - run: flutter --no-version-check build apk --release
         working-directory: example
+      # Kotlin unit tests (android/src/test) run in the example's Gradle build, where the Flutter
+      # Gradle plugin supplies the engine (io.flutter). The build above also regenerates the
+      # example/android wrapper (not committed). The standalone android/ build can't resolve
+      # io.flutter in CI — its local.properties / flutter.sdk is gitignored.
+      - run: ./gradlew :text_sight:testDebugUnitTest
+        working-directory: example/android
 
   ios-example:
-    name: iOS example build + no-bundling
+    name: iOS build + unit tests + no-bundling
     # macOS runners cost ~10x Linux, so only build iOS on pull requests.
     if: github.event_name == 'pull_request'
     runs-on: macos-latest
@@ -88,6 +119,25 @@ jobs:
             echo "::error::ML Kit found under example/ios — no-bundling invariant (APPENDIX.md#no-bundling) broken."
             exit 1
           fi
+      # Native XCTest cases (example/ios/RunnerTests, reaching TextSightCamera via @testable import)
+      # run through the Runner scheme's test action. The build above already wrote Generated.xcconfig.
+      # Pick the first available iPhone simulator so no device name is hardcoded across runner images
+      # (the iOS 18 floor is met by the bundled sims).
+      - name: RunnerTests (iOS simulator)
+        working-directory: example/ios
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available --json \
+            | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid // empty')
+          if [ -z "$DEVICE_ID" ]; then
+            echo "::error::No iPhone simulator available on the runner"
+            exit 1
+          fi
+          xcodebuild test \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -only-testing:RunnerTests \
+            -destination "id=$DEVICE_ID" \
+            CODE_SIGNING_ALLOWED=NO
 
   pigeon-freshness:
     name: Pigeon codegen freshness
