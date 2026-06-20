@@ -5,6 +5,10 @@
 **Live, on-device text recognition for Flutter** — Apple Vision on iOS, ML Kit on Android. Like
 [`mobile_scanner`](https://pub.dev/packages/mobile_scanner), but for text instead of barcodes.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/1-live-ocr.webp" width="260" alt="Live text recognition — confidence-coloured boxes over the camera feed">
+</p>
+
 ## Why text_sight?
 
 Most cross-platform OCR plugins run Google ML Kit on *both* platforms. That quietly pulls
@@ -49,6 +53,13 @@ the one-shot alike.
 
 The [`example/`](example/) app is where to look next — a live overlay, torch, region-of-interest,
 permission handling, and the one-shot screen, all wired up and ready to crib from.
+
+<table>
+  <tr>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/2-one-shot-android.png" width="240" alt="One-shot recognition on Android"><br><sub><b>Android</b> · ML Kit</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/3-one-shot-ios.png" width="240" alt="One-shot recognition on iOS"><br><sub><b>iOS</b> · Apple Vision</sub></td>
+  </tr>
+</table>
 
 ## Platform support
 

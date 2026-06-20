@@ -9,6 +9,17 @@ topics:
   - vision
   - mlkit
   - camera
+screenshots:
+  - description: >-
+      Live camera text recognition with a confidence-coloured box overlay and a
+      recognized-text panel.
+    path: doc/screenshots/1-live-ocr.webp
+  - description: >-
+      One-shot still-image recognition on Android (ML Kit), with per-line confidence.
+    path: doc/screenshots/2-one-shot-android.png
+  - description: >-
+      One-shot still-image recognition on iOS (Apple Vision), with per-line confidence.
+    path: doc/screenshots/3-one-shot-ios.png
 
 
 
@@ -32,14 +43,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  bdd_framework: ^4.0.7
+  benchmark_harness: ^2.4.0
   pigeon: ^27.1.0
   checks: ^0.3.1
-  bdd_framework: ^4.0.7
-  # Maintainer-only — the `benchmark/` codec micro-benchmark (excluded from the
-  # published tarball via .pubignore). `standard_message_codec` is the pure-Dart
-  # extraction of Flutter's platform-channel codec, so the benches run as plain
-  # `dart compile exe` with no Flutter binding.
-  benchmark_harness: ^2.4.0
   standard_message_codec: ^0.0.1+5
 
 
