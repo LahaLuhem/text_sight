@@ -397,9 +397,9 @@ internal fun encodeLine(
 ): Map<String, Any?> =
     mapOf(
         "text" to line.text,
-        // ML Kit v2 supplies a per-line confidence (null for a line that lacks one);
-        // forwarded as-is per the RecognizedLine.confidence contract.
-        "confidence" to line.confidence?.toDouble(),
+        // ML Kit always supplies a per-line confidence (a primitive float) — never null.
+        // Forwarded as a non-null Double the nullable RecognizedLine.confidence contract accepts.
+        "confidence" to line.confidence.toDouble(),
         // The crop origin (0 on the live path) maps boxes back into full-image coordinates.
         "left" to (boundingBox.left + offsetX) / imageWidth,
         "top" to (boundingBox.top + offsetY) / imageHeight,
