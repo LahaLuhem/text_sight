@@ -408,7 +408,8 @@ final class TextSightCamera: NSObject {
 
       return [
         "text": candidate.string,
-        // Vision always supplies a per-candidate confidence (unlike ML Kit, never null here).
+        // Vision always supplies a per-candidate confidence (a Float) — like ML Kit, never null.
+        // Forwarded as a non-null Double the nullable RecognizedLine.confidence contract accepts.
         "confidence": Double(candidate.confidence),
         "left": box.minX,
         "top": box.minY,
