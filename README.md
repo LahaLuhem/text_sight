@@ -3,6 +3,8 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/text_sight/pulls) [![Pub Package](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
 [![Pub Points](https://img.shields.io/pub/points/text_sight?logo=dart)](https://pub.dev/packages/text_sight/score)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![GitHub issues](https://img.shields.io/github/issues/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/issues) [![GitHub closed issues](https://img.shields.io/github/issues-closed/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/issues?q=is%3Aissue+is%3Aclosed)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/pulls) [![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/pulls?q=is%3Apr+is%3Aclosed)
 
 **Live, on-device text recognition for Flutter** — Apple Vision on iOS, ML Kit on Android. Like
 [`mobile_scanner`](https://pub.dev/packages/mobile_scanner), but for text instead of barcodes.
@@ -101,8 +103,21 @@ text_sight won't request camera permission for you — ask for it (e.g. with
 [`permission_handler`](https://pub.dev/packages/permission_handler)), then call
 `controller.start()`. Android's manifest already has what it needs.
 
+## Performance
+
+Recognition results cross from native to Dart as a small per-frame map over an `EventChannel`.
+Decoding it on the UI isolate costs **microseconds** — even a dense ~127-line frame is ~55 µs, well
+under 1% of a 60 fps budget. The native engine's inference, not the transport, sets the pace.
+
+![Per-frame decode cost vs frame size](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/decode_vs_lines.png)
+![Encoded payload size vs frame size](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/wire_bytes_vs_lines.png)
+![Decode cost per realistic OCR profile](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/profile_decode_bars.png)
+
+These measure the pure-Dart codec only — not native inference or end-to-end latency, which dominate.
+Leaner transports (`list`, Pigeon, packed-binary) win big in *percent* but stay tiny in absolute µs,
+so the self-describing `Map` stays. Full methodology and numbers: [`benchmark/`](benchmark/README.md).
+
 ## Going deeper
 
 How it all fits together — coordinate handling, the per-line confidence contract, how
-region-of-interest differs across platforms, performance, and what's next — lives in
-[APPENDIX.md](APPENDIX.md).
+region-of-interest differs across platforms, and what's next — lives in [APPENDIX.md](APPENDIX.md).
