@@ -1,6 +1,8 @@
-# text_sight
-
-[![pub package](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
+[![Package checks](https://github.com/LahaLuhem/text_sight/actions/workflows/package.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/text_sight/actions/workflows/package.yml)
+[![Pub Version](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/text_sight/pulls) [![Pub Package](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
+[![Pub Points](https://img.shields.io/pub/points/text_sight?logo=dart)](https://pub.dev/packages/text_sight/score)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
 
 **Live, on-device text recognition for Flutter** — Apple Vision on iOS, ML Kit on Android. Like
 [`mobile_scanner`](https://pub.dev/packages/mobile_scanner), but for text instead of barcodes.
@@ -8,6 +10,16 @@
 <p align="center">
   <img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/1-live-ocr.webp" width="260" alt="Live text recognition — confidence-coloured boxes over the camera feed">
 </p>
+
+<!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
+
+- [Why text_sight?](#why-text_sight)
+- [A quick taste](#a-quick-taste)
+- [Platform support](#platform-support)
+- [Install](#install)
+- [Going deeper](#going-deeper)
+
+<!-- TOC end -->
 
 ## Why text_sight?
 
@@ -29,9 +41,9 @@ Point the camera at some text:
 final controller = TextSightController();
 
 TextSightView(
-  controller: controller,
-  onResult: (capture) => capture.lines.forEach((line) => print(line.text)),
-  overlayBuilder: (context, capture, constraints) => /* paint line.boundingBox */,
+controller: controller,
+onResult: (capture) => capture.lines.forEach((line) => print(line.text)),
+overlayBuilder: (context, capture, constraints) => /* paint line.boundingBox */,
 );
 
 await controller.start(); // after the camera permission is granted
@@ -94,7 +106,3 @@ text_sight won't request camera permission for you — ask for it (e.g. with
 How it all fits together — coordinate handling, the per-line confidence contract, how
 region-of-interest differs across platforms, performance, and what's next — lives in
 [APPENDIX.md](APPENDIX.md).
-
-## License
-
-[LICENSE](LICENSE)
