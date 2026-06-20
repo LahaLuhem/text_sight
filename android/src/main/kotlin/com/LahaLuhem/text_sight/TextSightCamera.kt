@@ -13,6 +13,7 @@ import android.os.Looper
 import android.view.Display
 import android.view.Surface
 import androidx.annotation.OptIn
+import androidx.annotation.VisibleForTesting
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -334,59 +335,6 @@ internal class TextSightCamera(
             .addOnCompleteListener { imageProxy.close() }
     }
 
-    private fun encodeFrame(
-        visionText: Text,
-        imageWidth: Int,
-        imageHeight: Int,
-        quarterTurns: Int,
-        roi: RegionOfInterestMessage? = null,
-        offsetX: Int = 0,
-        offsetY: Int = 0,
-    ): Map<String, Any?> {
-        val width = imageWidth.toDouble()
-        val height = imageHeight.toDouble()
-
-        val lines = visionText.textBlocks
-            .flatMap { block -> block.lines }
-            .mapNotNull { line ->
-                val boundingBox = line.boundingBox ?: return@mapNotNull null
-                if (!boundingBox.centerWithin(roi, width, height)) {
-                    return@mapNotNull null
-                }
-
-                encodeLine(line, boundingBox, width, height, offsetX, offsetY)
-            }
-
-        return mapOf(
-            "imageWidth" to width,
-            "imageHeight" to height,
-            "quarterTurns" to quarterTurns,
-            "lines" to lines,
-        )
-    }
-
-    private fun encodeLine(
-        line: Text.Line,
-        boundingBox: Rect,
-        imageWidth: Double,
-        imageHeight: Double,
-        offsetX: Int,
-        offsetY: Int,
-    ): Map<String, Any?> =
-        mapOf(
-            "text" to line.text,
-            // ML Kit v2 supplies a per-line confidence (null for a line that lacks one);
-            // forwarded as-is per the RecognizedLine.confidence contract.
-            "confidence" to line.confidence?.toDouble(),
-            // The crop origin (0 on the live path) maps boxes back into full-image coordinates.
-            "left" to (boundingBox.left + offsetX) / imageWidth,
-            "top" to (boundingBox.top + offsetY) / imageHeight,
-            "width" to boundingBox.width() / imageWidth,
-            "height" to boundingBox.height() / imageHeight,
-            // Word-level elements are reserved for a future additive release.
-            "elements" to null,
-        )
-
     private fun releaseSession() {
         imageAnalysis?.clearAnalyzer()
         cameraProvider?.unbindAll()
@@ -400,8 +348,70 @@ internal class TextSightCamera(
     }
 }
 
+/**
+ * Encodes [visionText] into the self-describing per-frame map the captures channel emits — the same
+ * shape the iOS side produces. [roi] (when set) center-filters lines on the live path; the crop
+ * origin [offsetX]/[offsetY] maps still-image boxes back into full-image coordinates.
+ */
+@VisibleForTesting
+internal fun encodeFrame(
+    visionText: Text,
+    imageWidth: Int,
+    imageHeight: Int,
+    quarterTurns: Int,
+    roi: RegionOfInterestMessage? = null,
+    offsetX: Int = 0,
+    offsetY: Int = 0,
+): Map<String, Any?> {
+    val width = imageWidth.toDouble()
+    val height = imageHeight.toDouble()
+
+    val lines = visionText.textBlocks
+        .flatMap { block -> block.lines }
+        .mapNotNull { line ->
+            val boundingBox = line.boundingBox ?: return@mapNotNull null
+            if (!boundingBox.centerWithin(roi, width, height)) {
+                return@mapNotNull null
+            }
+
+            encodeLine(line, boundingBox, width, height, offsetX, offsetY)
+        }
+
+    return mapOf(
+        "imageWidth" to width,
+        "imageHeight" to height,
+        "quarterTurns" to quarterTurns,
+        "lines" to lines,
+    )
+}
+
+/** Encodes one recognized [line] into its per-frame wire map (box normalized, origin-offset). */
+@VisibleForTesting
+internal fun encodeLine(
+    line: Text.Line,
+    boundingBox: Rect,
+    imageWidth: Double,
+    imageHeight: Double,
+    offsetX: Int,
+    offsetY: Int,
+): Map<String, Any?> =
+    mapOf(
+        "text" to line.text,
+        // ML Kit v2 supplies a per-line confidence (null for a line that lacks one);
+        // forwarded as-is per the RecognizedLine.confidence contract.
+        "confidence" to line.confidence?.toDouble(),
+        // The crop origin (0 on the live path) maps boxes back into full-image coordinates.
+        "left" to (boundingBox.left + offsetX) / imageWidth,
+        "top" to (boundingBox.top + offsetY) / imageHeight,
+        "width" to boundingBox.width() / imageWidth,
+        "height" to boundingBox.height() / imageHeight,
+        // Word-level elements are reserved for a future additive release.
+        "elements" to null,
+    )
+
 /** Whether the center of this pixel rect falls inside [roi] (normalized [0, 1] top-left). */
-private fun Rect.centerWithin(
+@VisibleForTesting
+internal fun Rect.centerWithin(
     roi: RegionOfInterestMessage?,
     imageWidth: Double,
     imageHeight: Double,
@@ -427,7 +437,8 @@ private fun Bitmap.uprightBy(rotationDegrees: Int): Bitmap {
 }
 
 /** [roi] (normalized [0, 1] top-left) as a pixel [Rect] clamped inside the image, never empty. */
-private fun RegionOfInterestMessage.toPixelRect(imageWidth: Int, imageHeight: Int): Rect {
+@VisibleForTesting
+internal fun RegionOfInterestMessage.toPixelRect(imageWidth: Int, imageHeight: Int): Rect {
     val pixelLeft = (left * imageWidth).roundToInt().coerceIn(0, imageWidth - 1)
     val pixelTop = (top * imageHeight).roundToInt().coerceIn(0, imageHeight - 1)
     val pixelRight = ((left + width) * imageWidth).roundToInt().coerceIn(pixelLeft + 1, imageWidth)
