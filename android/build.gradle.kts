@@ -85,18 +85,18 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.4.2")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.mockito:mockito-core:5.18.0")
+    testImplementation("org.mockito:mockito-core:5.23.0")
     // Real android.graphics.Rect (and friends) on the JVM, so the box-geometry helpers test
     // in place without extracting the arithmetic off Android types.
-    testImplementation("org.robolectric:robolectric:4.15.1")
+    testImplementation("org.robolectric:robolectric:4.16.1")
     // mockito-kotlin's whenever/mock DSL over the already-present mockito-core, for stubbing the
     // ML Kit Text/Text.Line value graph that the frame encoder reads.
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
     // Robolectric runs under its JUnit 4 runner; the vintage engine executes those tests on the
     // JUnit Platform configured above (useJUnitPlatform).
     testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.12.2")
-    "mockitoAgent"("org.mockito:mockito-core:5.18.0") { isTransitive = false }
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.0")
+    "mockitoAgent"("org.mockito:mockito-core:5.23.0") { isTransitive = false }
 }
 
 // ── Standalone-only ──────────────────────────────────────────────────────────────────────────────
