@@ -25,6 +25,11 @@ plugins {
     id("com.android.library")
 }
 
+// Mockito's inline mock-maker has to load as a Java agent: self-attaching is deprecated on JDK 21+
+// and removed in a future JDK. This isolated configuration resolves to just the mockito-core jar,
+// handed to the unit-test JVM via -javaagent in testOptions below.
+val mockitoAgent: Configuration = configurations.create("mockitoAgent")
+
 android {
     namespace = "com.LahaLuhem.text_sight"
 
@@ -58,6 +63,7 @@ android {
             isIncludeAndroidResources = true
             all {
                 it.useJUnitPlatform()
+                it.jvmArgs("-javaagent:${mockitoAgent.asPath}")
 
                 it.outputs.upToDateWhen { false }
 
@@ -89,5 +95,16 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.4.2")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    testImplementation("org.mockito:mockito-core:5.0.0")
+    testImplementation("org.mockito:mockito-core:5.18.0")
+    // Real android.graphics.Rect (and friends) on the JVM, so the box-geometry helpers test
+    // in place without extracting the arithmetic off Android types.
+    testImplementation("org.robolectric:robolectric:4.15.1")
+    // mockito-kotlin's whenever/mock DSL over the already-present mockito-core, for stubbing the
+    // ML Kit Text/Text.Line value graph that the frame encoder reads.
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    // Robolectric runs under its JUnit 4 runner; the vintage engine executes those tests on the
+    // JUnit Platform configured above (useJUnitPlatform).
+    testImplementation("junit:junit:4.13.2")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.12.2")
+    "mockitoAgent"("org.mockito:mockito-core:5.18.0") { isTransitive = false }
 }
