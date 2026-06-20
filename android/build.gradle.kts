@@ -1,18 +1,7 @@
+import java.util.Properties
+
 group = "com.LahaLuhem.text_sight"
 version = "1.0-SNAPSHOT"
-
-buildscript {
-    val kotlinVersion = "2.3.20"
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath("com.android.tools.build:gradle:9.0.1")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
-    }
-}
 
 allprojects {
     repositories {
@@ -23,6 +12,7 @@ allprojects {
 
 plugins {
     id("com.android.library")
+    id("org.jetbrains.kotlin.android")
 }
 
 // Mockito's inline mock-maker has to load as a Java agent: self-attaching is deprecated on JDK 21+
@@ -107,4 +97,37 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.12.2")
     "mockitoAgent"("org.mockito:mockito-core:5.18.0") { isTransitive = false }
+}
+
+// ── Standalone-only ──────────────────────────────────────────────────────────────────────────────
+// Resolves io.flutter.* when this module is opened on its own in Android Studio. `project ==
+// rootProject` is true ONLY when android/ is the Gradle root (standalone development); inside an app
+// build the plugin is the `:text_sight` subproject and the Flutter Gradle plugin already puts the
+// engine on the classpath, so this whole block is skipped — consumers never see it. The engine
+// version is read from the pinned Flutter SDK (engine.version maps to Flutter's `1.0.0-<hash>` Maven
+// coordinate), so it tracks the SDK automatically instead of being hardcoded.
+if (project == rootProject) {
+    val localProperties = file("local.properties")
+    val flutterSdk: String? =
+        if (localProperties.exists()) {
+            Properties().apply { localProperties.inputStream().use { load(it) } }.getProperty("flutter.sdk")
+        } else {
+            null
+        }
+    val engineVersionFile = flutterSdk?.let { sdk -> file("$sdk/bin/internal/engine.version") }
+
+    if (engineVersionFile != null && engineVersionFile.exists()) {
+        val engineVersion = engineVersionFile.readText().trim()
+        repositories {
+            maven { url = uri("https://storage.googleapis.com/download.flutter.io") }
+        }
+        dependencies {
+            compileOnly("io.flutter:flutter_embedding_debug:1.0.0-$engineVersion")
+        }
+    } else {
+        logger.warn(
+            "text_sight: set `flutter.sdk` in android/local.properties to resolve io.flutter.* when " +
+                "developing this module standalone in Android Studio (not needed for app builds).",
+        )
+    }
 }
