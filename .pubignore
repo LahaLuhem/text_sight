@@ -45,6 +45,16 @@ example/android/
 example/ios/
 example/devtools_options.yaml
 
+# Plugin android/ standalone-dev scaffolding. android/ itself ships (it's the native
+# implementation), but the Gradle wrapper + root-build config below are read ONLY when android/ is
+# opened as its own Gradle build in Android Studio; a consuming app builds the plugin with its own
+# Gradle (via `include(":text_sight")`) and never touches them. They stay in git for contributors.
+/android/gradlew
+/android/gradlew.bat
+/android/gradle/
+/android/gradle.properties
+/android/settings.gradle.kts
+
 # Demo media. The screenshots are declared in pubspec.yaml's `screenshots:` field, so they
 # must ship in the tarball for pub.dev's gallery to render them (they're also inlined in
 # README.md via absolute GitHub raw URLs). Only the source screen recording is excluded —
