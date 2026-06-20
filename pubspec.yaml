@@ -1,6 +1,6 @@
 name: text_sight
 description: "Live, on-device text recognition — Apple Vision on iOS, ML Kit on Android. The text-scanning sibling to mobile_scanner."
-version: 0.0.0
+version: 0.0.1
 homepage: https://github.com/LahaLuhem/text_sight?tab=readme-ov-file
 repository: https://github.com/LahaLuhem/text_sight
 topics:
