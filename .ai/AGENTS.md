@@ -194,6 +194,42 @@ comply are blocked by CI.**
 Cutting a release is one command: `scripts/release.sh [patch|minor|major]` — see
 `scripts/README.md` for usage, preflight, and the pipeline-owned-files contract.
 
+## Testing
+
+Three test layers, three runners. Each covers only the **pure, platform-independent logic** —
+the device-bound capture/recognition pipeline (CameraX + ML Kit, AVCaptureSession + Vision) is
+not unit-tested.
+
+- **Dart** (`test/`) — `flutter test`. Pigeon control-channel + captures-stream decode against a
+  mocked host.
+- **Android native** (`android/src/test/`) —
+  `example/android/gradlew :text_sight:testDebugUnitTest`. Robolectric supplies a real
+  `android.graphics.Rect` so the box-geometry helpers test in place (no arithmetic extraction);
+  ML Kit's `Text` graph is Mockito-mocked. Robolectric runs under its JUnit 4 runner, executed on
+  the JUnit Platform via `junit-vintage-engine`. Mockito's inline mock-maker loads as a
+  `-javaagent` (JDK 21+ forbids self-attach) — see the `mockitoAgent` configuration in
+  `build.gradle.kts`. Covers `toPixelRect`, `centerWithin`, and the per-frame wire-map encoder
+  (`encodeFrame`/`encodeLine`, kept as file-level `internal` functions for this).
+- **iOS native** (`example/ios/RunnerTests/`) — `xcodebuild test -workspace
+  example/ios/Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,…'
+  -only-testing:RunnerTests`. Runs on a **simulator, not the host**, and tests helpers in place via
+  `@testable import text_sight` (they're `internal`, not `private`, for this). Covers
+  `displayRotation` (capture-angle → quarterTurns/orientation) and `makeRequest` (level,
+  language-correction, language list, lower-left ROI flip).
+  - **Why not a standalone host SPM test target:** the plugin's `Package.swift` declares
+    `FlutterFramework` via a path that only resolves inside Flutter's ephemeral build
+    (`example/ios/Flutter/ephemeral/Packages/.packages/`), so `swift test` can't resolve the
+    package standalone; and a sibling SPM package the plugin depends on would break the example
+    build (Flutter only links its own entries into `.packages/`). Simulator XCTest keeps
+    `Package.swift` untouched — which the no-bundling contract requires.
+  - **Two setup gotchas:** (1) the `RunnerTests` target's `IPHONEOS_DEPLOYMENT_TARGET` must be ≥
+    the plugin's iOS floor (18.0) or SPM rejects the link; (2) on a platform-version mismatch
+    against `FlutterGeneratedPluginSwiftPackage`, run `flutter build ios --config-only` first to
+    regenerate the (ephemeral) SPM manifests.
+
+Native unit-test deps are `test`-scoped only — they never reach the published AAR or a consumer's
+transitive closure, so they don't touch the no-bundling contract (hard rule 1).
+
 ## Style
 
 Full guide: [`../CODESTYLE.md`](../CODESTYLE.md) (covers Dart, Swift, Kotlin, and shell).

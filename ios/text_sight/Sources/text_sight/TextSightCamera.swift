@@ -274,9 +274,11 @@ final class TextSightCamera: NSObject {
   }
 
   /// Builds a recognizer request from a config snapshot — shared by the live path and the static
-  /// one-shot. A `RecognizeTextRequest` is a value type, so each frame/call gets its own.
-  private static func makeRequest(level: RecognitionLevelMessage, languages: [String],
-                                  roi: RegionOfInterestMessage?) -> RecognizeTextRequest {
+  /// one-shot. A `RecognizeTextRequest` is a value type, so each frame/call gets its own. Internal
+  /// (not `private`) so `RunnerTests` can exercise it via `@testable import`.
+  static func makeRequest(
+    level: RecognitionLevelMessage, languages: [String], roi: RegionOfInterestMessage?
+  ) -> RecognizeTextRequest {
     var request = RecognizeTextRequest()
     request.recognitionLevel = level == .accurate ? .accurate : .fast
     // Mirror the Dart `RecognitionLevel` enhanced-enum contract: accurate corrects, fast does not.
@@ -428,8 +430,9 @@ final class TextSightCamera: NSObject {
   /// Maps the coordinator's clockwise-to-upright `angle` (degrees) to the preview quarter-turns
   /// (clockwise, for Flutter's `RotatedBox`), the matching Vision orientation for the *unrotated*
   /// buffer, and whether the axes swap. If the on-device preview comes out rotated the wrong way,
-  /// this single mapping (the angle↔orientation convention) is the knob to adjust.
-  private static func displayRotation(forCaptureAngle angle: CGFloat)
+  /// this single mapping (the angle↔orientation convention) is the knob to adjust. Internal (not
+  /// `private`) so `RunnerTests` can exercise it via `@testable import`.
+  static func displayRotation(forCaptureAngle angle: CGFloat)
     -> (quarterTurns: Int, orientation: CGImagePropertyOrientation, isQuarterTurned: Bool) {
     switch (Int(angle.rounded()) % 360 + 360) % 360 {
     case 90: return (1, .left, true)
