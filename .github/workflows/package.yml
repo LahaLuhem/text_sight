@@ -39,16 +39,25 @@ jobs:
   dcm:
     name: DCM
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # so dcm-action can post findings onto the PR diff
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-flutter
+      - uses: ./.github/actions/setup-flutter # installs Flutter + runs `pub get` (DCM needs resolved deps)
       - uses: CQLabs/setup-dcm@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      # The dart_code_metrics rules in analysis_options aren't run by `flutter analyze`
-      # (CLAUDE.md's definition of done calls them out). `oss` ci-key/email = DCM's free
-      # open-source mode, so no license secret is needed. Same scope as the analyze gate.
-      - run: dcm analyze lib test pigeons --ci-key=oss --email=oss --fatal-style --fatal-warnings
+      # The dart_code_metrics rules in analysis_options aren't run by `flutter analyze` (CLAUDE.md's
+      # definition of done calls them out). Auth uses DCM's free open-source-project license (apply at
+      # dcm.dev) via the DCM_CI_KEY / DCM_EMAIL repo secrets. Action defaults (analyze + fatal-found =
+      # true) make it a blocking, any-finding gate; it also annotates the PR diff.
+      - uses: CQLabs/dcm-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          ci-key: ${{ secrets.DCM_CI_KEY }}
+          email: ${{ secrets.DCM_EMAIL }}
+          folders: lib,test,pigeons
 
   detekt:
     name: detekt (Kotlin)
