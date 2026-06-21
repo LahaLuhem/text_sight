@@ -17,6 +17,7 @@ benchmark/
 analysis_options.yaml
 detekt.yml
 .swiftlint.yml
+dart_dependency_validator.yaml
 
 # Build / IDE artefacts.
 build/
