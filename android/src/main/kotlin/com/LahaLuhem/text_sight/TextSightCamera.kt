@@ -436,7 +436,7 @@ private fun Bitmap.uprightBy(rotationDegrees: Int): Bitmap {
     return Bitmap.createBitmap(this, 0, 0, width, height, matrix, true)
 }
 
-/** [roi] (normalized [0, 1] top-left) as a pixel [Rect] clamped inside the image, never empty. */
+/** `roi` (normalized [0, 1] top-left) as a pixel [Rect] clamped inside the image, never empty. */
 @VisibleForTesting
 internal fun RegionOfInterestMessage.toPixelRect(imageWidth: Int, imageHeight: Int): Rect {
     val pixelLeft = (left * imageWidth).roundToInt().coerceIn(0, imageWidth - 1)

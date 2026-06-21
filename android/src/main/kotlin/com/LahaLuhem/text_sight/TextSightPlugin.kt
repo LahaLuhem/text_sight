@@ -11,6 +11,9 @@ import io.flutter.plugin.common.EventChannel
  * [TextSightCamera]. No recognition library crosses into the Dart pubspec — ML Kit
  * and CameraX are declared only in build.gradle.kts (the no-bundling contract).
  */
+// Instantiated reflectively by Flutter's generated registrant (declared as `pluginClass` in
+// pubspec.yaml), never referenced from Kotlin — the IDE's "never used" report is a false positive.
+@Suppress("unused")
 class TextSightPlugin :
     FlutterPlugin,
     TextSightHostApi {

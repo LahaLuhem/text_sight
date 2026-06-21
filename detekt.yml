@@ -1,0 +1,33 @@
+# detekt — Kotlin static analysis for android/src (the native plugin sources). Run with
+# `--build-upon-default-config`, so this file lists ONLY the deviations from detekt's default
+# ruleset; everything not mentioned stays at its default. The deviations mirror the project's Dart
+# analysis_options posture: thorough by default, with the few opinionated rules that conflict with
+# this plugin's deliberate choices switched off. Messages.g.kt (generated) is excluded at the CLI.
+
+complexity:
+  TooManyFunctions:
+    # The plugin entrypoint and the camera/recognition controller legitimately expose many small
+    # functions; the Dart side enforces no function-count cap either.
+    active: false
+  LongParameterList:
+    # The per-frame encoder helpers take the frame geometry positionally on the hot path; param
+    # count isn't enforced on the Dart side.
+    active: false
+
+naming:
+  PackageNaming:
+    # `com.LahaLuhem.text_sight` is the plugin's fixed identity (capitalised GitHub handle +
+    # underscore) — the AGP namespace and Kotlin package. It cannot be renamed.
+    active: false
+
+style:
+  MagicNumber:
+    # Mirrors the Dart side, which disables `no-magic-number`. The rotation/normalisation constants
+    # in the camera math read fine inline.
+    active: false
+
+exceptions:
+  TooGenericExceptionCaught:
+    # The camera init converts any native failure into a `FlutterError` at the channel boundary — a
+    # deliberate broad catch. (Re-enable and `@Suppress` that single site if stricter checking is wanted.)
+    active: false
