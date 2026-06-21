@@ -1,4 +1,4 @@
-package com.LahaLuhem.text_sight
+package com.lahaluhem.text_sight
 
 import android.Manifest
 import android.content.Context

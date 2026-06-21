@@ -12,7 +12,7 @@
         <list>
           <option value=":testDebugUnitTest" />
           <option value="--tests" />
-          <option value="&quot;com.LahaLuhem.text_sight.TextSightCameraTest&quot;" />
+          <option value="&quot;com.lahaluhem.text_sight.TextSightCameraTest&quot;" />
         </list>
       </option>
       <option name="vmOptions" />

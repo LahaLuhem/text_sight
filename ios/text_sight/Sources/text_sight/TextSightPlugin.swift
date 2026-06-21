@@ -76,4 +76,4 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
   }
 }
 
-private let capturesChannelName = "com.LahaLuhem.text_sight/captures"
+private let capturesChannelName = "com.lahaluhem.text_sight/captures"

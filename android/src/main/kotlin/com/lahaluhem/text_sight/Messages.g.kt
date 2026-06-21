@@ -2,7 +2,7 @@
 // See also: https://pub.dev/packages/pigeon
 @file:Suppress("UNCHECKED_CAST", "ArrayInDataClass")
 
-package com.LahaLuhem.text_sight
+package com.lahaluhem.text_sight
 
 import android.util.Log
 import io.flutter.plugin.common.BasicMessageChannel

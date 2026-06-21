@@ -122,7 +122,7 @@ and `messages.g.dart` is committed, so the fallback is simply to freeze it. (Pig
 cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
 
 **The per-frame wire format is a hand-written, self-describing map.** Each event on the captures
-`EventChannel` (`com.LahaLuhem.text_sight/captures`) is a `Map`: top-level `imageWidth` /
+`EventChannel` (`com.lahaluhem.text_sight/captures`) is a `Map`: top-level `imageWidth` /
 `imageHeight` (doubles, pixels post-rotation), `quarterTurns` (int — clockwise quarter-turns to
 rotate the raw preview texture to display-upright, per [#coordinate-normalization](#coordinate-normalization)),
 plus `lines`, a `List` of per-line maps —
@@ -273,53 +273,19 @@ performs it, and a unit image size yields the top-left-normalized box directly).
 <a id="known-limitations"></a>
 ## Known limitations, performance, and deferred work
 
-A running list of what v1 does *not* do well yet — the backlog to work out next. The user-facing
-summary lives in the [README](./README.md#limitations--known-issues); the engineering detail and
-rationale live here.
-
-**Performance — live recognition is single-in-flight with frame back-pressure.** Exactly one
-recognition runs at a time (iOS: one `RecognizeTextRequest` gated by an `isProcessing` flag +
-`alwaysDiscardsLateVideoFrames`; Android: `STRATEGY_KEEP_ONLY_LATEST` + the mandatory
-`imageProxy.close()`). The preview texture updates every frame, but the *recognition* rate is bounded
-by how fast the engine returns — under dense text or on lower-end devices it falls below the camera
-frame rate, and late frames are dropped rather than queued (the intended trade-off: latency over
-backlog). Levers to explore next: raising `minimumTextHeight` / downscaling before recognition, an
-explicit frame-skip cadence, and the Android live-ROI pre-crop below. Default `RecognitionLevel.fast` for
-live; `.accurate` is materially heavier.
-
-**Region-of-interest is asymmetric.** iOS sets Vision's native `regionOfInterest`, so a smaller box
-actually lowers recognition cost. Android's one-shot now **crops** to the ROI, so a smaller box
-lowers cost there too; the **live** stream still recognizes the full frame and *filters* lines whose
-center falls outside the ROI ([#coordinate-normalization](#coordinate-normalization)) — correct
-results, but **no speed-up**. A true YUV pre-crop on the live path is the deferred optimization.
+A running list of what v1 does *not* do well yet. The **active backlog is tracked as GitHub issues**
+(<https://github.com/LahaLuhem/text_sight/issues>). What stays *here* is the permanent rationale that
+isn't a backlog item:
 
 **Platform capability differences (inherent, not bugs).** `recognitionLevel` and `languages` apply on
 iOS (Vision) and are **no-ops on Android** (the ML Kit Latin recognizer exposes neither and reads
 Latin only). Per-line `confidence` is supplied by both, but the scales are **not comparable**. These
 are documented in the [README](./README.md); they are engine properties, not defects.
 
-**iOS rotation & background.** Orientation tracking uses `AVCaptureDevice.RotationCoordinator`
-(iOS 17+) to keep the delivered buffer upright; it is **compile-verified but not yet exercised on a
-physical device** (the Simulator has no camera). Explicit app-background teardown (gotcha 6 — stop the
-session on `didEnterBackground`, restart on foreground) is not implemented: the session relies on
-iOS's automatic capture suspension plus the consumer calling `stop`/`dispose`.
-
-**iOS floor is 18.0.** iOS 13–17 are unsupported until the availability-gated `VNRecognizeTextRequest`
-fallback lands ([#ios-capture-strategy](#ios-capture-strategy)).
-
-**Deferred features (each additive and non-breaking when it lands):**
-
-- **Word-level `RecognizedElement`s** — `RecognizedLine.elements` ships `null`/reserved; populating it
-  is a minor.
-- **iOS 13–17 hybrid** — `if #available(iOS 18)` → `RecognizeTextRequest`, else
-  `VNRecognizeTextRequest` ([#ios-capture-strategy](#ios-capture-strategy)).
-- **True ROI pre-crop on the Android *live* path** (the perf lever above; the one-shot already crops).
-- **macOS** — Apple Vision is identical; a shared `darwin/` brings it in cheaply
-  ([#ios-capture-strategy](#ios-capture-strategy)).
-- **Additional Android scripts** (Chinese / Devanagari / Japanese / Korean) — each needs its own ML
-  Kit recognizer + Gradle dependency.
-- **Federation** — split into a platform-interface package + per-platform packages if third parties
-  add platforms ([#federation-deferred](#federation-deferred)).
+**Federation is deferred (and likely unneeded).** v1 ships as one package; the split into a
+platform-interface package + per-platform implementations is only worth it if third parties add
+platforms ([#federation-deferred](#federation-deferred)). Not tracked as an issue — revisit only if
+that need actually arises.
 
 ---
 
