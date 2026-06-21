@@ -1,6 +1,6 @@
 import java.util.Properties
 
-group = "com.LahaLuhem.text_sight"
+group = "com.lahaluhem.text_sight"
 version = "1.0-SNAPSHOT"
 
 allprojects {
@@ -15,7 +15,7 @@ plugins {
 }
 
 android {
-    namespace = "com.LahaLuhem.text_sight"
+    namespace = "com.lahaluhem.text_sight"
 
     // Latest STABLE API level, matching Flutter's default (flutter.compileSdkVersion). Deliberately
     // NOT a newer/preview level: AGP bakes this into the AAR as minCompileSdk, forcing every consumer

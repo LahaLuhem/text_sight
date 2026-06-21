@@ -380,7 +380,7 @@ _HostCall _mockHostMethod(TestDefaultBinaryMessenger messenger, String method, {
 
 /// Mocks the captures `EventChannel` to emit [frames] in order, then close.
 void _mockCaptures(TestDefaultBinaryMessenger messenger, List<Object?> frames) {
-  const channel = EventChannel('com.LahaLuhem.text_sight/captures');
+  const channel = EventChannel('com.lahaluhem.text_sight/captures');
   messenger.setMockStreamHandler(
     channel,
     MockStreamHandler.inline(

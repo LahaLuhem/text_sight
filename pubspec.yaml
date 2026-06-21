@@ -56,7 +56,7 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.LahaLuhem.text_sight
+        package: com.lahaluhem.text_sight
         pluginClass: TextSightPlugin
       ios:
         pluginClass: TextSightPlugin

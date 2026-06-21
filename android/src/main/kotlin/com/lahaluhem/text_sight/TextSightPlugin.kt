@@ -1,4 +1,4 @@
-package com.LahaLuhem.text_sight
+package com.lahaluhem.text_sight
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
@@ -94,7 +94,7 @@ class TextSightPlugin :
     }
 
     private companion object {
-        const val CAPTURES_CHANNEL_NAME = "com.LahaLuhem.text_sight/captures"
+        const val CAPTURES_CHANNEL_NAME = "com.lahaluhem.text_sight/captures"
 
         fun <T> detached(): Result<T> =
             Result.failure(FlutterError("detached", "The plugin is not attached to a Flutter engine."))

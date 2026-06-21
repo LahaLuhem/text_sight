@@ -16,9 +16,10 @@ complexity:
 
 naming:
   PackageNaming:
-    # `com.LahaLuhem.text_sight` is the plugin's fixed identity (capitalised GitHub handle +
-    # underscore) — the AGP namespace and Kotlin package. It cannot be renamed.
-    active: false
+    # Package is lowercase now (com.lahaluhem.text_sight); keep this rule ACTIVE so it stays that
+    # way. The pattern only adds `_` to detekt's default allowed segment chars, since the
+    # `text_sight` segment deliberately mirrors the pub package name (the default forbids underscores).
+    packagePattern: '[a-z]+(\.[a-z][A-Za-z0-9_]*)*'
 
 style:
   MagicNumber:

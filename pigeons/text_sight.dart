@@ -13,8 +13,8 @@
   PigeonOptions(
     dartPackageName: 'text_sight',
     dartOut: 'lib/src/platform/messages.g.dart',
-    kotlinOut: 'android/src/main/kotlin/com/LahaLuhem/text_sight/Messages.g.kt',
-    kotlinOptions: KotlinOptions(package: 'com.LahaLuhem.text_sight'),
+    kotlinOut: 'android/src/main/kotlin/com/lahaluhem/text_sight/Messages.g.kt',
+    kotlinOptions: KotlinOptions(package: 'com.lahaluhem.text_sight'),
     swiftOut: 'ios/text_sight/Sources/text_sight/Messages.g.swift',
   ),
 )

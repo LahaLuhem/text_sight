@@ -22,7 +22,7 @@ import 'text_sight_platform.dart';
 final class PigeonTextSightPlatform extends TextSightPlatform {
   /// The native→Dart per-frame results stream. The name is mirrored verbatim by
   /// the native `EventChannel` registration on each platform.
-  static const _capturesChannel = EventChannel('com.LahaLuhem.text_sight/captures');
+  static const _capturesChannel = EventChannel('com.lahaluhem.text_sight/captures');
 
   final _hostApi = TextSightHostApi();
 

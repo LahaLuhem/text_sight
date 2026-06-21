@@ -1,4 +1,4 @@
-package com.LahaLuhem.text_sight
+package com.lahaluhem.text_sight
 
 import android.graphics.Rect
 import com.google.mlkit.vision.text.Text

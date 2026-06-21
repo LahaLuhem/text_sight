@@ -19,8 +19,8 @@ import Vision
 final class TextSightCamera: NSObject {
   private let textureRegistry: FlutterTextureRegistry
   private let session = AVCaptureSession()
-  private let sessionQueue = DispatchQueue(label: "com.LahaLuhem.text_sight.session")
-  private let captureQueue = DispatchQueue(label: "com.LahaLuhem.text_sight.capture")
+  private let sessionQueue = DispatchQueue(label: "com.lahaluhem.text_sight.session")
+  private let captureQueue = DispatchQueue(label: "com.lahaluhem.text_sight.capture")
 
   /// Guards every field touched from more than one thread: the latest pixel buffer (capture
   /// queue writes, raster thread reads via `copyPixelBuffer`), the sink, the recognizer config
@@ -396,7 +396,7 @@ final class TextSightCamera: NSObject {
   }
 
   /// Encodes observations into the self-describing per-frame map — byte-identical to the shape
-  /// the Android side emits over `com.LahaLuhem.text_sight/captures`.
+  /// the Android side emits over `com.lahaluhem.text_sight/captures`.
   private static func encodeFrame(_ observations: [RecognizedTextObservation],
                                   imageWidth: Double, imageHeight: Double,
                                   quarterTurns: Int) -> [String: Any] {
