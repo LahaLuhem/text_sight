@@ -1,0 +1,20 @@
+# SwiftLint — Swift static analysis for the plugin sources + the iOS RunnerTests. SwiftLint defaults
+# apply except the deviations below, which mirror the project's Dart analysis_options posture
+# (thorough, minus the opinionated rules that conflict with deliberate choices here).
+included:
+  - ios/text_sight/Sources/text_sight
+  - example/ios/RunnerTests
+excluded:
+  - ios/text_sight/Sources/text_sight/Messages.g.swift  # Pigeon-generated
+
+disabled_rules:
+  - file_length       # the camera/Vision file is one cohesive unit; Dart enforces no file-length cap
+  - type_body_length  # likewise the camera controller type
+  - trailing_comma    # trailing commas are kept, consistent with the project's Dart style
+
+identifier_name:
+  min_length:
+    warning: 2        # allow short, clear domain names (e.g. `up` in the rotation tests)
+
+large_tuple:
+  warning: 3          # displayRotation returns a 3-member named tuple — idiomatic; a struct'd be ceremony

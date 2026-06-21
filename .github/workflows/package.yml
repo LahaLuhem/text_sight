@@ -50,6 +50,21 @@ jobs:
       # open-source mode, so no license secret is needed. Same scope as the analyze gate.
       - run: dcm analyze lib test pigeons --ci-key=oss --email=oss --fatal-style --fatal-warnings
 
+  detekt:
+    name: detekt (Kotlin)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      # detekt analyses the Kotlin sources directly — no Gradle/Android SDK needed. The config
+      # layers this project's deviations onto detekt's default ruleset; Messages.g.kt is generated.
+      - run: |
+          curl -fsSL -o detekt-cli.jar https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8-all.jar
+          java -jar detekt-cli.jar --build-upon-default-config --config detekt.yml --input android/src --excludes '**/Messages.g.kt'
+
   deps:
     name: Dependency validator
     runs-on: ubuntu-latest
@@ -138,6 +153,14 @@ jobs:
             -only-testing:RunnerTests \
             -destination "id=$DEVICE_ID" \
             CODE_SIGNING_ALLOWED=NO
+      # SwiftLint over the plugin's Swift + RunnerTests (config excludes the generated
+      # Messages.g.swift). Folded into this macOS job to avoid a second ~10x-cost runner; the
+      # portable binary is version-pinned. Runs from the repo root so .swiftlint.yml resolves.
+      - name: SwiftLint
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" https://github.com/realm/SwiftLint/releases/download/0.63.3/portable_swiftlint.zip
+          unzip -oq "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
+          "$RUNNER_TEMP/swiftlint/swiftlint" lint --strict --config .swiftlint.yml
 
   pigeon-freshness:
     name: Pigeon codegen freshness

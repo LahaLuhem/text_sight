@@ -12,31 +12,20 @@ allprojects {
 
 plugins {
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
 }
-
-// Mockito's inline mock-maker has to load as a Java agent: self-attaching is deprecated on JDK 21+
-// and removed in a future JDK. This isolated configuration resolves to just the mockito-core jar,
-// handed to the unit-test JVM via -javaagent in testOptions below.
-val mockitoAgent: Configuration = configurations.create("mockitoAgent")
 
 android {
     namespace = "com.LahaLuhem.text_sight"
 
+    // Latest STABLE API level, matching Flutter's default (flutter.compileSdkVersion). Deliberately
+    // NOT a newer/preview level: AGP bakes this into the AAR as minCompileSdk, forcing every consumer
+    // to compile against >= it — and since pub.dev ships this as source, they'd also need that SDK
+    // platform installed. A higher value here breaks stock-Flutter consumers (see APPENDIX).
     compileSdk = 36
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-    }
-
-    sourceSets {
-        getByName("main") {
-            java.srcDirs("src/main/kotlin")
-        }
-        getByName("test") {
-            java.srcDirs("src/test/kotlin")
-        }
     }
 
     defaultConfig {
@@ -51,13 +40,20 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
-            all {
-                it.useJUnitPlatform()
-                it.jvmArgs("-javaagent:${mockitoAgent.asPath}")
+            all { testTask ->
+                testTask.useJUnitPlatform()
 
-                it.outputs.upToDateWhen { false }
+                // Mockito's inline mock-maker loads as a Java agent (self-attach is deprecated on
+                // JDK 21+). Point -javaagent at the mockito-core jar already on the resolved test
+                // classpath — doFirst defers the lookup to execution time, when it's resolvable.
+                testTask.doFirst {
+                    val agentJar = testTask.classpath.first { jar -> jar.name.startsWith("mockito-core-") }
+                    testTask.jvmArgs("-javaagent:${agentJar.absolutePath}")
+                }
 
-                it.testLogging {
+                testTask.outputs.upToDateWhen { false }
+
+                testTask.testLogging {
                     events("passed", "skipped", "failed", "standardOut", "standardError")
                     showStandardStreams = true
                 }
@@ -85,6 +81,7 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.4.2")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+    // mockito-core also carries the inline mock-maker agent that testOptions points -javaagent at.
     testImplementation("org.mockito:mockito-core:5.23.0")
     // Real android.graphics.Rect (and friends) on the JVM, so the box-geometry helpers test
     // in place without extracting the arithmetic off Android types.
@@ -96,7 +93,9 @@ dependencies {
     // JUnit Platform configured above (useJUnitPlatform).
     testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.0")
-    "mockitoAgent"("org.mockito:mockito-core:5.23.0") { isTransitive = false }
+    // JUnit Platform launcher — required on the test runtime classpath for useJUnitPlatform().
+    // The legacy AGP DSL / kotlin-android setup provided it implicitly; AGP 9's new DSL does not.
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.0")
 }
 
 // ── Standalone-only ──────────────────────────────────────────────────────────────────────────────

@@ -430,10 +430,11 @@ can be opened directly in Android Studio (`File > Open > android/`) with full sy
 including `io.flutter.*`. This is *not* Flutter's default plugin layout; `flutter create
 --template=plugin` produces an `android/` that resolves only inside an app build. The additions:
 
-- **`android/settings.gradle.kts`** — a `pluginManagement {}` block pinning the AGP + Kotlin plugin
-  versions, so `plugins { id("com.android.library") }` resolves when `android/` is the Gradle root.
-- **`android/gradle.properties`** — mirrors the Flutter app template (`newDsl=false`,
-  `builtInKotlin=false`) so standalone Kotlin handling matches the in-app build.
+- **`android/settings.gradle.kts`** — a `pluginManagement {}` block pinning the AGP version, so
+  `plugins { id("com.android.library") }` resolves when `android/` is the Gradle root. (No Kotlin
+  plugin — standalone uses AGP 9's built-in Kotlin; see the migration note below.)
+- **`android/gradle.properties`** — `useAndroidX` + JVM args only. (No `newDsl`/`builtInKotlin`
+  opt-out flags; the standalone build runs AGP 9's built-in Kotlin + new DSL.)
 - **`android/build.gradle.kts`** — an `if (project == rootProject)` block that adds the Flutter
   engine embedding (`io.flutter:flutter_embedding_debug:1.0.0-<engine.version>`) as `compileOnly`,
   reading the version from the pinned SDK so it tracks the channel rather than being hardcoded.
@@ -463,6 +464,37 @@ for reproducible builds; see the `!/gradle/wrapper/gradle-wrapper.jar` un-ignore
 `android/.gitignore`) but `.pubignore`d, so contributors get zero-setup standalone builds while the
 tarball stays lean. `android/local.properties` (gitignored) must set `flutter.sdk` for the engine to
 resolve standalone; the build logs a one-line hint if it's missing (app builds never need it).
+
+**AGP 9 built-in Kotlin — standalone only.** The standalone build runs AGP 9's **built-in Kotlin +
+new DSL**: no `org.jetbrains.kotlin.android` plugin, no `builtInKotlin`/`newDsl` opt-out flags, and
+no `sourceSets { java.srcDirs("src/main/kotlin") }` block (AGP 9 includes `src/main/kotlin` /
+`src/test/kotlin` by default). This clears the AGP-9 deprecation warnings (`android {}` legacy
+extension, `kotlin.android` "no longer required", the opt-out flags) **in the standalone window**.
+The **example app cannot follow**: Flutter 3.44's `flutter build` migrator actively re-adds
+`android.builtInKotlin=false` / `android.newDsl=false` to `example/android/gradle.properties` on
+every build, so the in-app build — and its AGP-9 deprecation warnings — stays on legacy AGP until
+Flutter itself migrates. The shared `build.gradle.kts` works in both contexts: built-in Kotlin
+standalone, and AGP's legacy auto-apply of `kotlin.android` (using the example's pinned Kotlin
+version) in-app. One consequence of the new DSL: `junit-platform-launcher` must be declared
+explicitly on the test runtime classpath for `useJUnitPlatform()` — the legacy DSL provided it
+implicitly.
+
+**`compileSdk` = latest *stable*, never preview.** `build.gradle.kts` pins `compileSdk = 36` (Android
+16 — Flutter 3.44's `flutter.compileSdkVersion` default), not a newer/preview level. AGP records a
+library's `compileSdk` as the AAR's **`minCompileSdk`**, forcing every consumer to compile against at
+least that; and since pub.dev ships this plugin as **source**, a higher value would also require
+consumers to have that SDK platform installed — hard-breaking stock-Flutter apps. AGP ≥ 9.2 *enforces*
+this (9.0 silently skipped it, which is how the example built before). This is the one spot where the
+vendor-forward instinct misfires: it governs the plugin's own API floor (and `minSdk`), not the
+compileSdk imposed on downstream apps. CameraX + ML Kit need nothing past stable 36.
+
+**AGP 9.2.1 on Gradle 9.6.0; no configuration cache (yet).** Both contexts run AGP 9.2.1, which
+requires Gradle ≥ 9.4.1 (so the example wrapper moved 9.1.0 → 9.6.0 to match standalone). Two known
+non-fixables, both upstream: the *"Project object as a dependency notation"* Gradle-10 deprecation
+comes from AGP's own `VariantDependenciesBuilder` (test-variant wiring; still present in the latest
+stable, harmless until Gradle 10), and **configuration cache stays off** because AGP 9.2.1's
+`JdkImageInput` (javac system-modules) isn't CC-serializable under Gradle 9.6 — a strict-mode CC build
+fails storing the entry. Both are AGP's to fix; re-evaluate when next bumping AGP.
 
 **Cost / fallback.** Off the supported path, the setup tracks the engine version (automatically, via
 `engine.version`) and ships a few `.pubignore`d dev-only files, in exchange for a lean plugin-only
