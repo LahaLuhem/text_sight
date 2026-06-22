@@ -56,6 +56,16 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     camera.dispose(completion: completion)
   }
 
+  func checkCameraPermission() throws -> CameraPermissionStatusMessage {
+    CameraPermission.current()
+  }
+
+  func requestCameraPermission(completion: @escaping (Result<CameraPermissionStatusMessage, Error>) -> Void) {
+    CameraPermission.request { status in
+      completion(.success(status))
+    }
+  }
+
   func setRegionOfInterest(roi: RegionOfInterestMessage?) throws {
     camera.setRegionOfInterest(roi: roi)
   }
