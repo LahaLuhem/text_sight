@@ -13,6 +13,8 @@
           <option value=":testDebugUnitTest" />
           <option value="--tests" />
           <option value="&quot;com.lahaluhem.text_sight.TextSightCameraTest&quot;" />
+          <option value="--tests" />
+          <option value="&quot;com.lahaluhem.text_sight.TextSightModelReadinessTest&quot;" />
         </list>
       </option>
       <option name="vmOptions" />
