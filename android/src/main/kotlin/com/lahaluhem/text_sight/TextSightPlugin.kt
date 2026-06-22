@@ -1,6 +1,8 @@
 package com.lahaluhem.text_sight
 
 import io.flutter.embedding.engine.plugins.FlutterPlugin
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.EventChannel
 
 /**
@@ -16,9 +18,12 @@ import io.flutter.plugin.common.EventChannel
 @Suppress("unused")
 class TextSightPlugin :
     FlutterPlugin,
+    ActivityAware,
     TextSightHostApi {
     private var camera: TextSightCamera? = null
     private var modelReadiness: TextSightModelReadiness? = null
+    private var permissions: CameraPermissionRequester? = null
+    private var activityBinding: ActivityPluginBinding? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         TextSightHostApi.setUp(binding.binaryMessenger, this)
@@ -28,6 +33,8 @@ class TextSightPlugin :
 
         val readinessChannel = EventChannel(binding.binaryMessenger, READINESS_CHANNEL_NAME)
         modelReadiness = TextSightModelReadiness(binding.applicationContext, readinessChannel)
+
+        permissions = CameraPermissionRequester(binding.applicationContext)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -36,6 +43,7 @@ class TextSightPlugin :
         camera?.dispose()
         camera = null
         modelReadiness = null
+        permissions = null
     }
 
     override fun initialize(options: TextSightOptionsMessage, callback: (Result<Long>) -> Unit) {
@@ -60,6 +68,18 @@ class TextSightPlugin :
         val activeCamera = camera ?: return callback(detached())
 
         activeCamera.disposeSession(callback)
+    }
+
+    override fun checkCameraPermission(): CameraPermissionStatusMessage {
+        val activePermissions = permissions ?: throw detachedError()
+
+        return activePermissions.check()
+    }
+
+    override fun requestCameraPermission(callback: (Result<CameraPermissionStatusMessage>) -> Unit) {
+        val activePermissions = permissions ?: return callback(detached())
+
+        activePermissions.request(callback)
     }
 
     override fun setRegionOfInterest(roi: RegionOfInterestMessage?) {
@@ -104,11 +124,48 @@ class TextSightPlugin :
         activeCamera.recognizePath(path, options, callback)
     }
 
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        bindActivity(binding)
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        bindActivity(binding)
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        unbindActivity()
+    }
+
+    override fun onDetachedFromActivity() {
+        unbindActivity()
+    }
+
+    // The runtime permission request needs a foreground Activity and a result listener; both arrive
+    // and depart with the ActivityAware lifecycle. The capture pipeline binds to a headless
+    // LifecycleOwner, so the camera is unaffected by Activity attach/detach.
+    private fun bindActivity(binding: ActivityPluginBinding) {
+        val activePermissions = permissions ?: return
+
+        binding.addRequestPermissionsResultListener(activePermissions)
+        activePermissions.activity = binding.activity
+        activityBinding = binding
+    }
+
+    private fun unbindActivity() {
+        permissions?.let { activePermissions ->
+            activityBinding?.removeRequestPermissionsResultListener(activePermissions)
+            activePermissions.activity = null
+        }
+        activityBinding = null
+    }
+
     private companion object {
         const val CAPTURES_CHANNEL_NAME = "com.lahaluhem.text_sight/captures"
         const val READINESS_CHANNEL_NAME = "com.lahaluhem.text_sight/readiness"
 
-        fun <T> detached(): Result<T> =
-            Result.failure(FlutterError("detached", "The plugin is not attached to a Flutter engine."))
+        fun detachedError(): FlutterError =
+            FlutterError("detached", "The plugin is not attached to a Flutter engine.")
+
+        fun <T> detached(): Result<T> = Result.failure(detachedError())
     }
 }
