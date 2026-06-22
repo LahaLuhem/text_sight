@@ -1,6 +1,7 @@
 // Tests
 // ignore_for_file: prefer-match-file-name
 
+import 'dart:async' show unawaited;
 import 'dart:ui' show Locale, Rect, Size;
 
 import 'package:bdd_framework/bdd_framework.dart';
@@ -448,6 +449,27 @@ void main() {
       });
 
   Bdd(readiness)
+      .scenario('The readiness stream decodes a download-then-ready progression in order')
+      .given('the host emits downloading 25%, downloading 80%, then ready')
+      .when('the platform collects the readiness states in order')
+      .then('they decode to ModelDownloading(0.25), ModelDownloading(0.8), ModelReady')
+      .run((_) async {
+        final platform = PigeonTextSightPlatform();
+        _mockReadiness(messenger, <Object?>[
+          <Object?, Object?>{'state': 'downloading', 'progress': 0.25},
+          <Object?, Object?>{'state': 'downloading', 'progress': 0.8},
+          <Object?, Object?>{'state': 'ready'},
+        ]);
+
+        final states = await platform.modelReadiness.take(3).toList();
+
+        check<Iterable<Object?>>(states).length.equals(3);
+        check(states[0]).isA<ModelDownloading>().has((s) => s.progress, 'progress').equals(0.25);
+        check(states[1]).isA<ModelDownloading>().has((s) => s.progress, 'progress').equals(0.8);
+        check(states[2]).isA<ModelReady>();
+      });
+
+  Bdd(readiness)
       .scenario('TextSightModel.ensureReady resolves through the default platform')
       .given('the default platform instance talking to a mocked host that replies ready')
       .when('TextSightModel.ensureReady is awaited')
@@ -459,11 +481,33 @@ void main() {
 
         check(state).isA<ModelReady>();
       });
+
+  Bdd(readiness)
+      .scenario('ensureReady triggers the native prepare even when its future is dropped')
+      .given('a mocked host recording whether ensureModelReady is invoked')
+      .when('TextSightModel.ensureReady() is called fire-and-forget, its future discarded')
+      .then('the host still receives the ensureModelReady call')
+      .run((_) async {
+        final call = _mockHostMethod(
+          messenger,
+          'ensureModelReady',
+          reply: <String, Object?>{'state': 'ready'},
+        );
+
+        // Model a consumer that kicks off the fetch without awaiting it (watching the stream
+        // instead, or just letting it run). The native prepare must still fire.
+        unawaited(TextSightModel.ensureReady());
+        await pumpEventQueue();
+
+        check(call.invoked).isTrue();
+      });
 }
 
-/// Records the decoded argument payload a mocked host method receives.
+/// Records the decoded argument payload a mocked host method receives, and whether it was invoked
+/// at all (a no-argument method like `ensureModelReady` carries a `null` payload either way).
 final class _HostCall {
   Object? payload;
+  var invoked = false;
 }
 
 /// Installs a mock handler for the Pigeon `@HostApi` [method], recording the
@@ -476,7 +520,9 @@ _HostCall _mockHostMethod(TestDefaultBinaryMessenger messenger, String method, {
     TextSightHostApi.pigeonChannelCodec,
   );
   messenger.setMockDecodedMessageHandler<Object?>(channel, (message) {
-    call.payload = message;
+    call
+      ..invoked = true
+      ..payload = message;
 
     return Future<Object?>.syncValue(<Object?>[reply]);
   });
