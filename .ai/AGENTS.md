@@ -88,7 +88,7 @@ text_sight/
 ├── ios/                     iOS plugin (Swift + Vision + AVFoundation)
 │   ├── text_sight.podspec        CocoaPods; links system frameworks; NO third-party deps
 │   ├── text_sight/Package.swift  SwiftPM manifest; system frameworks need no dependency line
-│   ├── .swiftlint.yml            SwiftLint config (deviations only; run from the repo root)
+│   ├── .swiftlint.yml            SwiftLint for the plugin Swift (RunnerTests: example/ios/.swiftlint.yml)
 │   └── text_sight/Sources/text_sight/   AVCaptureSession + VNRecognizeTextRequest + FlutterTexture
 ├── android/                 Android plugin (Kotlin + CameraX + ML Kit)
 │   ├── build.gradle.kts          ML Kit + CameraX deps live ONLY here; built-in Kotlin
