@@ -7,32 +7,23 @@ import 'package:text_sight/text_sight.dart';
 
 import 'data/enums/session_status.dart';
 
-/// Owns the live [TextSightController], the camera-permission flow, and the latest
-/// capture. The view binds the controller to a `TextSightView` and reads the rest as
-/// listenables.
 final class LiveScannerViewModel extends ViewModel {
   final _controller = TextSightController();
 
-  final _sessionStatusNotifier = ValueNotifier(SessionStatus.requesting);
-  final _captureNotifier = ValueNotifier<TextSightCapture?>(null);
+  final _sessionStatusNotifier = ValueNotifier(SessionStatus.preparingModel);
   final _shouldEnableTorchNotifier = ValueNotifier(false);
-  StreamSubscription<TextSightCapture>? _captureSubscription;
   String? _failure;
 
   @override
   void init() {
-    _captureSubscription = _controller.captures.listen(
-      (capture) => _captureNotifier.value = capture,
-    );
     unawaited(_start());
   }
 
-  /// The session controller — bound directly to the view's `TextSightView`.
+  /// The session controller — bound to the view's `TextSightView`, and the source of its
+  /// `captures` stream.
   TextSightController get controller => _controller;
 
   ValueListenable<SessionStatus> get sessionStatusListenable => _sessionStatusNotifier;
-
-  ValueListenable<TextSightCapture?> get captureListenable => _captureNotifier;
 
   ValueListenable<bool> get shouldEnableTorchListenable => _shouldEnableTorchNotifier;
 
@@ -48,8 +39,18 @@ final class LiveScannerViewModel extends ViewModel {
   }
 
   Future<void> _start() async {
-    _sessionStatusNotifier.value = .requesting;
+    // Fetch the on-device model first (instant on iOS / with the bundled model). Keeps model loading
+    // off app startup and lets the UI show download progress before the camera ever opens.
+    _sessionStatusNotifier.value = .preparingModel;
+    final readiness = await TextSightModel.ensureReady();
+    if (readiness is ModelUnavailable) {
+      _failure = _describeUnavailable(readiness);
+      _sessionStatusNotifier.value = .failed;
 
+      return;
+    }
+
+    _sessionStatusNotifier.value = .requesting;
     final permission = await Permission.camera.request();
     if (!permission.isGranted) {
       _sessionStatusNotifier.value = .denied;
@@ -66,11 +67,16 @@ final class LiveScannerViewModel extends ViewModel {
     }
   }
 
+  static String _describeUnavailable(ModelUnavailable state) => switch (state.reason) {
+    .playServicesUnavailable =>
+      'Google Play Services is required to download the recognition model on this device.',
+    .downloadFailed =>
+      'The recognition model could not be downloaded. Check your connection and retry.',
+  };
+
   @override
   void dispose() {
-    unawaited(_captureSubscription?.cancel());
     _sessionStatusNotifier.dispose();
-    _captureNotifier.dispose();
     _shouldEnableTorchNotifier.dispose();
     _controller.dispose();
 
