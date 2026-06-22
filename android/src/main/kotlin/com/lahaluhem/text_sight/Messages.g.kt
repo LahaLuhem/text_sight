@@ -204,6 +204,19 @@ enum class RecognitionLevelMessage(val raw: Int) {
   }
 }
 
+/** Transport twin of the public `CameraPermissionStatus`. */
+enum class CameraPermissionStatusMessage(val raw: Int) {
+  GRANTED(0),
+  DENIED(1),
+  PERMANENTLY_DENIED(2);
+
+  companion object {
+    fun ofRaw(raw: Int): CameraPermissionStatusMessage? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 /**
  * Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
  *
@@ -314,11 +327,16 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         }
       }
       130.toByte() -> {
+        return (readValue(buffer) as Long?)?.let {
+          CameraPermissionStatusMessage.ofRaw(it.toInt())
+        }
+      }
+      131.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           RegionOfInterestMessage.fromList(it)
         }
       }
-      131.toByte() -> {
+      132.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           TextSightOptionsMessage.fromList(it)
         }
@@ -332,12 +350,16 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(129)
         writeValue(stream, value.raw.toLong())
       }
-      is RegionOfInterestMessage -> {
+      is CameraPermissionStatusMessage -> {
         stream.write(130)
+        writeValue(stream, value.raw.toLong())
+      }
+      is RegionOfInterestMessage -> {
+        stream.write(131)
         writeValue(stream, value.toList())
       }
       is TextSightOptionsMessage -> {
-        stream.write(131)
+        stream.write(132)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -361,6 +383,10 @@ interface TextSightHostApi {
   fun stop(callback: (Result<Unit>) -> Unit)
   /** Releases the camera and texture. */
   fun dispose(callback: (Result<Unit>) -> Unit)
+  /** Reports the current camera-permission status without prompting. */
+  fun checkCameraPermission(): CameraPermissionStatusMessage
+  /** Prompts for camera permission when it has not yet been decided, resolving to the resulting status. */
+  fun requestCameraPermission(callback: (Result<CameraPermissionStatusMessage>) -> Unit)
   /** Restricts recognition to [roi], or clears it (whole frame) when null. */
   fun setRegionOfInterest(roi: RegionOfInterestMessage?)
   /** Switches the recognizer's accuracy/latency level. */
@@ -452,6 +478,39 @@ interface TextSightHostApi {
                 reply.reply(MessagesPigeonUtils.wrapError(error))
               } else {
                 reply.reply(MessagesPigeonUtils.wrapResult(null))
+              }
+            }
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.checkCameraPermission$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.checkCameraPermission())
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.requestCameraPermission$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.requestCameraPermission{ result: Result<CameraPermissionStatusMessage> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
               }
             }
           }
