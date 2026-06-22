@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Icons;
-import 'package:permission_handler/permission_handler.dart' show openAppSettings;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 import 'package:text_sight/text_sight.dart';
@@ -55,8 +54,20 @@ class LiveScannerView extends StatelessWidget {
                 size: 48,
               ),
               message: 'Camera permission is required to recognize text.',
-              actionLabel: 'Open settings',
-              onAction: openAppSettings,
+              actionLabel: 'Allow access',
+              onAction: viewModel.onRetryPressed,
+            ),
+            .permanentlyDenied => _MessageView(
+              icon: Icon(
+                context.platformIcon(
+                  material: Icons.no_photography_outlined,
+                  cupertino: CupertinoIcons.camera_circle,
+                ),
+                size: 48,
+              ),
+              message: 'Camera access is off. Enable it in Settings, then try again.',
+              actionLabel: 'Try again',
+              onAction: viewModel.onRetryPressed,
             ),
             .failed => _MessageView(
               icon: Icon(

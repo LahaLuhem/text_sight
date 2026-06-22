@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:pmvvm/pmvvm.dart';
 import 'package:text_sight/text_sight.dart';
 
@@ -51,9 +50,11 @@ final class LiveScannerViewModel extends ViewModel {
     }
 
     _sessionStatusNotifier.value = .requesting;
-    final permission = await Permission.camera.request();
-    if (!permission.isGranted) {
-      _sessionStatusNotifier.value = .denied;
+    final permission = await _controller.requestCameraPermission();
+    if (permission != .granted) {
+      _sessionStatusNotifier.value = permission == .permanentlyDenied
+          ? .permanentlyDenied
+          : .denied;
 
       return;
     }

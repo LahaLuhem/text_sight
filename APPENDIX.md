@@ -80,6 +80,67 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
 ---
 
+<a id="camera-permission"></a>
+## Camera permission: requested natively, no permission package
+
+**Decision (2026-06-22).** text_sight requests camera permission itself, straight through the OS
+APIs, and bundles **no** permission package. The public surface is two methods on
+`TextSightController` — `checkCameraPermission()` (a prompt-free status read) and
+`requestCameraPermission()` (drives the system prompt) — both returning a unified
+`CameraPermissionStatus { granted, denied, permanentlyDenied }`. `start()` stays permission-free, so
+the app keeps control of *when* the prompt appears.
+
+**Why not bundle `permission_handler`.** The request primitive is already free on both platforms —
+`AVCaptureDevice.requestAccess` (AVFoundation) on iOS, `ActivityCompat.requestPermissions` plus a
+`RequestPermissionsResultListener` (the Flutter embedding + AndroidX) on Android — which is exactly
+what `permission_handler` wraps internally for *app* code. A plugin calls it directly (the
+`mobile_scanner` approach), so bundling buys nothing and costs plenty:
+
+- It lands in **every** downstream user's transitive closure for one effectively-boolean question.
+- On iOS it makes consumers' lives *harder*, not easier: `permission_handler_apple` gates each
+  permission behind `GCC_PREPROCESSOR_DEFINITIONS` macros in the **Podfile**, and Apple's static
+  analyzer scans the binary for permission code at submission. Bundling it would force a Podfile
+  macro step on every consumer and drag a CocoaPods-shaped config into the SPM / no-`Podfile`
+  example — the opposite of removing boilerplate, and a direct hit on the package's
+  [no-bundling identity](#no-bundling-native-dependencies-never-touch-the-dart-pubspecyaml).
+
+So this is the no-bundling principle extended from the ML engines to permissions. Apps that already
+use `permission_handler` keep working unchanged — this adds an option, it does not remove one.
+
+**What stays the consumer's job.** The iOS `NSCameraUsageDescription` string is app-specific and
+cannot be delegated. The Android `CAMERA` `<uses-permission>` ships in the plugin's *own* manifest
+and merges automatically. The request and the status read are all the plugin now owns.
+
+**The Android cost: `ActivityAware`.** A runtime permission request needs a foreground `Activity`,
+which a plain `FlutterPlugin` never holds — it gets only the application `Context`. So
+`TextSightPlugin` implements `ActivityAware` to capture the `ActivityPluginBinding`, registers a
+`RequestPermissionsResultListener`, and delegates the flow to `CameraPermissionRequester`. This is
+unavoidable *regardless of approach* — even `permission_handler` needs an Activity; it just hides the
+plumbing. The capture pipeline binds to a headless `LifecycleOwner`, so Activity attach/detach never
+disturbs a running session. The eager `checkSelfPermission` / `authorizationStatus` guards already in
+`initialize()` stay as a defence-in-depth net (the request rides the same typed `@HostApi` as the
+rest of the control surface — see [#channel-topology](#channel-topology)).
+
+**The unified status contract hides a real platform asymmetry.** `granted`; `denied` (not granted,
+but a request may still surface the prompt); `permanentlyDenied` (no prompt will appear — only system
+settings can grant it). The platforms reach a refusal differently, and the enum papers over it:
+
+- **iOS prompts exactly once.** After a decision, `requestAccess` resolves immediately with the
+  stored value and never re-prompts. So an iOS refusal — and `.restricted` (parental controls / an
+  MDM profile) — maps to `permanentlyDenied`; `.notDetermined` maps to `denied`, since a request can
+  still show the dialog.
+- **Android distinguishes** a re-askable refusal from "don't ask again" via
+  `shouldShowRequestPermissionRationale`, checked *after* the result. A prompt-free `check` (no
+  Activity, and it must not trigger UI) cannot tell permanence apart, so it conservatively reports
+  `denied`.
+
+The actionable split for callers is the whole point: `denied` → asking again may help;
+`permanentlyDenied` → route the user to system settings. The example dogfoods exactly this and, by
+dropping its own `permission_handler` dependency, doubles as the no-bundling proof for the permission
+path.
+
+---
+
 <a id="channel-topology"></a>
 ## Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview
 
@@ -88,8 +149,9 @@ funnelled through one channel:
 
 - **Control + the one-shot recognize → typed codegen `@HostApi`.** The control surface
   (`initialize` / `start` / `stop` / `setRegionOfInterest` / `setRecognitionLevel` /
-  `setLanguages` / `setTorchEnabled` / `dispose`) is request/response and benefits from a
-  generated, type-checked Dart↔native boundary. The static one-shot (`recognizeImage` /
+  `setLanguages` / `setTorchEnabled` / `checkCameraPermission` / `requestCameraPermission` /
+  `dispose`) is request/response and benefits from a generated, type-checked Dart↔native
+  boundary. The static one-shot (`recognizeImage` /
   `recognizePath`) is *also* request/response, so it rides the **same** `@HostApi` as two
   `@async` methods that return the same self-describing per-frame map the results stream uses
   (decoded Dart-side into a `TextSightCapture`) — not the results stream below; this is why the
