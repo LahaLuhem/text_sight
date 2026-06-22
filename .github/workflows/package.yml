@@ -72,7 +72,7 @@ jobs:
       # layers this project's deviations onto detekt's default ruleset; Messages.g.kt is generated.
       - run: |
           curl -fsSL -o detekt-cli.jar https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8-all.jar
-          java -jar detekt-cli.jar --build-upon-default-config --config detekt.yml --input android/src --excludes '**/Messages.g.kt'
+          java -jar detekt-cli.jar --build-upon-default-config --config android/detekt.yml --input android/src --excludes '**/Messages.g.kt'
 
   deps:
     name: Dependency validator
@@ -164,12 +164,13 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
       # SwiftLint over the plugin's Swift + RunnerTests (config excludes the generated
       # Messages.g.swift). Folded into this macOS job to avoid a second ~10x-cost runner; the
-      # portable binary is version-pinned. Runs from the repo root so .swiftlint.yml resolves.
+      # portable binary is version-pinned. Run from the repo root: the config lives in ios/ but its
+      # included paths are repo-root-relative (and also cover example/ios/RunnerTests).
       - name: SwiftLint
         run: |
           curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" https://github.com/realm/SwiftLint/releases/download/0.63.3/portable_swiftlint.zip
           unzip -oq "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
-          "$RUNNER_TEMP/swiftlint/swiftlint" lint --strict --config .swiftlint.yml
+          "$RUNNER_TEMP/swiftlint/swiftlint" lint --strict --config ios/.swiftlint.yml
 
   pigeon-freshness:
     name: Pigeon codegen freshness
