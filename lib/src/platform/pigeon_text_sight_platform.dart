@@ -2,6 +2,7 @@ import 'dart:ui' show Locale, Rect, Size;
 
 import 'package:flutter/services.dart';
 
+import '../capture/camera_permission_status.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/recognized_line.dart';
 import '../recognition/text_sight_capture.dart';
@@ -52,6 +53,14 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
   Future<void> dispose() => _hostApi.dispose();
 
   @override
+  Future<CameraPermissionStatus> checkCameraPermission() async =>
+      (await _hostApi.checkCameraPermission())._toPublic();
+
+  @override
+  Future<CameraPermissionStatus> requestCameraPermission() async =>
+      (await _hostApi.requestCameraPermission())._toPublic();
+
+  @override
   Future<void> updateRegionOfInterest(Rect? roi) => _hostApi.setRegionOfInterest(roi?._toMessage());
 
   @override
@@ -97,6 +106,15 @@ extension on RecognitionLevel {
   RecognitionLevelMessage _toMessage() => switch (this) {
     .fast => .fast,
     .accurate => .accurate,
+  };
+}
+
+/// Maps the Pigeon permission-status twin back to the public enum.
+extension on CameraPermissionStatusMessage {
+  CameraPermissionStatus _toPublic() => switch (this) {
+    .granted => .granted,
+    .denied => .denied,
+    .permanentlyDenied => .permanentlyDenied,
   };
 }
 
