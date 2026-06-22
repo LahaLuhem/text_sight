@@ -18,12 +18,16 @@ class TextSightPlugin :
     FlutterPlugin,
     TextSightHostApi {
     private var camera: TextSightCamera? = null
+    private var modelReadiness: TextSightModelReadiness? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         TextSightHostApi.setUp(binding.binaryMessenger, this)
 
         val capturesChannel = EventChannel(binding.binaryMessenger, CAPTURES_CHANNEL_NAME)
         camera = TextSightCamera(binding.applicationContext, binding.textureRegistry, capturesChannel)
+
+        val readinessChannel = EventChannel(binding.binaryMessenger, READINESS_CHANNEL_NAME)
+        modelReadiness = TextSightModelReadiness(binding.applicationContext, readinessChannel)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -31,6 +35,7 @@ class TextSightPlugin :
 
         camera?.dispose()
         camera = null
+        modelReadiness = null
     }
 
     override fun initialize(options: TextSightOptionsMessage, callback: (Result<Long>) -> Unit) {
@@ -73,6 +78,12 @@ class TextSightPlugin :
         camera?.setTorchEnabled(enabled)
     }
 
+    override fun ensureModelReady(callback: (Result<Map<String, Any?>>) -> Unit) {
+        val activeReadiness = modelReadiness ?: return callback(detached())
+
+        activeReadiness.ensureModelReady(callback)
+    }
+
     override fun recognizeImage(
         bytes: ByteArray,
         options: TextSightOptionsMessage,
@@ -95,6 +106,7 @@ class TextSightPlugin :
 
     private companion object {
         const val CAPTURES_CHANNEL_NAME = "com.lahaluhem.text_sight/captures"
+        const val READINESS_CHANNEL_NAME = "com.lahaluhem.text_sight/readiness"
 
         fun <T> detached(): Result<T> =
             Result.failure(FlutterError("detached", "The plugin is not attached to a Flutter engine."))

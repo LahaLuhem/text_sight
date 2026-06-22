@@ -4,10 +4,8 @@
         android:name="android.hardware.camera.any"
         android:required="false" />
 
-    <application>
-        <!-- Prefetch the unbundled OCR model via Google Play Services at install time. -->
-        <meta-data
-            android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="ocr" />
-    </application>
+    <!-- The unbundled OCR model loads lazily and app-controlled (TextSightModel.ensureReady()), so
+         the `com.google.mlkit.vision.DEPENDENCIES` install-time prefetch meta-data is deliberately
+         omitted — it would force a download for every consumer at install. A consumer that wants
+         eager install-time prefetch can declare that meta-data in their own app manifest. -->
 </manifest>
