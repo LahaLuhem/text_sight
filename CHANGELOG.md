@@ -1,4 +1,4 @@
-## [Unreleased]
+## [0.1.0] - 2026-06-22
 ### Added
 - \[#7\] TextSightModel.ensureReady() and TextSightModel.readiness — app-controlled, non-blocking on-device model loading, with a sealed TextSightReadinessState (ModelReady / ModelDownloading / ModelUnavailable)
 - \[#7\] com.lahaluhem.text\_sight.useBundled Gradle flag — bundle the ML Kit model into the APK (instant, offline) instead of the default unbundled Play Services download
@@ -14,5 +14,5 @@
 - Recognizer configuration on the controller: region of interest (a normalized `Rect`), recognition level, language preferences, and torch.
 - A unified result model — per-line confidence and normalized `[0,1]` top-left bounding boxes, identical across platforms, with a rotation-aware preview.
 
-[Unreleased]: https://github.com/LahaLuhem/text_sight/compare/0.0.1...HEAD
+[0.1.0]: https://github.com/LahaLuhem/text_sight/compare/0.0.1...0.1.0
 [0.0.1]: https://github.com/LahaLuhem/text_sight/releases/tag/0.0.1
