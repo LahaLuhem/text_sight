@@ -12,23 +12,30 @@ import Flutter
 /// the `FlutterPlugin` registration surface needs to be `public`.
 public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
   private let camera: TextSightCamera
+  private let modelReadiness: TextSightModelReadiness
 
-  init(camera: TextSightCamera) {
+  init(camera: TextSightCamera, modelReadiness: TextSightModelReadiness) {
     self.camera = camera
+    self.modelReadiness = modelReadiness
     super.init()
   }
 
   public static func register(with registrar: FlutterPluginRegistrar) {
     let messenger = registrar.messenger()
     let camera = TextSightCamera(textureRegistry: registrar.textures())
-    let plugin = TextSightPlugin(camera: camera)
+    let modelReadiness = TextSightModelReadiness()
+    let plugin = TextSightPlugin(camera: camera, modelReadiness: modelReadiness)
 
     TextSightHostApiSetup.setUp(binaryMessenger: messenger, api: plugin)
 
     let capturesChannel = FlutterEventChannel(name: capturesChannelName, binaryMessenger: messenger)
     capturesChannel.setStreamHandler(camera)
 
-    // Anchor the plugin's lifetime to the registrar; the texture registry retains the camera.
+    let readinessChannel = FlutterEventChannel(name: readinessChannelName, binaryMessenger: messenger)
+    readinessChannel.setStreamHandler(modelReadiness)
+
+    // Anchor the plugin's lifetime to the registrar; the texture registry retains the camera, and
+    // the plugin retains the readiness handler.
     registrar.publish(plugin)
   }
 
@@ -65,6 +72,10 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     camera.setTorchEnabled(enabled: enabled)
   }
 
+  func ensureModelReady(completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+    modelReadiness.ensureModelReady(completion: completion)
+  }
+
   func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage,
                       completion: @escaping (Result<[String: Any?], Error>) -> Void) {
     camera.recognizeImage(bytes: bytes, options: options, completion: completion)
@@ -77,3 +88,4 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
 }
 
 private let capturesChannelName = "com.lahaluhem.text_sight/captures"
+private let readinessChannelName = "com.lahaluhem.text_sight/readiness"
