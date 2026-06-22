@@ -190,6 +190,13 @@ enum RecognitionLevelMessage: Int, CaseIterable {
   case accurate = 1
 }
 
+/// Transport twin of the public `CameraPermissionStatus`.
+enum CameraPermissionStatusMessage: Int, CaseIterable {
+  case granted = 0
+  case denied = 1
+  case permanentlyDenied = 2
+}
+
 /// Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
 ///
 /// Generated class from Pigeon that represents data sent in messages.
@@ -299,8 +306,14 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
       }
       return nil
     case 130:
-      return RegionOfInterestMessage.fromList(self.readValue() as! [Any?])
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return CameraPermissionStatusMessage(rawValue: enumResultAsInt)
+      }
+      return nil
     case 131:
+      return RegionOfInterestMessage.fromList(self.readValue() as! [Any?])
+    case 132:
       return TextSightOptionsMessage.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -313,11 +326,14 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     if let value = value as? RecognitionLevelMessage {
       super.writeByte(129)
       super.writeValue(value.rawValue)
-    } else if let value = value as? RegionOfInterestMessage {
+    } else if let value = value as? CameraPermissionStatusMessage {
       super.writeByte(130)
+      super.writeValue(value.rawValue)
+    } else if let value = value as? RegionOfInterestMessage {
+      super.writeByte(131)
       super.writeValue(value.toList())
     } else if let value = value as? TextSightOptionsMessage {
-      super.writeByte(131)
+      super.writeByte(132)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -353,6 +369,10 @@ protocol TextSightHostApi {
   func stop(completion: @escaping (Result<Void, Error>) -> Void)
   /// Releases the camera and texture.
   func dispose(completion: @escaping (Result<Void, Error>) -> Void)
+  /// Reports the current camera-permission status without prompting.
+  func checkCameraPermission() throws -> CameraPermissionStatusMessage
+  /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
+  func requestCameraPermission(completion: @escaping (Result<CameraPermissionStatusMessage, Error>) -> Void)
   /// Restricts recognition to [roi], or clears it (whole frame) when null.
   func setRegionOfInterest(roi: RegionOfInterestMessage?) throws
   /// Switches the recognizer's accuracy/latency level.
@@ -441,6 +461,36 @@ class TextSightHostApiSetup {
       }
     } else {
       disposeChannel.setMessageHandler(nil)
+    }
+    /// Reports the current camera-permission status without prompting.
+    let checkCameraPermissionChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.checkCameraPermission\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      checkCameraPermissionChannel.setMessageHandler { _, reply in
+        do {
+          let result = try api.checkCameraPermission()
+          reply(wrapResult(result))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      checkCameraPermissionChannel.setMessageHandler(nil)
+    }
+    /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
+    let requestCameraPermissionChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.requestCameraPermission\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      requestCameraPermissionChannel.setMessageHandler { _, reply in
+        api.requestCameraPermission { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      requestCameraPermissionChannel.setMessageHandler(nil)
     }
     /// Restricts recognition to [roi], or clears it (whole frame) when null.
     let setRegionOfInterestChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.setRegionOfInterest\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)

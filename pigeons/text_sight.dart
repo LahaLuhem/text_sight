@@ -49,6 +49,9 @@ class TextSightOptionsMessage {
   RegionOfInterestMessage? roi;
 }
 
+/// Transport twin of the public `CameraPermissionStatus`.
+enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
+
 /// The typed control channel. Per-frame results stream over a plain
 /// EventChannel and the preview is a texture — neither rides this API.
 @HostApi()
@@ -68,6 +71,16 @@ abstract class TextSightHostApi {
   /// Releases the camera and texture.
   @async
   void dispose();
+
+  // Camera permission — the live camera path needs it; the static one-shot does not. The check is a
+  // synchronous status read; the request is async because it drives the system prompt.
+
+  /// Reports the current camera-permission status without prompting.
+  CameraPermissionStatusMessage checkCameraPermission();
+
+  /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
+  @async
+  CameraPermissionStatusMessage requestCameraPermission();
 
   /// Restricts recognition to [roi], or clears it (whole frame) when null.
   void setRegionOfInterest(RegionOfInterestMessage? roi);
