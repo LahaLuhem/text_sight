@@ -19,6 +19,8 @@
 - [A quick taste](#a-quick-taste)
 - [Platform support](#platform-support)
 - [Install](#install)
+- [The recognition model](#the-recognition-model)
+- [Performance](#performance)
 - [Going deeper](#going-deeper)
 
 <!-- TOC end -->
@@ -65,6 +67,10 @@ Want a scan-box? Hand the controller a **region of interest** —
 it, the recognition level, or the torch while the session runs. It applies to the live preview and
 the one-shot alike.
 
+One Android thing worth knowing up front: the model downloads on first use, so
+[give it a head start](#the-recognition-model) when the user opens your scanner — otherwise that first
+scan comes back empty.
+
 The [`example/`](example/) app is where to look next — a live overlay, torch, region-of-interest,
 permission handling, and the one-shot screen, all wired up and ready to crib from.
 
@@ -102,6 +108,61 @@ On iOS, add a camera-usage string to `ios/Runner/Info.plist`:
 text_sight won't request camera permission for you — ask for it (e.g. with
 [`permission_handler`](https://pub.dev/packages/permission_handler)), then call
 `controller.start()`. Android's manifest already has what it needs.
+
+## The recognition model
+
+On iOS there's nothing to see here — recognition is Apple Vision, a system framework that's always
+on hand. No download, no waiting.
+
+Android is the interesting one. The ML Kit model ships **unbundled** by default: it's a tiny ~260 KB
+and gets pulled from Google Play Services the first time you actually use it. We don't grab it at
+install time on purpose — most apps don't need OCR the second they launch, so there's no point making
+everyone pay for it up front. The one catch: a scan you kick off before the model has landed comes
+back empty.
+
+So give it a nudge when the user wanders into your scanner:
+
+```dart
+final state = await TextSightModel.ensureReady();
+if (state is ModelUnavailable) {
+  // No Play Services, or the download didn't make it. Tell the user, maybe offer a retry.
+}
+```
+
+Call it as often as you like — it returns right away once the model's around (which is always, on
+iOS). Want a progress bar in front of the user while it downloads? Listen to the readiness stream and
+switch over it. It's a sealed type, so the compiler makes sure you've handled every case:
+
+```dart
+TextSightModel.readiness.listen((state) {
+  final label = switch (state) {
+    ModelReady() => 'Ready to scan',
+    ModelDownloading(:final progress) => 'Downloading… ${((progress ?? 0) * 100).round()}%',
+    ModelUnavailable(:final reason) => 'Model unavailable ($reason)',
+  };
+  // ...show `label`, or feed `progress` straight into a progress indicator
+});
+```
+
+The [`example/`](example/) live scanner does exactly this — `ensureReady()` to gate, the stream for a
+real download bar.
+
+### Or just bundle it
+
+Don't fancy any of that? Ship the model inside your APK — instant, offline, Play Services out of the
+picture. One line in your app's `android/gradle.properties`:
+
+```properties
+com.lahaluhem.text_sight.useBundled=true
+```
+
+Now `ensureReady()` returns immediately and `ModelUnavailable` never shows up. You're trading size
+for it, mind:
+
+| Mode                  | App size          | First use           | Offline              | Needs Play Services |
+|-----------------------|-------------------|---------------------|----------------------|---------------------|
+| Unbundled *(default)* | ~260 KB           | downloads on demand | after first download | yes                 |
+| Bundled               | ~4 MB/script/arch | instant             | yes                  | no                  |
 
 ## Performance
 

@@ -21,6 +21,7 @@ void main() {
   final control = BddFeature('TextSight control channel');
   final captures = BddFeature('TextSight captures stream');
   final oneShot = BddFeature('TextSight one-shot recognition');
+  final readiness = BddFeature('TextSight model readiness');
 
   Bdd(control)
       .scenario('Recognition level is sent as its Pigeon twin')
@@ -352,6 +353,112 @@ void main() {
         final options = (call.payload! as List<Object?>)[1]! as TextSightOptionsMessage;
         check(options.level).equals(RecognitionLevelMessage.accurate);
       });
+
+  Bdd(readiness)
+      .scenario('ensureModelReady decodes a ready terminal reply')
+      .given('a host that replies with a ready state')
+      .when('ensureModelReady is awaited')
+      .then('it resolves to ModelReady')
+      .run((_) async {
+        final platform = PigeonTextSightPlatform();
+        _mockHostMethod(messenger, 'ensureModelReady', reply: <String, Object?>{'state': 'ready'});
+
+        final state = await platform.ensureModelReady();
+
+        check(state).isA<ModelReady>();
+      });
+
+  Bdd(readiness)
+      .scenario('ensureModelReady decodes an unavailable reply, mapping the reason tag')
+      .given('a host that replies unavailable with <wireReason> and <details>')
+      .when('ensureModelReady is awaited')
+      .then('it resolves to ModelUnavailable carrying <reason> and <details>')
+      .example(
+        val('wireReason', 'playServicesUnavailable'),
+        val('reason', ModelUnavailableReason.playServicesUnavailable),
+        val('details', 'Play Services missing'),
+      )
+      .example(
+        val('wireReason', 'downloadFailed'),
+        val('reason', ModelUnavailableReason.downloadFailed),
+        val('details', null),
+      )
+      .example(
+        // An unknown tag is treated defensively as a failed download (we own both ends).
+        val('wireReason', 'somethingUnknown'),
+        val('reason', ModelUnavailableReason.downloadFailed),
+        val('details', null),
+      )
+      .run((ctx) async {
+        final platform = PigeonTextSightPlatform();
+        _mockHostMethod(
+          messenger,
+          'ensureModelReady',
+          reply: <String, Object?>{
+            'state': 'unavailable',
+            'reason': ctx.example.val('wireReason'),
+            'details': ctx.example.val('details'),
+          },
+        );
+
+        final state = await platform.ensureModelReady();
+
+        final unavailable = check(state).isA<ModelUnavailable>();
+        unavailable
+            .has((s) => s.reason, 'reason')
+            .equals(ctx.example.val('reason') as ModelUnavailableReason);
+        unavailable.has((s) => s.details, 'details').equals(ctx.example.val('details') as String?);
+      });
+
+  Bdd(readiness)
+      .scenario('The readiness stream decodes a downloading event with its progress')
+      .given('the host emits a downloading event at <progress>')
+      .when('the platform receives the first readiness state')
+      .then('it is ModelDownloading carrying <progress>')
+      .example(val('progress', 0.42))
+      .example(val('progress', null))
+      .run((ctx) async {
+        final platform = PigeonTextSightPlatform();
+        _mockReadiness(messenger, <Object?>[
+          <Object?, Object?>{'state': 'downloading', 'progress': ctx.example.val('progress')},
+        ]);
+
+        final state = await platform.modelReadiness.first;
+
+        check(state)
+            .isA<ModelDownloading>()
+            .has((s) => s.progress, 'progress')
+            .equals(ctx.example.val('progress') as double?);
+      });
+
+  Bdd(readiness)
+      .scenario('The readiness stream decodes a ready event')
+      .given('the host emits a ready event')
+      .when('the platform receives the first readiness state')
+      .then('it is ModelReady')
+      .run((_) async {
+        final platform = PigeonTextSightPlatform();
+        _mockReadiness(messenger, <Object?>[
+          <Object?, Object?>{'state': 'ready'},
+        ]);
+
+        final state = await platform.modelReadiness.first;
+
+        check(state).isA<ModelReady>();
+      });
+
+  Bdd(readiness)
+      .scenario('TextSightModel.ensureReady resolves through the default platform')
+      .given('the default platform instance talking to a mocked host that replies ready')
+      .when('TextSightModel.ensureReady is awaited')
+      .then('it resolves to ModelReady')
+      .run((_) async {
+        _mockHostMethod(messenger, 'ensureModelReady', reply: <String, Object?>{'state': 'ready'});
+
+        final state = await TextSightModel.ensureReady();
+
+        check(state).isA<ModelReady>();
+      });
 }
 
 /// Records the decoded argument payload a mocked host method receives.
@@ -386,6 +493,21 @@ void _mockCaptures(TestDefaultBinaryMessenger messenger, List<Object?> frames) {
     MockStreamHandler.inline(
       onListen: (arguments, events) {
         frames.forEach(events.success);
+        events.endOfStream();
+      },
+    ),
+  );
+  addTearDown(() => messenger.setMockStreamHandler(channel, null));
+}
+
+/// Mocks the readiness `EventChannel` to emit [states] in order, then close.
+void _mockReadiness(TestDefaultBinaryMessenger messenger, List<Object?> states) {
+  const channel = EventChannel('com.lahaluhem.text_sight/readiness');
+  messenger.setMockStreamHandler(
+    channel,
+    MockStreamHandler.inline(
+      onListen: (arguments, events) {
+        states.forEach(events.success);
         events.endOfStream();
       },
     ),
