@@ -3,6 +3,7 @@ import 'dart:ui' show Locale, Rect;
 
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
+import '../capture/camera_permission_status.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
@@ -51,6 +52,14 @@ abstract class TextSightPlatform extends PlatformInterface {
 
   /// Tears the session down and releases the camera and texture.
   Future<void> dispose() => throw UnimplementedError('dispose() has not been implemented.');
+
+  /// Reports the current camera-permission status without prompting.
+  Future<CameraPermissionStatus> checkCameraPermission() =>
+      throw UnimplementedError('checkCameraPermission() has not been implemented.');
+
+  /// Prompts for camera permission when it is still undecided and resolves to the resulting status.
+  Future<CameraPermissionStatus> requestCameraPermission() =>
+      throw UnimplementedError('requestCameraPermission() has not been implemented.');
 
   /// Restricts recognition to [roi], or clears it (whole frame) when `null`.
   Future<void> updateRegionOfInterest(Rect? roi) =>

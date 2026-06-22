@@ -8,6 +8,7 @@ import '../recognition/normalized_roi.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
+import 'camera_permission_status.dart';
 
 /// Configures and drives a live camera recognition session.
 ///
@@ -79,6 +80,23 @@ final class TextSightController extends ChangeNotifier {
     _isRunning = false;
     notifyListeners();
   }
+
+  /// Reports the current camera-permission status without prompting the user.
+  ///
+  /// A cheap status read — use it to decide whether to show a priming or
+  /// rationale screen before [requestCameraPermission]. Does not open the camera.
+  Future<CameraPermissionStatus> checkCameraPermission() =>
+      TextSightPlatform.instance.checkCameraPermission();
+
+  /// Requests camera permission, surfacing the system prompt when the choice is
+  /// still undecided, and resolves to the resulting [CameraPermissionStatus].
+  ///
+  /// Call this before [start] to drive the permission flow without a third-party
+  /// package. You must still declare the platform usage string
+  /// (`NSCameraUsageDescription` on iOS); the Android manifest entry ships with
+  /// the plugin. [start] itself never requests — its behaviour is unchanged.
+  Future<CameraPermissionStatus> requestCameraPermission() =>
+      TextSightPlatform.instance.requestCameraPermission();
 
   /// Switches the accuracy/latency [level] of the running recognizer.
   Future<void> updateRecognitionLevel(RecognitionLevel level) async {
