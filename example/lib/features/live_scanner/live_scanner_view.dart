@@ -24,6 +24,27 @@ class LiveScannerView extends StatelessWidget {
         child: ValueListenableBuilder(
           valueListenable: viewModel.sessionStatusListenable,
           builder: (context, status, _) => switch (status) {
+            // Readiness arrives as a sealed TextSightReadinessState — switch over it. The download
+            // path is the interesting one (Android, unbundled model); ensureReady() in the view
+            // model drives the actual gate and flips to .ready / .failed once it resolves.
+            .preparingModel => Center(
+              child: StreamBuilder(
+                stream: TextSightModel.readiness,
+                builder: (context, snapshot) => switch (snapshot.data) {
+                  ModelDownloading(:final progress) => _PreparingModel(
+                    progress: progress,
+                    message: progress == null
+                        ? 'Fetching the recognition model…'
+                        : 'Fetching the recognition model… ${(progress * 100).round()}%',
+                  ),
+                  ModelUnavailable() => const _PreparingModel(
+                    message: 'Recognition model unavailable.',
+                  ),
+                  ModelReady() ||
+                  null => const _PreparingModel(message: 'Preparing the recognition model…'),
+                },
+              ),
+            ),
             .requesting => const Center(child: PlatformProgressIndicator()),
             .denied => _MessageView(
               icon: Icon(
@@ -76,7 +97,7 @@ class _ScannerView extends StatelessWidget {
             (confidence) => ConstTheme.confidence(context, confidence),
           ),
         ),
-        placeholderBuilder: (context) => const Center(child: PlatformProgressIndicator()),
+        placeholderBuilder: (_) => const Center(child: PlatformProgressIndicator()),
       ),
       Positioned(
         top: 16,
@@ -99,9 +120,9 @@ class _ScannerView extends StatelessWidget {
         left: 8,
         right: 8,
         bottom: 8,
-        child: ValueListenableBuilder(
-          valueListenable: viewModel.captureListenable,
-          builder: (context, capture, _) => _RecognizedTextPanel(capture: capture),
+        child: StreamBuilder(
+          stream: viewModel.controller.captures,
+          builder: (context, snapshot) => _RecognizedTextPanel(capture: snapshot.data),
         ),
       ),
     ],
@@ -162,6 +183,31 @@ class _ConfidenceBoxPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ConfidenceBoxPainter oldDelegate) => oldDelegate.lines != lines;
+}
+
+/// The model-preparation view: a progress indicator over a short message. The indicator runs
+/// determinate while a download reports [progress] (`MaterialProgressIndicatorData.value`), and as
+/// a plain spinner otherwise (indeterminate, or on iOS where there is nothing to download).
+class _PreparingModel extends StatelessWidget {
+  final double? progress;
+  final String message;
+
+  const _PreparingModel({required this.message, this.progress});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const .all(24),
+    child: Column(
+      mainAxisSize: .min,
+      spacing: 16,
+      children: [
+        PlatformProgressIndicator(
+          materialProgressIndicatorData: MaterialProgressIndicatorData(value: progress),
+        ),
+        Text(message, textAlign: .center),
+      ],
+    ),
+  );
 }
 
 /// A centered icon + message + action button for the permission/error states.
