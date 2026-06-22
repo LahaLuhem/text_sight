@@ -1,6 +1,10 @@
 # SwiftLint — Swift static analysis for the plugin sources + the iOS RunnerTests. SwiftLint defaults
 # apply except the deviations below, which mirror the project's Dart analysis_options posture
 # (thorough, minus the opinionated rules that conflict with deliberate choices here).
+#
+# This file lives in ios/, but the paths below are RELATIVE TO THE REPO ROOT (and `included` also
+# covers example/ios/RunnerTests, outside this dir). Run SwiftLint from the repo root, e.g.
+# `swiftlint lint --config ios/.swiftlint.yml` — CI does exactly that (.github/workflows/package.yml).
 included:
   - ios/text_sight/Sources/text_sight
   - example/ios/RunnerTests

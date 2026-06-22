@@ -88,9 +88,11 @@ text_sight/
 ├── ios/                     iOS plugin (Swift + Vision + AVFoundation)
 │   ├── text_sight.podspec        CocoaPods; links system frameworks; NO third-party deps
 │   ├── text_sight/Package.swift  SwiftPM manifest; system frameworks need no dependency line
+│   ├── .swiftlint.yml            SwiftLint config (deviations only; run from the repo root)
 │   └── text_sight/Sources/text_sight/   AVCaptureSession + VNRecognizeTextRequest + FlutterTexture
 ├── android/                 Android plugin (Kotlin + CameraX + ML Kit)
 │   ├── build.gradle.kts          ML Kit + CameraX deps live ONLY here; built-in Kotlin
+│   ├── detekt.yml                detekt config (deviations only; --input android/src from repo root)
 │   └── src/main/kotlin/com/LahaLuhem/text_sight/   CameraX ImageAnalysis + ML Kit recognizer
 ├── example/                 Runnable demo — also the no-bundling test harness
 ├── analysis_options.yaml    Strict-mode + opinionated lints

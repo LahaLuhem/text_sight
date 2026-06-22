@@ -45,7 +45,7 @@ for 7 days, and a tag push triggers an automated publish).
   invoke plain `flutter` / `dart`, not the manager directly.
 - **Lint with `flutter analyze`** — the project promotes many lints to `error:` in
   `analysis_options.yaml`; those are the contract, not suggestions. The Swift/Kotlin sides are
-  gated by **detekt** (`detekt.yml`) and **SwiftLint** (`.swiftlint.yml`) in CI; still apply
+  gated by **detekt** (`android/detekt.yml`) and **SwiftLint** (`ios/.swiftlint.yml`) in CI; still apply
   [`../CODESTYLE.md`](../CODESTYLE.md)'s native conventions by hand for what those don't cover.
 - **Agent tool** for wide / open-ended searches or to keep large outputs out of main
   context. Not for trivial lookups.
@@ -151,7 +151,7 @@ is **not** in the routine-edit list. All move together only when the user explic
 - `flutter test` green (where tests exist).
 - **Native conventions hand-applied** per [`../CODESTYLE.md`](../CODESTYLE.md) (Swift 2-space
   + system-frameworks-only; Kotlin 4-space + built-in-Kotlin + mandatory `imageProxy.close()`).
-- **detekt + SwiftLint clean** — native lint gates (`detekt.yml` / `.swiftlint.yml`, run in CI).
+- **detekt + SwiftLint clean** — native lint gates (`android/detekt.yml` / `ios/.swiftlint.yml`, run in CI).
   Generated `Messages.g.*` is excluded; for a new deviation, tune the config (not the generated code).
 - When native capture/recognition changed: build and run the example on **both** an Android
   emulator and an iOS simulator — or explicitly call out what you did NOT verify (e.g.
