@@ -6,6 +6,7 @@ import '../recognition/recognition_level.dart';
 import '../recognition/recognized_line.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
+import '../recognition/text_sight_readiness_state.dart';
 import 'messages.g.dart';
 import 'text_sight_platform.dart';
 
@@ -24,11 +25,19 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
   /// the native `EventChannel` registration on each platform.
   static const _capturesChannel = EventChannel('com.lahaluhem.text_sight/captures');
 
+  /// The native→Dart model-readiness stream, mirrored verbatim by the native
+  /// `EventChannel` registration on each platform.
+  static const _readinessChannel = EventChannel('com.lahaluhem.text_sight/readiness');
+
   final _hostApi = TextSightHostApi();
 
   late final Stream<TextSightCapture> _captures = _capturesChannel.receiveBroadcastStream().map(
     _decodeCapture,
   );
+
+  late final Stream<TextSightReadinessState> _readiness = _readinessChannel
+      .receiveBroadcastStream()
+      .map(_decodeReadiness);
 
   @override
   Future<int> initialize(TextSightOptions options) => _hostApi.initialize(options._toMessage());
@@ -58,6 +67,13 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
 
   @override
   Stream<TextSightCapture> get captures => _captures;
+
+  @override
+  Future<TextSightReadinessState> ensureModelReady() async =>
+      _decodeReadiness(await _hostApi.ensureModelReady());
+
+  @override
+  Stream<TextSightReadinessState> get modelReadiness => _readiness;
 
   @override
   Future<TextSightCapture> recognizeImage(Uint8List bytes, TextSightOptions options) async =>
@@ -127,3 +143,29 @@ RecognizedLine _decodeLine(Object? rawLine) {
     confidence: (confidenceValue as num?)?.toDouble(),
   );
 }
+
+/// Decodes one model-readiness event — a self-describing map — into a
+/// [TextSightReadinessState]. Shared by the [PigeonTextSightPlatform.modelReadiness]
+/// stream and the terminal map [PigeonTextSightPlatform.ensureModelReady] returns; each
+/// native side emits exactly this shape.
+TextSightReadinessState _decodeReadiness(Object? event) {
+  final stateMap = event! as Map<Object?, Object?>;
+
+  return switch (stateMap['state']! as String) {
+    'ready' => const ModelReady(),
+    'downloading' => ModelDownloading(progress: (stateMap['progress'] as num?)?.toDouble()),
+    'unavailable' => ModelUnavailable(
+      reason: _decodeUnavailableReason(stateMap['reason'] as String?),
+      details: stateMap['details'] as String?,
+    ),
+    // Both ends of this channel are ours; an unknown tag means a prep that did not complete.
+    _ => const ModelUnavailable(reason: ModelUnavailableReason.downloadFailed),
+  };
+}
+
+/// Maps the wire tag to its [ModelUnavailableReason], defaulting to
+/// [ModelUnavailableReason.downloadFailed] for anything unrecognized.
+ModelUnavailableReason _decodeUnavailableReason(String? tag) => switch (tag) {
+  'playServicesUnavailable' => ModelUnavailableReason.playServicesUnavailable,
+  _ => ModelUnavailableReason.downloadFailed,
+};

@@ -388,6 +388,27 @@ class TextSightHostApi {
     _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
   }
 
+  /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
+  /// Google Play Services when needed) and returns the terminal readiness state.
+  Future<Map<String, Object?>> ensureModelReady() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.text_sight.TextSightHostApi.ensureModelReady$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return (pigeonVar_replyValue! as Map<Object?, Object?>).cast<String, Object?>();
+  }
+
   /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
   Future<Map<String, Object?>> recognizeImage(
     Uint8List bytes,
