@@ -92,9 +92,10 @@ final class TextSightController extends ChangeNotifier {
   /// still undecided, and resolves to the resulting [CameraPermissionStatus].
   ///
   /// Call this before [start] to drive the permission flow without a third-party
-  /// package. You must still declare the platform usage string
-  /// (`NSCameraUsageDescription` on iOS); the Android manifest entry ships with
-  /// the plugin. [start] itself never requests — its behaviour is unchanged.
+  /// package. You must still declare the platform usage string —
+  /// `NSCameraUsageDescription` on iOS, which is **required** (iOS terminates the
+  /// app if the camera is requested without it); the Android manifest entry ships
+  /// with the plugin. [start] itself never requests — its behaviour is unchanged.
   Future<CameraPermissionStatus> requestCameraPermission() =>
       TextSightPlatform.instance.requestCameraPermission();
 

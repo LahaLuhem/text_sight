@@ -99,7 +99,8 @@ device — the iOS Simulator has no camera. The one-shot runs anywhere.
 flutter pub add text_sight
 ```
 
-On iOS, add a camera-usage string to `ios/Runner/Info.plist`:
+On iOS, add a camera-usage string to `ios/Runner/Info.plist` — this is **required**: iOS terminates
+the app the moment the camera is requested without it.
 
 ```xml
 <key>NSCameraUsageDescription</key>
