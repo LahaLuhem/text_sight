@@ -6,6 +6,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
+import '../recognition/text_sight_readiness_state.dart';
 import 'pigeon_text_sight_platform.dart';
 
 /// The platform-facing contract both drivers delegate to — the federation seam.
@@ -70,6 +71,17 @@ abstract class TextSightPlatform extends PlatformInterface {
   /// The live per-frame results stream, backed by a plain `EventChannel`.
   Stream<TextSightCapture> get captures =>
       throw UnimplementedError('captures has not been implemented.');
+
+  // Model readiness — mode-agnostic, shared by both drivers. Decoupled from the camera
+  // session: a still image and a live preview both need the model, neither needs the other.
+
+  /// Ensures the recognition model is present and resolves to the terminal readiness state.
+  Future<TextSightReadinessState> ensureModelReady() =>
+      throw UnimplementedError('ensureModelReady() has not been implemented.');
+
+  /// The model-readiness state stream, backed by a plain `EventChannel`.
+  Stream<TextSightReadinessState> get modelReadiness =>
+      throw UnimplementedError('modelReadiness has not been implemented.');
 
   // Static one-shot driver — no camera session, texture, or permission. Both return a capture
   // whose `quarterTurns` is 0 (a still is upright), built from the same recognizer and models

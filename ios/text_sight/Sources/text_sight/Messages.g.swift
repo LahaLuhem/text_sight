@@ -361,6 +361,9 @@ protocol TextSightHostApi {
   func setLanguages(languages: [String]) throws
   /// Turns the camera torch on or off.
   func setTorchEnabled(enabled: Bool) throws
+  /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
+  /// Google Play Services when needed) and returns the terminal readiness state.
+  func ensureModelReady(completion: @escaping (Result<[String: Any?], Error>) -> Void)
   /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
   func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage, completion: @escaping (Result<[String: Any?], Error>) -> Void)
   /// Recognizes text in the image at file [path], honouring [options].
@@ -502,6 +505,23 @@ class TextSightHostApiSetup {
       }
     } else {
       setTorchEnabledChannel.setMessageHandler(nil)
+    }
+    /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
+    /// Google Play Services when needed) and returns the terminal readiness state.
+    let ensureModelReadyChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.ensureModelReady\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      ensureModelReadyChannel.setMessageHandler { _, reply in
+        api.ensureModelReady { result in
+          switch result {
+          case .success(let res):
+            reply(wrapResult(res))
+          case .failure(let error):
+            reply(wrapError(error))
+          }
+        }
+      }
+    } else {
+      ensureModelReadyChannel.setMessageHandler(nil)
     }
     /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
     let recognizeImageChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.recognizeImage\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)

@@ -369,6 +369,11 @@ interface TextSightHostApi {
   fun setLanguages(languages: List<String>)
   /** Turns the camera torch on or off. */
   fun setTorchEnabled(enabled: Boolean)
+  /**
+   * Ensures the recognition model is present (fetching the unbundled ML Kit model via
+   * Google Play Services when needed) and returns the terminal readiness state.
+   */
+  fun ensureModelReady(callback: (Result<Map<String, Any?>>) -> Unit)
   /** Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options]. */
   fun recognizeImage(bytes: ByteArray, options: TextSightOptionsMessage, callback: (Result<Map<String, Any?>>) -> Unit)
   /** Recognizes text in the image at file [path], honouring [options]. */
@@ -521,6 +526,24 @@ interface TextSightHostApi {
               MessagesPigeonUtils.wrapError(exception)
             }
             reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.ensureModelReady$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            api.ensureModelReady{ result: Result<Map<String, Any?>> ->
+              val error = result.exceptionOrNull()
+              if (error != null) {
+                reply.reply(MessagesPigeonUtils.wrapError(error))
+              } else {
+                val data = result.getOrNull()
+                reply.reply(MessagesPigeonUtils.wrapResult(data))
+              }
+            }
           }
         } else {
           channel.setMessageHandler(null)

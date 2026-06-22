@@ -81,6 +81,17 @@ abstract class TextSightHostApi {
   /// Turns the camera torch on or off.
   void setTorchEnabled(bool enabled);
 
+  // Model readiness — mode-agnostic (both drivers recognize through the same model), so it
+  // rides this control API rather than either driver. Triggers a check-and-fetch of the
+  // on-device model and returns the terminal readiness map (decoded Dart-side, the same
+  // self-describing style as the recognize calls). Intermediate progress streams over a
+  // plain EventChannel (com.lahaluhem.text_sight/readiness), not this method.
+
+  /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
+  /// Google Play Services when needed) and returns the terminal readiness state.
+  @async
+  Map<String, Object?> ensureModelReady();
+
   // Static one-shot driver — no camera session, texture, or permission. Each call runs a
   // transient native recognizer over a still image and returns the same self-describing
   // per-frame map the captures EventChannel emits (decoded Dart-side by `_decodeCapture`), so
