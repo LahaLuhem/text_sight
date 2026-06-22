@@ -7,9 +7,7 @@ on:
     branches: [main]
 
 concurrency:
-  # Pull-request runs cancel each other per PR; main-branch runs cancel only
-  # against later main commits. The `|| github.ref` fallback keeps the group
-  # well-formed on push events where `pull_request.number` is empty.
+  # Per PR, or per ref on a direct push to main; a newer event cancels the older run.
   group: pkg-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
@@ -17,8 +15,40 @@ permissions:
   contents: read
 
 jobs:
+  # A push to main that's just a merged PR was already fully checked on that PR, so the jobs
+  # below skip it; a *direct* push to main (and every PR) still runs them. The push payload can't
+  # distinguish the two, so ask the API whether the pushed commit belongs to a merged PR —
+  # strategy-agnostic (works for squash, merge-commit, and rebase merges).
+  gate:
+    name: Decide whether to run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "push" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"   # PRs always run
+            exit 0
+          fi
+          # Did the pushed commit land via a merged PR? If so, it's a post-merge push.
+          merged=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" \
+                     --jq '[.[] | select(.merged_at != null)] | length' 2>/dev/null || echo 0)
+          if [ "${merged:-0}" -gt 0 ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"  # already checked on the PR — skip
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"   # direct push to main — run
+          fi
+
   analyze:
     name: Flutter analyze
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +58,8 @@ jobs:
 
   format:
     name: Dart format
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,6 +75,8 @@ jobs:
 
   detekt:
     name: detekt (Kotlin)
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +92,8 @@ jobs:
 
   deps:
     name: Dependency validator
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +103,8 @@ jobs:
 
   test:
     name: Tests
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +118,8 @@ jobs:
 
   android-example:
     name: Android example build + unit tests
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -108,8 +148,10 @@ jobs:
 
   ios-example:
     name: iOS build + unit tests + no-bundling
-    # macOS runners cost ~10x Linux, so only build iOS on pull requests.
-    if: github.event_name == 'pull_request'
+    # Runs on PRs and direct pushes to main; the gate skips post-merge pushes — which is what keeps
+    # redundant re-runs off the ~10x-cost macOS runner (the reason this used to be PR-only).
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -172,6 +214,8 @@ jobs:
 
   pigeon-freshness:
     name: Pigeon codegen freshness
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
