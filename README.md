@@ -50,7 +50,8 @@ onResult: (capture) => capture.lines.forEach((line) => print(line.text)),
 overlayBuilder: (context, capture, constraints) => /* paint line.boundingBox */,
 );
 
-await controller.start(); // after the camera permission is granted
+await controller.requestCameraPermission(); // prompts via the OS — no permission package needed
+await controller.start();
 ```
 
 Or read a single still — no camera, no permission:
@@ -105,9 +106,12 @@ On iOS, add a camera-usage string to `ios/Runner/Info.plist`:
 <string>Used to recognize text from the camera.</string>
 ```
 
-text_sight won't request camera permission for you — ask for it (e.g. with
-[`permission_handler`](https://pub.dev/packages/permission_handler)), then call
-`controller.start()`. Android's manifest already has what it needs.
+Then let text_sight drive the runtime prompt: call `controller.requestCameraPermission()` (or
+`controller.checkCameraPermission()` to gate a priming screen) before `controller.start()`. It goes
+straight to the platform APIs — AVFoundation on iOS, the Android permission flow on Android — so **no
+permission package is required**. Already using
+[`permission_handler`](https://pub.dev/packages/permission_handler) or similar? That still works.
+Android's manifest already has what it needs.
 
 ## The recognition model
 
