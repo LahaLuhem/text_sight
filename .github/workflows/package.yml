@@ -87,6 +87,9 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+          # Restores ~/.gradle across runs (AGP, Kotlin, CameraX, ML Kit, Robolectric's android-all
+          # jars, JUnit/Mockito) — otherwise every run re-downloads the whole dependency graph.
+          cache: gradle
       - uses: ./.github/actions/setup-flutter
         with:
           working-directory: example
@@ -155,8 +158,17 @@ jobs:
         run: |
           curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" https://github.com/realm/SwiftLint/releases/download/0.63.3/portable_swiftlint.zip
           unzip -oq "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
-          "$RUNNER_TEMP/swiftlint/swiftlint" lint --strict --config ios/.swiftlint.yml
-          "$RUNNER_TEMP/swiftlint/swiftlint" lint --strict --config example/ios/.swiftlint.yml
+          SL="$RUNNER_TEMP/swiftlint/swiftlint"
+          # Disjoint trees, so lint them concurrently. Each writes its own log (printed in a
+          # collapsible group after both finish, to keep concurrent output readable); the step fails
+          # if EITHER run fails — so all lint errors surface in one run, not just the first config's.
+          "$SL" lint --strict --config ios/.swiftlint.yml > "$RUNNER_TEMP/sl-plugin.log" 2>&1 & p1=$!
+          "$SL" lint --strict --config example/ios/.swiftlint.yml > "$RUNNER_TEMP/sl-tests.log" 2>&1 & p2=$!
+          r1=0; wait "$p1" || r1=$?
+          r2=0; wait "$p2" || r2=$?
+          echo "::group::SwiftLint — plugin (ios/.swiftlint.yml)"; cat "$RUNNER_TEMP/sl-plugin.log"; echo "::endgroup::"
+          echo "::group::SwiftLint — RunnerTests (example/ios/.swiftlint.yml)"; cat "$RUNNER_TEMP/sl-tests.log"; echo "::endgroup::"
+          [ "$r1" -eq 0 ] && [ "$r2" -eq 0 ]
 
   pigeon-freshness:
     name: Pigeon codegen freshness
