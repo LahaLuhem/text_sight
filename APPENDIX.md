@@ -5,6 +5,7 @@
 - [Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview](#channel-topology-pigeon-control-api--eventchannel-results--texture-preview)
 - [Coordinate normalization: top-left `[0,1]` in native code](#coordinate-normalization-top-left-01-in-native-code)
 - [iOS capture & recognition strategy: roll-your-own AVCapture + Swift Vision](#ios-capture-strategy)
+- [Model readiness and the bundled / unbundled axis (Android)](#model-readiness)
 - [Federation deferred: one plugin package for v1](#federation-deferred-one-plugin-package-for-v1)
 - [Known limitations, performance, and deferred work](#known-limitations)
 - [Public API funnelled through `lib/text_sight.dart`](#public-api-funnelled-through-libtext_sightdart)
@@ -19,9 +20,9 @@ READMEs, [`CODESTYLE.md`](./CODESTYLE.md), and [`.ai/AGENTS.md`](./.ai/AGENTS.md
 reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
 > **Status:** the symlink, channel-topology, coordinate-normalization, iOS-capture-strategy,
-> known-limitations, and public-API sections are written. `#no-bundling` and `#federation-deferred`
-> stay stubs — locked decisions whose rationale is filled in when the corresponding code lands.
-> Anchors are stable; only stub bodies grow.
+> model-readiness, known-limitations, and public-API sections are written. `#no-bundling` and
+> `#federation-deferred` stay stubs — locked decisions whose rationale is filled in when the
+> corresponding code lands. Anchors are stable; only stub bodies grow.
 
 ---
 
@@ -116,8 +117,13 @@ whole control surface this schema needs — a typed `@HostApi`, `@async` methods
 classes — and as the official Flutter-team tool it is the durable choice for a package others
 depend on. Golubets' genuine additions (user-defined generics, advanced sealed classes, default
 parameter values, true Swift-concurrency / Kotlin-coroutine codegen) go unused by this
-flat-model, hand-written-public-types design. Low-risk and reversible: codegen is dev-time only
-and `messages.g.dart` is committed, so the fallback is simply to freeze it. (Pigeon's own
+flat-model, hand-written-public-types design. The model-readiness work (2026-06-22) reconfirmed
+this head-on: its `TextSightReadinessState` *is* a sealed class, yet it stays hand-written and rides
+the readiness `EventChannel` as a decoded map — so Golubets' sealed-class codegen would still have
+gone unused; that, plus Golubets' own pub.dev page discouraging generated code in a published
+package's public API and requiring both ends on the same version, kept the package on Pigeon (see
+[#model-readiness](#model-readiness)). Low-risk and reversible: codegen is dev-time only and
+`messages.g.dart` is committed, so the fallback is simply to freeze it. (Pigeon's own
 `@EventChannelApi` could later type the results stream, but with `Rect`/`Size` models that can't
 cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
 
@@ -253,6 +259,65 @@ and non-breaking when it lands. Cross-refs: [#channel-topology](#channel-topolog
 both paths emit) and [#coordinate-normalization](#coordinate-normalization) (the Y-flip both apply —
 the new Swift API keeps Vision's lower-left origin, so the flip stays; `NormalizedRect.toImageCoordinates(_:origin:.upperLeft)`
 performs it, and a unit image size yields the top-left-normalized box directly).
+
+---
+
+<a id="model-readiness"></a>
+## Model readiness and the bundled / unbundled axis (Android)
+
+**Decision.** The on-device recognition model loads **lazily and under app control** — never on the
+app-startup path — and whether it is **bundled or unbundled** is a build-time choice. Two orthogonal
+axes, settled 2026-06-22:
+
+- **Runtime readiness — `TextSightModel.ensureReady()` + `TextSightModel.readiness`.**
+  Mode-agnostic: both the live and one-shot drivers recognize through the same model, so the API sits
+  on neither driver but on its own `TextSightModel` namespace. `ensureReady()` resolves to a terminal
+  `TextSightReadinessState` (`ModelReady` / `ModelUnavailable`); `readiness` streams
+  `ModelDownloading(progress)` in between. The app calls it when entering an OCR feature, so model
+  loading is backgrounded rather than blocking launch.
+- **Build-time bundling — the `com.lahaluhem.text_sight.useBundled` gradle flag.** Default unbundled
+  (~260 KB/script, fetched via Google Play Services); `=true` bundles the model into the APK
+  (~4 MB/script/arch, instant + offline). The ML Kit Kotlin API is identical across the two
+  artifacts, so the switch is a pure dependency swap in `android/build.gradle.kts` — the recognizer
+  code (`TextSightCamera`) is untouched.
+
+**Why two axes, not one.** Bundling is a packaging decision the *app developer* makes once, at build
+time — the only place an Android dependency-variant switch can live, so it is a `gradle.properties`
+flag (the mechanism `mobile_scanner` uses, inverted because our default is unbundled). Borrowing that
+*mechanism* does not make the Dart API a `mobile_scanner` clone — the readiness API is designed on its
+own terms. Readiness is a *runtime* concern the app drives per session. The two interact but are not
+the same lever: with the bundled model `ensureReady()` resolves instantly (the model is in the APK);
+with the unbundled model it may download. The Kotlin side learns which from `BuildConfig.USE_BUNDLED`
+(fed by the flag) and short-circuits to ready when bundled.
+
+**Why lazy-by-default — no install-time prefetch.** ML Kit's unbundled model has three delivery
+paths: an install-time `com.google.mlkit.vision.DEPENDENCIES` manifest meta-data, an explicit
+`ModuleInstallClient` download, or download-on-first-use. The plugin's `AndroidManifest.xml`
+deliberately **omits** the meta-data — it merges into *every* consumer, so it would force an
+OCR-model download at install for apps that may never use the feature, the opposite of lazy. The
+default is therefore download-on-first-use, with `ensureReady()` — backed by `ModuleInstallClient`
+(`areModulesAvailable` → `installModules` + an `InstallStatusListener` for progress) — as the
+app-controlled trigger. A consumer that genuinely wants eager prefetch re-adds the meta-data in their
+own app manifest. (Removing the meta-data is a behavioural change from the prior build, not an API
+one: first use now downloads instead of install time.)
+
+**Failure is a state, not a throw.** The unbundled model needs Google Play Services — absent on
+GMS-less / offline devices — and a download can fail. Both surface as `ModelUnavailable` with a typed
+`reason` (`playServicesUnavailable` / `downloadFailed`), a state the consumer renders rather than a
+crash ([hard rule 11](.ai/AGENTS.md#hard-rules)). None of it applies on iOS: Vision is a system
+framework, so readiness is always `ModelReady` and `ensureReady()` is an instant no-op.
+
+**Transport reuses the existing split** ([#channel-topology](#channel-topology)). `ensureModelReady()`
+is one `@async` Pigeon control method returning the terminal-state map; `readiness` is a plain
+`EventChannel` (`com.lahaluhem.text_sight/readiness`) of self-describing maps, hand-decoded into the
+sealed `TextSightReadinessState` exactly as the captures stream decodes into `TextSightCapture`. The
+sealed type is **hand-written public Dart, never generated** — which is why a sealed result type did
+*not* push the package onto Golubets (that analysis lives in [#channel-topology](#channel-topology)).
+
+**The no-bundling contract is untouched.** That rule ([#no-bundling](#no-bundling)) is iOS-only — no
+third-party ML library in the *Apple* build. Android bundled-vs-unbundled is a separate, legitimate
+axis: ML Kit is declared only in `android/build.gradle.kts` either way, and the bundled artifact
+never reaches the Dart `pubspec.yaml`.
 
 ---
 
