@@ -177,6 +177,63 @@ void main() {
         await check(platform.dispose()).completes();
       });
 
+  Bdd(control)
+      .scenario('checkCameraPermission maps the host status twin to the public enum')
+      .given('a host that replies with the <twin> status')
+      .when('checkCameraPermission is awaited')
+      .then('it resolves to <status>')
+      .example(
+        val('twin', CameraPermissionStatusMessage.granted),
+        val('status', CameraPermissionStatus.granted),
+      )
+      .example(
+        val('twin', CameraPermissionStatusMessage.denied),
+        val('status', CameraPermissionStatus.denied),
+      )
+      .example(
+        val('twin', CameraPermissionStatusMessage.permanentlyDenied),
+        val('status', CameraPermissionStatus.permanentlyDenied),
+      )
+      .run((ctx) async {
+        final platform = PigeonTextSightPlatform();
+        _mockHostMethod(messenger, 'checkCameraPermission', reply: ctx.example.val('twin'));
+
+        final status = await platform.checkCameraPermission();
+
+        check(status).equals(ctx.example.val('status') as CameraPermissionStatus);
+      });
+
+  Bdd(control)
+      .scenario('requestCameraPermission invokes the host and maps the resulting status')
+      .given('a host that replies with the <twin> status')
+      .when('requestCameraPermission is awaited')
+      .then('the host is invoked and it resolves to <status>')
+      .example(
+        val('twin', CameraPermissionStatusMessage.granted),
+        val('status', CameraPermissionStatus.granted),
+      )
+      .example(
+        val('twin', CameraPermissionStatusMessage.denied),
+        val('status', CameraPermissionStatus.denied),
+      )
+      .example(
+        val('twin', CameraPermissionStatusMessage.permanentlyDenied),
+        val('status', CameraPermissionStatus.permanentlyDenied),
+      )
+      .run((ctx) async {
+        final platform = PigeonTextSightPlatform();
+        final call = _mockHostMethod(
+          messenger,
+          'requestCameraPermission',
+          reply: ctx.example.val('twin'),
+        );
+
+        final status = await platform.requestCameraPermission();
+
+        check(call.invoked).isTrue();
+        check(status).equals(ctx.example.val('status') as CameraPermissionStatus);
+      });
+
   Bdd(captures)
       .scenario('A frame decodes into a capture with normalized lines')
       .given('the camera emits one frame sized <imageWidth> by <imageHeight>')
