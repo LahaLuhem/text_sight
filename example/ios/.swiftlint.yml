@@ -1,0 +1,12 @@
+# SwiftLint — deviations for the example's iOS RunnerTests (the plugin's native unit tests). Kept
+# separate from ios/.swiftlint.yml because SwiftLint resolves `included`/`excluded` relative to each
+# config's own directory, and the two trees need different deviations. Paths are relative to this file.
+included:
+  - RunnerTests
+
+disabled_rules:
+  - trailing_comma    # trailing commas are kept, consistent with the project's Dart style
+
+identifier_name:
+  min_length:
+    warning: 2        # allow short, clear domain names (e.g. `up` in the rotation tests)

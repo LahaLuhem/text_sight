@@ -138,21 +138,25 @@ jobs:
             echo "::error::No iPhone simulator available on the runner"
             exit 1
           fi
-          xcodebuild test \
+          # -quiet trims the log to warnings + errors; a full xcodebuild test transcript is several
+          # thousand lines (unlike `flutter build ios` above, which Flutter already prints tersely).
+          # A failing build/test still prints its error; drop -quiet to see the full transcript.
+          xcodebuild test -quiet \
             -workspace Runner.xcworkspace \
             -scheme Runner \
             -only-testing:RunnerTests \
             -destination "id=$DEVICE_ID" \
             CODE_SIGNING_ALLOWED=NO
-      # SwiftLint over the plugin's Swift + RunnerTests (config excludes the generated
-      # Messages.g.swift). Folded into this macOS job to avoid a second ~10x-cost runner; the
-      # portable binary is version-pinned. Run from the repo root: the config lives in ios/ but its
-      # included paths are repo-root-relative (and also cover example/ios/RunnerTests).
+      # SwiftLint over the plugin's Swift (ios/.swiftlint.yml) and the example's RunnerTests
+      # (example/ios/.swiftlint.yml) — two configs because SwiftLint resolves included/excluded
+      # relative to each config's own dir, and the trees need different deviations. Folded into this
+      # macOS job to avoid a second ~10x-cost runner; the portable binary is version-pinned.
       - name: SwiftLint
         run: |
           curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" https://github.com/realm/SwiftLint/releases/download/0.63.3/portable_swiftlint.zip
           unzip -oq "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
           "$RUNNER_TEMP/swiftlint/swiftlint" lint --strict --config ios/.swiftlint.yml
+          "$RUNNER_TEMP/swiftlint/swiftlint" lint --strict --config example/ios/.swiftlint.yml
 
   pigeon-freshness:
     name: Pigeon codegen freshness
