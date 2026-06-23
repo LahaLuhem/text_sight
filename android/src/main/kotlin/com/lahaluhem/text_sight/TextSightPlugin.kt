@@ -160,8 +160,8 @@ class TextSightPlugin :
     }
 
     private companion object {
-        const val CAPTURES_CHANNEL_NAME = "com.lahaluhem.text_sight/captures"
-        const val READINESS_CHANNEL_NAME = "com.lahaluhem.text_sight/readiness"
+        const val CAPTURES_CHANNEL_NAME = "${BuildConfig.LIBRARY_PACKAGE_NAME}/captures"
+        const val READINESS_CHANNEL_NAME = "${BuildConfig.LIBRARY_PACKAGE_NAME}/readiness"
 
         fun detachedError(): FlutterError =
             FlutterError("detached", "The plugin is not attached to a Flutter engine.")

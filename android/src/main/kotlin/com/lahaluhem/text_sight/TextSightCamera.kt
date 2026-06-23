@@ -69,10 +69,10 @@ internal class TextSightCamera(
     private var isRecognizing = false
 
     /**
-     * Keeps [ImageAnalysis]'s target rotation in step with the live display rotation, so the
+     * Keeps [ImageAnalysis]'s target rotation in-step with the live display rotation, so the
      * reported quarter-turns ([ImageProxy] rotationDegrees / 90) track the device in every
      * orientation. The headless session has no Activity to do this automatically, so without it
-     * the rotation hint is stuck at the bind-time default and only portrait looks right.
+     * the rotation hint is stuck at the bind-time default, and only the portrait looks right.
      */
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) = Unit
@@ -210,7 +210,7 @@ internal class TextSightCamera(
      * Recognizes [bitmap], rotated upright by [rotationDegrees] (its EXIF orientation), with a
      * transient pass over the shared recognizer. When [roi] is set, the upright bitmap is cropped
      * to it first so ML Kit reads only that region — a true crop, unlike the live path's
-     * center-containment filter. Completes on the main thread with the same per-frame map the live
+     * centre-containment filter. Completes on the main thread with the same per-frame map the live
      * path emits — quarterTurns 0, since a still is already upright.
      */
     private fun recognizeStill(
@@ -349,8 +349,8 @@ internal class TextSightCamera(
 }
 
 /**
- * Encodes [visionText] into the self-describing per-frame map the captures channel emits — the same
- * shape the iOS side produces. [roi] (when set) center-filters lines on the live path; the crop
+ * Encodes [visionText] into the self-describing per-frame map that the capture channel emits — the same
+ * shape the iOS side produces. [roi] (when set) centre-filters lines on the live path; the crop
  * origin [offsetX]/[offsetY] maps still-image boxes back into full-image coordinates.
  */
 @VisibleForTesting
@@ -409,7 +409,7 @@ internal fun encodeLine(
         "elements" to null,
     )
 
-/** Whether the center of this pixel rect falls inside [roi] (normalized [0, 1] top-left). */
+/** Whether the centre of this pixel rect falls inside [roi] (normalized [0, 1] top-left). */
 @VisibleForTesting
 internal fun Rect.centerWithin(
     roi: RegionOfInterestMessage?,

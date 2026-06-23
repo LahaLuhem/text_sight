@@ -16,8 +16,8 @@ import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener
  * the `ActivityAware` lifecycle. As a [RequestPermissionsResultListener] this receives the system
  * result on the main thread and resolves the pending callback there — off the capture pipeline.
  *
- * `denied` vs `permanentlyDenied` is the standard heuristic: after a refusal, if the system would no
- * longer show a rationale the user chose "don't ask again" (or policy blocks it), so only the OS
+ * `denied` vs `permanentlyDenied` is the standard heuristic: after a refusal, if the system no
+ * longer shows a rationale the user chose "don't ask again" (or policy blocks it), so only the OS
  * settings can change it.
  */
 internal class CameraPermissionRequester(
