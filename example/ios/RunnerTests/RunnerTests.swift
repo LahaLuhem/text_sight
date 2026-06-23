@@ -42,7 +42,9 @@ final class TextSightCameraTests: XCTestCase {
   }
 
   // MARK: ModernTextRecognizer.makeRequest — config snapshot -> Vision RecognizeTextRequest
+  // (iOS 18+ only — `ModernTextRecognizer` is `@available(iOS 18, *)`; skipped on older runtimes).
 
+  @available(iOS 18, *)
   func testMakeRequestFastLevelDisablesLanguageCorrection() {
     let request = ModernTextRecognizer.makeRequest(
       config: RecognitionConfig(level: .fast, languages: [], roi: nil)
@@ -52,6 +54,7 @@ final class TextSightCameraTests: XCTestCase {
     XCTAssertFalse(request.usesLanguageCorrection)
   }
 
+  @available(iOS 18, *)
   func testMakeRequestAccurateLevelEnablesLanguageCorrection() {
     let request = ModernTextRecognizer.makeRequest(
       config: RecognitionConfig(level: .accurate, languages: [], roi: nil)
@@ -61,6 +64,7 @@ final class TextSightCameraTests: XCTestCase {
     XCTAssertTrue(request.usesLanguageCorrection)
   }
 
+  @available(iOS 18, *)
   func testMakeRequestMapsLanguagesInPreferenceOrder() {
     let request = ModernTextRecognizer.makeRequest(
       config: RecognitionConfig(level: .fast, languages: ["en-US", "fr"], roi: nil)
@@ -72,6 +76,7 @@ final class TextSightCameraTests: XCTestCase {
     )
   }
 
+  @available(iOS 18, *)
   func testMakeRequestFlipsRegionOfInterestToLowerLeft() {
     let roi = RegionOfInterestMessage(left: 0.1, top: 0.2, width: 0.3, height: 0.4)
 
