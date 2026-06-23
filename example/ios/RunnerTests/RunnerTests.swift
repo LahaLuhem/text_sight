@@ -17,20 +17,20 @@ final class TextSightCameraTests: XCTestCase {
     XCTAssertEqual(up.orientation, .up)
     XCTAssertFalse(up.isQuarterTurned)
 
-    let left = TextSightCamera.displayRotation(forCaptureAngle: 90)
-    XCTAssertEqual(left.quarterTurns, 1)
-    XCTAssertEqual(left.orientation, .left)
-    XCTAssertTrue(left.isQuarterTurned)
+    let right = TextSightCamera.displayRotation(forCaptureAngle: 90)
+    XCTAssertEqual(right.quarterTurns, 1)
+    XCTAssertEqual(right.orientation, .right)
+    XCTAssertTrue(right.isQuarterTurned)
 
     let down = TextSightCamera.displayRotation(forCaptureAngle: 180)
     XCTAssertEqual(down.quarterTurns, 2)
     XCTAssertEqual(down.orientation, .down)
     XCTAssertFalse(down.isQuarterTurned)
 
-    let right = TextSightCamera.displayRotation(forCaptureAngle: 270)
-    XCTAssertEqual(right.quarterTurns, 3)
-    XCTAssertEqual(right.orientation, .right)
-    XCTAssertTrue(right.isQuarterTurned)
+    let left = TextSightCamera.displayRotation(forCaptureAngle: 270)
+    XCTAssertEqual(left.quarterTurns, 3)
+    XCTAssertEqual(left.orientation, .left)
+    XCTAssertTrue(left.isQuarterTurned)
   }
 
   func testDisplayRotationNormalizesOutOfRangeAngles() {
