@@ -6,9 +6,9 @@ import PackageDescription
 let package = Package(
     name: "text_sight",
     platforms: [
-        // iOS 18.0 — floor for Vision's Swift `RecognizeTextRequest` API
-        // An availability-gated fallback to iOS 13+ `VNRecognizeTextRequest` is a deferred feature.
-        .iOS("18.0")
+        // iOS 13.0 — the hybrid recognizer availability-gates Vision's Swift `RecognizeTextRequest`
+        // (iOS 18+) against the legacy `VNRecognizeTextRequest` (iOS 13–17).
+        .iOS("13.0")
     ],
     products: [
         .library(name: "text-sight", targets: ["text_sight"])

@@ -84,14 +84,23 @@ permission handling, and the one-shot screen, all wired up and ready to crib fro
 
 ## Platform support
 
-| Platform | Minimum | Engine                                  |
-|----------|---------|-----------------------------------------|
-| iOS      | 18.0    | Apple Vision — `RecognizeTextRequest`   |
-| Android  | API 24  | ML Kit Text Recognition v2 (Latin)      |
+| Platform | Minimum | Engine                                                            |
+|----------|---------|-------------------------------------------------------------------|
+| iOS      | 13.0    | Apple Vision — `RecognizeTextRequest` (18+) / `VNRecognizeTextRequest` (13–17) |
+| Android  | API 24  | ML Kit Text Recognition v2 (Latin)                                |
 
-A few things worth knowing before you start: iOS needs **18.0+** (older versions are on the
-roadmap), Android recognizes **Latin script only** for now, and *live* scanning needs a real
-device — the iOS Simulator has no camera. The one-shot runs anywhere.
+A few things worth knowing before you start: iOS supports **13.0+** — recognition uses Apple
+Vision's modern Swift `RecognizeTextRequest` on iOS 18+ and falls back to the legacy
+`VNRecognizeTextRequest` on iOS 13–17 (the same engine, chosen automatically). Android recognizes
+**Latin script only** for now, and *live* scanning needs a real device — the iOS Simulator has no
+camera. The one-shot runs anywhere.
+
+> **⚠️ iOS 13–16: the live preview and recognition don't follow device rotation.** These versions
+> predate `AVCaptureDevice.RotationCoordinator`, so live capture isn't rotated to match how the
+> device is held (iOS 17+ is unaffected, and *one-shot* recognition is fine on every version — it
+> reads the image's own orientation). It's a deliberate, low-maintenance trade-off for a device
+> population we don't expect in practice; if it affects you, please
+> [open an issue](https://github.com/LahaLuhem/text_sight/issues) and a proper rotation fallback will follow.
 
 ## Install
 

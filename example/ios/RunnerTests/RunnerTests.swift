@@ -87,6 +87,49 @@ final class TextSightCameraTests: XCTestCase {
     XCTAssertEqual(region.height, 0.4, accuracy: 1e-9)
   }
 
+  // MARK: LegacyTextRecognizer.makeRequest — config snapshot -> Vision VNRecognizeTextRequest
+
+  func testLegacyMakeRequestFastLevelDisablesLanguageCorrection() {
+    let request = LegacyTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: [], roi: nil)
+    )
+
+    XCTAssertEqual(request.recognitionLevel, .fast)
+    XCTAssertFalse(request.usesLanguageCorrection)
+  }
+
+  func testLegacyMakeRequestAccurateLevelEnablesLanguageCorrection() {
+    let request = LegacyTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .accurate, languages: [], roi: nil)
+    )
+
+    XCTAssertEqual(request.recognitionLevel, .accurate)
+    XCTAssertTrue(request.usesLanguageCorrection)
+  }
+
+  func testLegacyMakeRequestPassesLanguagesThroughInOrder() {
+    let request = LegacyTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: ["en-US", "fr"], roi: nil)
+    )
+
+    XCTAssertEqual(request.recognitionLanguages, ["en-US", "fr"])
+  }
+
+  func testLegacyMakeRequestFlipsRegionOfInterestToLowerLeft() {
+    let roi = RegionOfInterestMessage(left: 0.1, top: 0.2, width: 0.3, height: 0.4)
+
+    let request = LegacyTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: [], roi: roi)
+    )
+
+    // Vision's region-of-interest is lower-left normalized: y = 1 - (top + height).
+    let region = request.regionOfInterest
+    XCTAssertEqual(region.origin.x, 0.1, accuracy: 1e-9)
+    XCTAssertEqual(region.origin.y, 0.4, accuracy: 1e-9)
+    XCTAssertEqual(region.width, 0.3, accuracy: 1e-9)
+    XCTAssertEqual(region.height, 0.4, accuracy: 1e-9)
+  }
+
   // MARK: encodeFrame — neutral lines -> the cross-platform per-frame wire map
 
   func testEncodeFrameMapsLinesToWireKeys() {
