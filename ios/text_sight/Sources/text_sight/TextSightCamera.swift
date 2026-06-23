@@ -436,9 +436,12 @@ final class TextSightCamera: NSObject {
   static func displayRotation(forCaptureAngle angle: CGFloat)
     -> (quarterTurns: Int, orientation: CGImagePropertyOrientation, isQuarterTurned: Bool) {
     switch (Int(angle.rounded()) % 360 + 360) % 360 {
-    case 90: return (1, .left, true)
+    // Back camera: a 90° clockwise-to-upright angle (portrait) is EXIF `.right`; the opposite
+    // quarter-turn (270°) is `.left`. Swapping the two feeds Vision a 180°-rotated image, which
+    // wrecks recognition in portrait while landscape (`.up`/`.down`) still looks fine.
+    case 90: return (1, .right, true)
     case 180: return (2, .down, false)
-    case 270: return (3, .right, true)
+    case 270: return (3, .left, true)
     default: return (0, .up, false)
     }
   }
