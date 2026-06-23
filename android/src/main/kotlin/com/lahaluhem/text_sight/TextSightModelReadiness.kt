@@ -36,7 +36,7 @@ internal class TextSightModelReadiness(
     private var eventSink: EventChannel.EventSink? = null
 
     // The last state emitted, replayed to a late subscriber (e.g. a progress UI attached after a
-    // fetch began) so it is never left blank. Null until the first emit.
+    // fetch began), so it is never left blank. Null until the first emit.
     private var currentState: Map<String, Any?>? = null
 
     init {
@@ -158,7 +158,7 @@ internal class TextSightModelReadiness(
 
 // The readiness wire-map builders are file-level `internal` — like the captures `encodeFrame` /
 // `encodeLine` — so the host-side unit tests can assert the shapes the Dart side decodes without a
-// Google Play Services round-trip (the module install can't be triggered on an emulator).
+// Google Play Services round-trip. (The module installation can't be triggered on an emulator.)
 
 /** The "ready" readiness wire map. */
 internal fun readyState(): Map<String, Any?> = mapOf("state" to "ready")
