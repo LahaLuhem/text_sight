@@ -1,6 +1,9 @@
 package com.lahaluhem.text_sight
 
 import com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate
+import com.lahaluhem.text_sight.readiness.downloadingState
+import com.lahaluhem.text_sight.readiness.readyState
+import com.lahaluhem.text_sight.readiness.unavailableState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

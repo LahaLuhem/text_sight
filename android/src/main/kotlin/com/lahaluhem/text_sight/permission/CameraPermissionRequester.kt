@@ -1,4 +1,4 @@
-package com.lahaluhem.text_sight
+package com.lahaluhem.text_sight.permission
 
 import android.Manifest
 import android.app.Activity
@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.lahaluhem.text_sight.CameraPermissionStatusMessage
+import com.lahaluhem.text_sight.FlutterError
 import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener
 
 /**

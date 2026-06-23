@@ -284,6 +284,33 @@ style.
 
 ---
 
+<a id="source-file-organization"></a>
+## Source-file organization
+
+- **One responsibility per file; the filename names it.** A file holds one public/primary type, or
+  one cohesive cluster of free functions — `FrameEncoding.kt` is the per-frame wire map,
+  `RegionOfInterest.kt` the ROI geometry. Don't let helper functions or a second helper class pile up
+  at the bottom of a driver file; extract them so each file's path advertises its job. **Why:**
+  findability, and a one-responsibility diff when that concern changes. (`lib/src/` already does this —
+  one public type per file behind the barrel.)
+- **But keep a cohesive stateful unit whole.** The capture/session class (`TextSightCamera`, both
+  platforms) stays one file even when long — splitting one stateful lifecycle across files costs more
+  than it saves. The native file-length caps are relaxed for exactly this (`ios/.swiftlint.yml`,
+  `android/detekt.yml`); extract the *standalone* helpers around the class, never the class itself.
+- **Group by responsibility into sub-dirs.** iOS folders are free (one module, no namespace shift):
+  `Enums/`, `Models/`, feature folders (`TextRecognizer/` + `Engines/`, `Factories/`). A Kotlin
+  sub-dir *is* a sub-package (it adds a `package` line + imports), so group the same way by
+  responsibility: `camera/`, `recognition/`, `permission/`, `readiness/`.
+- **Type-named dirs only for hand-written types.** `Enums/` / `Models/` earn their place on iOS
+  because those types are hand-written. On Android the enums and data models are **Pigeon-generated**
+  (all in `Messages.g.kt`, unmovable), so Android groups by responsibility instead — don't create
+  empty `enums/` / `models/` packages there.
+- **Two things never leave the root package/dir:** the plugin entry class (`TextSightPlugin` — FQN
+  pinned by `pubspec.yaml`'s `pluginClass`/`package`) and Pigeon's generated `Messages.g.*` (the
+  generator owns its output path). Everything else is free to move into a responsibility sub-dir.
+
+---
+
 <a id="idioms"></a>
 ## Idioms
 

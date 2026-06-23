@@ -1,19 +1,16 @@
-package com.lahaluhem.text_sight
+package com.lahaluhem.text_sight.camera
 
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Matrix
-import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
 import android.view.Display
 import android.view.Surface
 import androidx.annotation.OptIn
-import androidx.annotation.VisibleForTesting
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
@@ -23,20 +20,21 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
 import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.lahaluhem.text_sight.FlutterError
+import com.lahaluhem.text_sight.RegionOfInterestMessage
+import com.lahaluhem.text_sight.TextSightOptionsMessage
+import com.lahaluhem.text_sight.recognition.encodeFrame
+import com.lahaluhem.text_sight.recognition.toPixelRect
+import com.lahaluhem.text_sight.recognition.uprightBy
 import io.flutter.plugin.common.EventChannel
 import io.flutter.view.TextureRegistry
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.concurrent.Executors
-import kotlin.math.roundToInt
 
 /**
  * Owns the CameraX session, the ML Kit recognizer, and the preview texture for one
@@ -345,120 +343,5 @@ internal class TextSightCamera(
         imageAnalysis = null
         cameraProvider = null
         surfaceProducer = null
-    }
-}
-
-/**
- * Encodes [visionText] into the self-describing per-frame map that the capture channel emits — the same
- * shape the iOS side produces. [roi] (when set) centre-filters lines on the live path; the crop
- * origin [offsetX]/[offsetY] maps still-image boxes back into full-image coordinates.
- */
-@VisibleForTesting
-internal fun encodeFrame(
-    visionText: Text,
-    imageWidth: Int,
-    imageHeight: Int,
-    quarterTurns: Int,
-    roi: RegionOfInterestMessage? = null,
-    offsetX: Int = 0,
-    offsetY: Int = 0,
-): Map<String, Any?> {
-    val width = imageWidth.toDouble()
-    val height = imageHeight.toDouble()
-
-    val lines = visionText.textBlocks
-        .flatMap { block -> block.lines }
-        .mapNotNull { line ->
-            val boundingBox = line.boundingBox ?: return@mapNotNull null
-            if (!boundingBox.centerWithin(roi, width, height)) {
-                return@mapNotNull null
-            }
-
-            encodeLine(line, boundingBox, width, height, offsetX, offsetY)
-        }
-
-    return mapOf(
-        "imageWidth" to width,
-        "imageHeight" to height,
-        "quarterTurns" to quarterTurns,
-        "lines" to lines,
-    )
-}
-
-/** Encodes one recognized [line] into its per-frame wire map (box normalized, origin-offset). */
-@VisibleForTesting
-internal fun encodeLine(
-    line: Text.Line,
-    boundingBox: Rect,
-    imageWidth: Double,
-    imageHeight: Double,
-    offsetX: Int,
-    offsetY: Int,
-): Map<String, Any?> =
-    mapOf(
-        "text" to line.text,
-        // ML Kit always supplies a per-line confidence (a primitive float) — never null.
-        // Forwarded as a non-null Double the nullable RecognizedLine.confidence contract accepts.
-        "confidence" to line.confidence.toDouble(),
-        // The crop origin (0 on the live path) maps boxes back into full-image coordinates.
-        "left" to (boundingBox.left + offsetX) / imageWidth,
-        "top" to (boundingBox.top + offsetY) / imageHeight,
-        "width" to boundingBox.width() / imageWidth,
-        "height" to boundingBox.height() / imageHeight,
-        // Word-level elements are reserved for a future additive release.
-        "elements" to null,
-    )
-
-/** Whether the centre of this pixel rect falls inside [roi] (normalized [0, 1] top-left). */
-@VisibleForTesting
-internal fun Rect.centerWithin(
-    roi: RegionOfInterestMessage?,
-    imageWidth: Double,
-    imageHeight: Double,
-): Boolean {
-    if (roi == null) return true
-
-    val centerX = exactCenterX() / imageWidth
-    val centerY = exactCenterY() / imageHeight
-
-    return centerX >= roi.left &&
-        centerX <= roi.left + roi.width &&
-        centerY >= roi.top &&
-        centerY <= roi.top + roi.height
-}
-
-/** This bitmap rotated clockwise [rotationDegrees]° to upright; the same instance when 0. */
-private fun Bitmap.uprightBy(rotationDegrees: Int): Bitmap {
-    if (rotationDegrees == 0) return this
-
-    val matrix = Matrix().apply { postRotate(rotationDegrees.toFloat()) }
-
-    return Bitmap.createBitmap(this, 0, 0, width, height, matrix, true)
-}
-
-/** `roi` (normalized [0, 1] top-left) as a pixel [Rect] clamped inside the image, never empty. */
-@VisibleForTesting
-internal fun RegionOfInterestMessage.toPixelRect(imageWidth: Int, imageHeight: Int): Rect {
-    val pixelLeft = (left * imageWidth).roundToInt().coerceIn(0, imageWidth - 1)
-    val pixelTop = (top * imageHeight).roundToInt().coerceIn(0, imageHeight - 1)
-    val pixelRight = ((left + width) * imageWidth).roundToInt().coerceIn(pixelLeft + 1, imageWidth)
-    val pixelBottom = ((top + height) * imageHeight).roundToInt().coerceIn(pixelTop + 1, imageHeight)
-
-    return Rect(pixelLeft, pixelTop, pixelRight, pixelBottom)
-}
-
-/** A [LifecycleOwner] driven manually so CameraX can bind without an Activity. */
-private class SessionLifecycleOwner : LifecycleOwner {
-    private val registry =
-        LifecycleRegistry(this).apply { currentState = Lifecycle.State.INITIALIZED }
-
-    override val lifecycle: Lifecycle get() = registry
-
-    fun resume() {
-        registry.currentState = Lifecycle.State.RESUMED
-    }
-
-    fun destroy() {
-        registry.currentState = Lifecycle.State.DESTROYED
     }
 }

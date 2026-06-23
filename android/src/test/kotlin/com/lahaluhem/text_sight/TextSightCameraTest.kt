@@ -2,6 +2,10 @@ package com.lahaluhem.text_sight
 
 import android.graphics.Rect
 import com.google.mlkit.vision.text.Text
+import com.lahaluhem.text_sight.recognition.centerWithin
+import com.lahaluhem.text_sight.recognition.encodeFrame
+import com.lahaluhem.text_sight.recognition.encodeLine
+import com.lahaluhem.text_sight.recognition.toPixelRect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
