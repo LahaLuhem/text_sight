@@ -283,10 +283,11 @@ model and the `Rect` ROI).
 ## iOS capture & recognition strategy: roll-your-own AVCapture + Swift Vision
 
 **Decision.** The iOS live path is **roll-your-own** `AVCaptureSession` + Vision →
-`FlutterTexture`, mirroring the Android `TextSightCamera`. The recognizer is Vision's **Swift
-`RecognizeTextRequest`** — the WWDC 2024 API — **not** the legacy `VNRecognizeTextRequest`. This
-sets the **iOS deployment floor at 18.0** (`text_sight.podspec` + `Package.swift`); a future macOS
-target would floor at 15.0 (the same API's macOS availability).
+`FlutterTexture`, mirroring the Android `TextSightCamera`. The primary recognizer is Vision's **Swift
+`RecognizeTextRequest`** — the WWDC 2024 API — with a legacy `VNRecognizeTextRequest` fallback for
+iOS 13–17 (the hybrid, below). The **deployment floor is 13.0** (`text_sight.podspec` +
+`Package.swift`); iOS 18+ runs the modern path, and a future macOS target would floor at 15.0 for it
+(the same API's macOS availability).
 
 **Why roll-your-own, not `DataScannerViewController`.** VisionKit's `DataScannerViewController`
 (iOS 16+, A12+) is turnkey, but it is a UIKit view controller that **owns its own camera preview
@@ -307,20 +308,34 @@ new code toward (Swift concurrency / `async`–`await`, `Sendable`, value-typed
 posture that puts Android on CameraX + ML Kit v2 and that the whole no-bundling effort embodies
 (off GoogleMLKit-on-iOS). It runs the **same** Vision text engine as the legacy request, so this is
 a modernity / ergonomics choice, **not** an accuracy or capability gain; `topCandidates(1)`
-confidence and a normalized `regionOfInterest` both carry over. The cost is the iOS 18 floor —
-accepted because supporting iOS 13–17 devices is deliberately deprioritized in favour of the
-current stack.
+confidence and a normalized `regionOfInterest` both carry over. The modern API *was* an iOS 18 floor;
+the hybrid below recovers iOS 13–17 through the legacy request while iOS 18+ keeps the modern path.
 
-**Deferred — backwards-compatible hybrid (iOS 13–17).** A future feature can lower the floor back to
-iOS 13 without losing the modern path: gate on `if #available(iOS 18, *)` to use
-`RecognizeTextRequest`, falling back to `VNRecognizeTextRequest` on iOS 13–17. The legacy request is
-**not deprecated**, so the fallback stays valid; both feed the identical per-frame map over the
-captures `EventChannel`, so only the recognizer-construction site branches. It is deferred because
-it roughly doubles the Vision code paths to serve devices this release does not target — additive
-and non-breaking when it lands. Cross-refs: [#channel-topology](#channel-topology) (the wire format
-both paths emit) and [#coordinate-normalization](#coordinate-normalization) (the Y-flip both apply —
-the new Swift API keeps Vision's lower-left origin, so the flip stays; `NormalizedRect.toImageCoordinates(_:origin:.upperLeft)`
-performs it, and a unit image size yields the top-left-normalized box directly).
+**Backwards-compatible hybrid (iOS 13–17) — as built (issue #5).** The floor is **13.0**. A
+`TextRecognizer` protocol abstracts two backends — `ModernTextRecognizer` (`@available(iOS 18, *)`,
+the Swift `RecognizeTextRequest`) and `LegacyTextRecognizer` (`VNRecognizeTextRequest`, iOS 13–17,
+*not* deprecated) — and `TextRecognizerFactory.make()` is the **single** `#available(iOS 18, *)`
+site, resolved once at `TextSightCamera` init (kept out of the ~30 fps path). Both backends emit the
+identical neutral `RecognizedLineData`, so the captures-`EventChannel` map and the Y-flip stay shared
+— only request construction and observation-mapping differ (the modern path uses
+`NormalizedRect.toImageCoordinates(_:origin:.upperLeft)`; the legacy path flips lower-left→top-left
+as `1 - maxY`, [#coordinate-normalization](#coordinate-normalization)). **iOS 18+ devices pay
+nothing:** they take the same `RecognizeTextRequest` path as before, `#available` is one cached
+OS-version compare (not a per-frame tax), and the legacy code never runs there. The legacy `perform`
+is *synchronous*, so it runs on a dedicated serial queue bridged to `async` via a continuation, never
+blocking the cooperative pool.
+
+**Lowering the floor was *not* recognizer-only — the rotation gotcha (option C).** Dropping to 13
+also exposed `AVCaptureDevice.RotationCoordinator` (iOS 17+) in the *capture* pipeline; the earlier
+"only the recognizer-construction site branches" guess was wrong. Rather than carry a second rotation
+pipeline (the pre-17 `UIDevice` / `videoOrientation` path) for a device population we **do not expect
+in practice** — iOS 13–16 is a vanishing slice by 2026, and most iOS-17-capable devices also run 18 —
+the coordinator is gated `@available(iOS 17, *)` and on iOS 13–16 rotation is simply **not tracked**
+(`currentRotationAngle` stays 0): basic, un-rotated *live* capture (the one-shot is unaffected — it
+reads EXIF). Recognition still works; the live preview just won't follow device rotation. This
+degraded fallback (**option C**) was chosen for near-free 13–16 reach at low maintenance; the full
+pre-17 rotation path (**option A**) is **deferred until real bug reports from actual 13–16 users
+justify it** (caveated in the [README](./README.md)). Cross-ref: [#channel-topology](#channel-topology).
 
 ---
 

@@ -21,9 +21,10 @@ final class TextSightCamera: NSObject {
   private let sessionQueue = DispatchQueue(label: "com.lahaluhem.text_sight.session")
   private let captureQueue = DispatchQueue(label: "com.lahaluhem.text_sight.capture")
 
-  /// The Vision backend behind the `TextRecognizer` seam. Stateless w.r.t. config (it is passed
-  /// per call), so the live path and the one-shot share this one instance, race-free.
-  private let recognizer: any TextRecognizer = ModernTextRecognizer()
+  /// The Vision backend behind the `TextRecognizer` seam, chosen once by OS (modern on iOS 18+,
+  /// legacy on 13–17). Stateless w.r.t. config (it is passed per call), so the live path and the
+  /// one-shot share this one instance, race-free.
+  private let recognizer: any TextRecognizer = TextRecognizerFactory.make()
 
   /// Guards every field touched from more than one thread: the latest pixel buffer (capture
   /// queue writes, raster thread reads via `copyPixelBuffer`), the sink, the recognizer config
@@ -34,12 +35,15 @@ final class TextSightCamera: NSObject {
   private var textureId: Int64?
   private var latestPixelBuffer: CVPixelBuffer?
   private var captureDevice: AVCaptureDevice?
-  private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
+  // Type-erased: the concrete `AVCaptureDevice.RotationCoordinator` is iOS 17+, but this class
+  // deploys to 13. Held only to keep the coordinator alive for its KVO; stays nil on iOS 13–16.
+  private var rotationCoordinator: Any?
   private var rotationObservation: NSKeyValueObservation?
 
   /// Clockwise degrees (from the rotation coordinator) to rotate the sensor buffer upright. The
   /// buffer is delivered unrotated; this drives the Vision orientation and the reported
-  /// `quarterTurns` that `TextSightView` applies to the preview texture.
+  /// `quarterTurns` that `TextSightView` applies to the preview texture. Stays `0` on iOS 13–16
+  /// (no `RotationCoordinator`): preview and recognition do not follow live rotation there.
   private var currentRotationAngle: CGFloat = 0
 
   // Recognizer config, stored as the Pigeon transport types and snapshotted into a
@@ -170,7 +174,8 @@ final class TextSightCamera: NSObject {
 
     session.commitConfiguration()
 
-    startTrackingRotation(for: device)
+    // iOS 13–16 has no `RotationCoordinator`; rotation stays untracked there (documented).
+    if #available(iOS 17, *) { startTrackingRotation(for: device) }
 
     let id = textureRegistry.register(self)
     stateLock.lock()
@@ -186,7 +191,9 @@ final class TextSightCamera: NSObject {
   /// The buffer itself is delivered unrotated — cheaper, and it avoids relying on data-output
   /// rotation; instead the angle is reported to Dart as `quarterTurns` (so `TextSightView` rotates
   /// the preview texture) and is used to orient Vision so recognition stays upright and boxes come
-  /// out display-oriented.
+  /// out display-oriented. Gated to 17+: on iOS 13–16 the angle stays `0` — a deliberate degraded
+  /// fallback (no live rotation), not a full pre-17 rotation path. See APPENDIX / the README note.
+  @available(iOS 17, *)
   private func startTrackingRotation(for device: AVCaptureDevice) {
     let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
     rotationCoordinator = coordinator
