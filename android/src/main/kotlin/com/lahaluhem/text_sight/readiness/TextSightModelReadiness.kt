@@ -1,4 +1,4 @@
-package com.lahaluhem.text_sight
+package com.lahaluhem.text_sight.readiness
 
 import android.content.Context
 import android.os.Handler
@@ -12,6 +12,7 @@ import com.google.android.gms.common.moduleinstall.ModuleInstallStatusUpdate.Ins
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.lahaluhem.text_sight.BuildConfig
 import io.flutter.plugin.common.EventChannel
 
 /**

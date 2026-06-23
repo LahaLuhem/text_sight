@@ -1,5 +1,8 @@
 package com.lahaluhem.text_sight
 
+import com.lahaluhem.text_sight.camera.TextSightCamera
+import com.lahaluhem.text_sight.permission.CameraPermissionRequester
+import com.lahaluhem.text_sight.readiness.TextSightModelReadiness
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding

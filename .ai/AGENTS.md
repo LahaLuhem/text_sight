@@ -36,10 +36,10 @@ the package's reason to exist — see [`APPENDIX.md#no-bundling`](../APPENDIX.md
   channel for local use). Dart 3.12 comfortably clears the 3.10 static-dot-shorthand floor
   the code style leans on.
 - **iOS — Swift**, using the system frameworks **Vision** + **AVFoundation** (+ CoreMedia /
-  CoreVideo). `AVCaptureSession` → Vision's Swift **`RecognizeTextRequest`** (the WWDC 2024
-  API; **iOS 18.0 deployment floor**), preview to a `FlutterTexture`. The legacy
-  `VNRecognizeTextRequest` (iOS 13+) is intentionally **not** used — an availability-gated
-  fallback to it for iOS 13–17 is a deferred backwards-compat feature
+  CoreVideo). `AVCaptureSession` → a `TextRecognizer` **hybrid**: Vision's Swift
+  **`RecognizeTextRequest`** (the WWDC 2024 API) on iOS 18+, the legacy **`VNRecognizeTextRequest`**
+  on iOS 13–17, picked once via a factory; preview to a `FlutterTexture`. **iOS 13.0 deployment
+  floor** — iOS 13–16 get degraded, un-rotated capture (no `RotationCoordinator`)
   ([`APPENDIX.md#ios-capture-strategy`](../APPENDIX.md#ios-capture-strategy)). Ships **both**
   `ios/text_sight.podspec` **and** `ios/text_sight/Package.swift` so host apps on CocoaPods
   *or* SwiftPM both work — the SPM path is the cleanliness win. Neither declares a
@@ -89,11 +89,11 @@ text_sight/
 │   ├── text_sight.podspec        CocoaPods; links system frameworks; NO third-party deps
 │   ├── text_sight/Package.swift  SwiftPM manifest; system frameworks need no dependency line
 │   ├── .swiftlint.yml            SwiftLint for the plugin Swift (RunnerTests: example/ios/.swiftlint.yml)
-│   └── text_sight/Sources/text_sight/   AVCaptureSession + VNRecognizeTextRequest + FlutterTexture
+│   └── text_sight/Sources/text_sight/   AVCaptureSession + Vision (RecognizeTextRequest / VNRecognizeTextRequest hybrid) + FlutterTexture
 ├── android/                 Android plugin (Kotlin + CameraX + ML Kit)
 │   ├── build.gradle.kts          ML Kit + CameraX deps live ONLY here; built-in Kotlin
 │   ├── detekt.yml                detekt config (deviations only; --input android/src from repo root)
-│   └── src/main/kotlin/com/LahaLuhem/text_sight/   CameraX ImageAnalysis + ML Kit recognizer
+│   └── src/main/kotlin/com/lahaluhem/text_sight/   CameraX + ML Kit, grouped by responsibility (camera/ recognition/ permission/ readiness/)
 ├── example/                 Runnable demo — also the no-bundling test harness
 ├── analysis_options.yaml    Strict-mode + opinionated lints
 ├── .pubignore               Files excluded from `flutter pub publish`
@@ -225,7 +225,7 @@ not unit-tested.
     build (Flutter only links its own entries into `.packages/`). Simulator XCTest keeps
     `Package.swift` untouched — which the no-bundling contract requires.
   - **Two setup gotchas:** (1) the `RunnerTests` target's `IPHONEOS_DEPLOYMENT_TARGET` must be ≥
-    the plugin's iOS floor (18.0) or SPM rejects the link; (2) on a platform-version mismatch
+    the plugin's iOS floor (13.0) or SPM rejects the link; (2) on a platform-version mismatch
     against `FlutterGeneratedPluginSwiftPackage`, run `flutter build ios --config-only` first to
     regenerate the (ephemeral) SPM manifests.
 

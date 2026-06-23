@@ -47,8 +47,8 @@
     "Live recognition: create a TextSightController, render a TextSightView, then call controller.start() once camera permission is granted (the view does NOT auto-start). Read results via onResult or controller.captures; boxes are normalized [0,1], top-left.",
     "One-shot recognition (no camera, session, or permission): await TextSight.recognizeImage(bytes) or TextSight.recognizePath(path); it defaults to RecognitionLevel.accurate.",
     "Reconfigure a running session through the controller's update* methods — updateRegionOfInterest, updateRecognitionLevel, updateLanguages, updateTorchEnabled — each an async command returning Future<void>, not a set* method or setter.",
-    "Platforms: iOS 18.0+ (Vision), Android API 24+ (ML Kit Latin). recognitionLevel/languages apply on iOS only; Android Latin ignores them. Region-of-interest is a normalized Rect: iOS restricts Vision to it; Android crops one-shot, live keeps centred lines.",
-    "RecognizedLine.confidence is double? in [0,1]; null means the engine supplied none (never synthesized), and the scales are not comparable across platforms (Apple Vision's .accurate confidence is coarse — often 1.0)."
+    "Platforms: iOS 13.0+ (Vision — modern RecognizeTextRequest on 18+, legacy VNRecognizeTextRequest on 13–17; iOS 13–16 don't follow live device rotation), Android API 24+ (ML Kit Latin). recognitionLevel/languages apply on iOS only; Android Latin ignores them. Region-of-interest is a normalized Rect: iOS restricts Vision to it; Android crops one-shot, live keeps centred lines.",
+    "RecognizedLine.confidence is double? in [0,1]; null means the engine supplied none (never synthesized), and the scales are not comparable across platforms — nor across iOS versions (modern RecognizeTextRequest is coarse, often 1.0; legacy VNRecognizeTextRequest is graded)."
   ],
   "previousVersions": []
 }
