@@ -492,7 +492,11 @@ seam shows in the tree. Each public type gets its own file (per
 - **`RecognizedLine.confidence` is `double?`, range `[0,1]`.** Both engines supply a per-line
   confidence — Apple Vision, and (re-verified for the pinned `play-services-mlkit-text-recognition`
   19.0.1) ML Kit v2 via `Text.Line.getConfidence()`. It is `null` only when the engine omits one
-  for a given line; the two scales are **not guaranteed comparable** across platforms. `null`
+  for a given line; the two scales are **not guaranteed comparable** across platforms — nor, on
+  iOS, across versions: the modern `RecognizeTextRequest` (18+) reports **coarse** confidence
+  (frequently `1.0`), whereas the legacy `VNRecognizeTextRequest` (13–17) is **graded** — the same
+  image read on an iOS 15 device scored `~0.5` for lines the iOS 18+ path scored `1.0`
+  (device-verified). `null`
   means **"not supplied,"** *not* "low confidence" — never synthesize a value to fill it. A
   consumer thresholding picks an explicit default (`(line.confidence ?? 1) >= min`) and never
   compares `null` to a bound.

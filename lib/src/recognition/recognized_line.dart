@@ -12,8 +12,10 @@ final class RecognizedLine {
 
   /// Recognition confidence in `[0, 1]`, or `null` when the engine supplies none
   /// for this line. Both Apple Vision and ML Kit provide a per-line value, though
-  /// the scales are not guaranteed comparable across platforms. `null` means
-  /// "unknown", not "low" — threshold against an explicit default
+  /// the scales are not guaranteed comparable across platforms — nor, on iOS,
+  /// across versions: iOS 18+ (`RecognizeTextRequest`) reports coarse values
+  /// (often `1.0`), while iOS 13–17 (`VNRecognizeTextRequest`) is graded. `null`
+  /// means "unknown", not "low" — threshold against an explicit default
   /// (`(line.confidence ?? 1) >= min`), never compare `null` to a bound.
   final double? confidence;
 

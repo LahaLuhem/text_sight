@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import UIKit
 import Vision
 import XCTest
 
@@ -159,5 +160,49 @@ final class TextSightCameraTests: XCTestCase {
     XCTAssertEqual(encoded?["width"] as? Double, 0.3)
     XCTAssertEqual(encoded?["height"] as? Double, 0.4)
     XCTAssertTrue(encoded?["elements"] is NSNull)
+  }
+}
+
+/// End-to-end recognition for the legacy Vision backend. Unlike `TextSightCameraTests` (pure
+/// mapping logic), this actually runs `VNRecognizeTextRequest`: instantiating `LegacyTextRecognizer`
+/// directly exercises the iOS 13–17 path on *any* runtime, so the legacy perform / continuation /
+/// Y-flip stays covered in CI without a sub-18 simulator.
+final class LegacyTextRecognizerTests: XCTestCase {
+  func testReadsRenderedText() async throws {
+    let cgImage = try XCTUnwrap(Self.renderText("HELLO").cgImage)
+
+    let lines = try await LegacyTextRecognizer().recognize(
+      cgImage: cgImage, orientation: .up,
+      config: RecognitionConfig(level: .accurate, languages: [], roi: nil)
+    )
+
+    XCTAssertFalse(lines.isEmpty, "legacy recognizer returned no lines")
+    let joined = lines.map(\.text).joined().uppercased()
+    XCTAssertTrue(joined.contains("HELLO"), "expected HELLO, got \"\(joined)\"")
+
+    let line = try XCTUnwrap(lines.first)
+    // Vision always supplies a confidence; the legacy request grades it (often < 1.0). Assert only
+    // the invariant range — the exact value is Vision-version-dependent and would be brittle.
+    XCTAssertGreaterThanOrEqual(line.confidence, 0)
+    XCTAssertLessThanOrEqual(line.confidence, 1)
+    // The neutral box is top-left-normalized, so it stays inside the unit square.
+    XCTAssertGreaterThanOrEqual(line.box.minX, 0)
+    XCTAssertLessThanOrEqual(line.box.maxX, 1)
+    XCTAssertGreaterThanOrEqual(line.box.minY, 0)
+    XCTAssertLessThanOrEqual(line.box.maxY, 1)
+  }
+
+  /// Renders `string` as large black text on a white field — clear enough for reliable recognition.
+  private static func renderText(_ string: String) -> UIImage {
+    let size = CGSize(width: 512, height: 160)
+
+    return UIGraphicsImageRenderer(size: size).image { context in
+      UIColor.white.setFill()
+      context.fill(CGRect(origin: .zero, size: size))
+      (string as NSString).draw(at: CGPoint(x: 24, y: 36), withAttributes: [
+        .font: UIFont.boldSystemFont(ofSize: 84),
+        .foregroundColor: UIColor.black,
+      ])
+    }
   }
 }
