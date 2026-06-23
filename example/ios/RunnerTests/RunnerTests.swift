@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import ImageIO
 import Vision
@@ -40,24 +41,30 @@ final class TextSightCameraTests: XCTestCase {
     XCTAssertEqual(TextSightCamera.displayRotation(forCaptureAngle: 89.6).quarterTurns, 1)
   }
 
-  // MARK: makeRequest — config snapshot -> Vision RecognizeTextRequest
+  // MARK: ModernTextRecognizer.makeRequest — config snapshot -> Vision RecognizeTextRequest
 
   func testMakeRequestFastLevelDisablesLanguageCorrection() {
-    let request = TextSightCamera.makeRequest(level: .fast, languages: [], roi: nil)
+    let request = ModernTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: [], roi: nil)
+    )
 
     XCTAssertEqual(request.recognitionLevel, .fast)
     XCTAssertFalse(request.usesLanguageCorrection)
   }
 
   func testMakeRequestAccurateLevelEnablesLanguageCorrection() {
-    let request = TextSightCamera.makeRequest(level: .accurate, languages: [], roi: nil)
+    let request = ModernTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .accurate, languages: [], roi: nil)
+    )
 
     XCTAssertEqual(request.recognitionLevel, .accurate)
     XCTAssertTrue(request.usesLanguageCorrection)
   }
 
   func testMakeRequestMapsLanguagesInPreferenceOrder() {
-    let request = TextSightCamera.makeRequest(level: .fast, languages: ["en-US", "fr"], roi: nil)
+    let request = ModernTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: ["en-US", "fr"], roi: nil)
+    )
 
     XCTAssertEqual(
       request.recognitionLanguages,
@@ -68,7 +75,9 @@ final class TextSightCameraTests: XCTestCase {
   func testMakeRequestFlipsRegionOfInterestToLowerLeft() {
     let roi = RegionOfInterestMessage(left: 0.1, top: 0.2, width: 0.3, height: 0.4)
 
-    let request = TextSightCamera.makeRequest(level: .fast, languages: [], roi: roi)
+    let request = ModernTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: [], roi: roi)
+    )
 
     // Vision's region-of-interest is lower-left normalized: y = 1 - (top + height).
     let region = request.regionOfInterest
@@ -76,5 +85,31 @@ final class TextSightCameraTests: XCTestCase {
     XCTAssertEqual(region.origin.y, 0.4, accuracy: 1e-9)
     XCTAssertEqual(region.width, 0.3, accuracy: 1e-9)
     XCTAssertEqual(region.height, 0.4, accuracy: 1e-9)
+  }
+
+  // MARK: encodeFrame — neutral lines -> the cross-platform per-frame wire map
+
+  func testEncodeFrameMapsLinesToWireKeys() {
+    let line = RecognizedLineData(text: "hi", confidence: 0.5,
+                                  box: CGRect(x: 0.1, y: 0.2, width: 0.3, height: 0.4))
+
+    let frame = TextSightCamera.encodeFrame([line], imageWidth: 100, imageHeight: 200,
+                                            quarterTurns: 1)
+
+    XCTAssertEqual(frame["imageWidth"] as? Double, 100)
+    XCTAssertEqual(frame["imageHeight"] as? Double, 200)
+    XCTAssertEqual(frame["quarterTurns"] as? Int, 1)
+
+    let encodedLines = frame["lines"] as? [[String: Any]]
+    XCTAssertEqual(encodedLines?.count, 1)
+
+    let encoded = encodedLines?.first
+    XCTAssertEqual(encoded?["text"] as? String, "hi")
+    XCTAssertEqual(encoded?["confidence"] as? Double, 0.5)
+    XCTAssertEqual(encoded?["left"] as? Double, 0.1)
+    XCTAssertEqual(encoded?["top"] as? Double, 0.2)
+    XCTAssertEqual(encoded?["width"] as? Double, 0.3)
+    XCTAssertEqual(encoded?["height"] as? Double, 0.4)
+    XCTAssertTrue(encoded?["elements"] is NSNull)
   }
 }

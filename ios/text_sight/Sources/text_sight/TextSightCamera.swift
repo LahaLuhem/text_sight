@@ -4,7 +4,6 @@ import CoreMedia
 import CoreVideo
 import Flutter
 import ImageIO
-import Vision
 
 /// Owns the `AVCaptureSession`, the Vision recognizer, and the preview texture for one live
 /// recognition session — the iOS twin of the Android `TextSightCamera`.
@@ -12,15 +11,19 @@ import Vision
 /// Recognition runs off the platform main thread (Vision's own async executor, kicked off the
 /// capture-delegate queue); boxes are normalized to top-left `[0, 1]` here — Vision yields
 /// lower-left normalized rects — and marshalled back to main before reaching the captures
-/// `EventChannel` sink. Backpressure is a single in-flight `RecognizeTextRequest` plus
+/// `EventChannel` sink. Backpressure is a single in-flight recognition plus
 /// `alwaysDiscardsLateVideoFrames`: a late frame is dropped, never queued. Only system
-/// frameworks are imported (Vision / AVFoundation / CoreMedia / CoreVideo / Flutter) — the
-/// no-bundling contract holds structurally on the Apple side.
+/// frameworks are imported (here: AVFoundation / CoreMedia / CoreVideo / Flutter; Vision sits
+/// behind the `TextRecognizer`) — the no-bundling contract holds structurally on the Apple side.
 final class TextSightCamera: NSObject {
   private let textureRegistry: FlutterTextureRegistry
   private let session = AVCaptureSession()
   private let sessionQueue = DispatchQueue(label: "com.lahaluhem.text_sight.session")
   private let captureQueue = DispatchQueue(label: "com.lahaluhem.text_sight.capture")
+
+  /// The Vision backend behind the `TextRecognizer` seam. Stateless w.r.t. config (it is passed
+  /// per call), so the live path and the one-shot share this one instance, race-free.
+  private let recognizer: any TextRecognizer = ModernTextRecognizer()
 
   /// Guards every field touched from more than one thread: the latest pixel buffer (capture
   /// queue writes, raster thread reads via `copyPixelBuffer`), the sink, the recognizer config
@@ -39,8 +42,8 @@ final class TextSightCamera: NSObject {
   /// `quarterTurns` that `TextSightView` applies to the preview texture.
   private var currentRotationAngle: CGFloat = 0
 
-  // Recognizer config, stored as the Pigeon transport types and translated to Vision per frame
-  // (a `RecognizeTextRequest` is a cheap value type, so there is no shared mutable request to race).
+  // Recognizer config, stored as the Pigeon transport types and snapshotted into a
+  // `RecognitionConfig` per frame for the recognizer (which builds its own value-typed request).
   private var recognitionLevel: RecognitionLevelMessage = .fast
   private var recognitionLanguages: [String] = []
   private var regionOfInterest: RegionOfInterestMessage?
@@ -231,19 +234,16 @@ final class TextSightCamera: NSObject {
 
   // MARK: Recognition
 
-  /// Builds a fresh request from the current config and performs it off-main, emitting the
-  /// per-frame map on success. `isProcessing` is reset whatever the outcome, releasing backpressure.
+  /// Snapshots the current config and recognizes off-main, emitting the per-frame map on success.
+  /// `isProcessing` is reset whatever the outcome, releasing backpressure.
   private func recognize(_ pixelBuffer: CVPixelBuffer) {
     stateLock.lock()
-    let level = recognitionLevel
-    let languages = recognitionLanguages
-    let roi = regionOfInterest
+    let config = RecognitionConfig(level: recognitionLevel, languages: recognitionLanguages,
+                                   roi: regionOfInterest)
     let angle = currentRotationAngle
     stateLock.unlock()
 
     let rotation = Self.displayRotation(forCaptureAngle: angle)
-
-    let request = Self.makeRequest(level: level, languages: languages, roi: roi)
 
     // The buffer is sensor-oriented; report its display-oriented size (axes swap on a quarter
     // turn) to match the boxes Vision returns in the oriented space.
@@ -257,11 +257,12 @@ final class TextSightCamera: NSObject {
 
       // Drop a single failed frame rather than tearing down the session (CODESTYLE: `try?`).
       guard
-        let observations = try? await request.perform(on: pixelBuffer,
-                                                       orientation: rotation.orientation)
+        let lines = try? await self?.recognizer.recognize(pixelBuffer: pixelBuffer,
+                                                           orientation: rotation.orientation,
+                                                           config: config)
       else { return }
 
-      let frame = Self.encodeFrame(observations, imageWidth: imageWidth, imageHeight: imageHeight,
+      let frame = Self.encodeFrame(lines, imageWidth: imageWidth, imageHeight: imageHeight,
                                    quarterTurns: rotation.quarterTurns)
       self?.emit(frame)
     }
@@ -271,28 +272,6 @@ final class TextSightCamera: NSObject {
     stateLock.lock()
     isProcessing = false
     stateLock.unlock()
-  }
-
-  /// Builds a recognizer request from a config snapshot — shared by the live path and the static
-  /// one-shot. A `RecognizeTextRequest` is a value type, so each frame/call gets its own. Internal
-  /// (not `private`) so `RunnerTests` can exercise it via `@testable import`.
-  static func makeRequest(
-    level: RecognitionLevelMessage, languages: [String], roi: RegionOfInterestMessage?
-  ) -> RecognizeTextRequest {
-    var request = RecognizeTextRequest()
-    request.recognitionLevel = level == .accurate ? .accurate : .fast
-    // Mirror the Dart `RecognitionLevel` enhanced-enum contract: accurate corrects, fast does not.
-    request.usesLanguageCorrection = level == .accurate
-    if !languages.isEmpty {
-      request.recognitionLanguages = languages.map { Locale.Language(identifier: $0) }
-    }
-    if let roi {
-      // Vision's region-of-interest is lower-left normalized; flip the incoming top-left rect.
-      request.regionOfInterest = NormalizedRect(x: roi.left, y: 1 - (roi.top + roi.height),
-                                                width: roi.width, height: roi.height)
-    }
-
-    return request
   }
 
   // MARK: Static one-shot recognition (no session, texture, or permission)
@@ -333,10 +312,10 @@ final class TextSightCamera: NSObject {
   /// `quarterTurns` 0, since a still is already upright. No session, texture, or sink is touched.
   private func recognizeStill(_ source: CGImageSource, options: TextSightOptionsMessage,
                               completion: @escaping (Result<[String: Any?], Error>) -> Void) {
-    let request = Self.makeRequest(level: options.level, languages: options.languages,
+    let config = RecognitionConfig(level: options.level, languages: options.languages,
                                    roi: options.roi)
 
-    Task {
+    Task { [recognizer] in
       guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
         DispatchQueue.main.async {
           completion(.failure(PigeonError(code: "decode-failed",
@@ -355,8 +334,9 @@ final class TextSightCamera: NSObject {
       let pixelHeight = Double(cgImage.height)
 
       do {
-        let observations = try await request.perform(on: cgImage, orientation: orientation)
-        let frame = Self.encodeFrame(observations,
+        let lines = try await recognizer.recognize(cgImage: cgImage, orientation: orientation,
+                                                   config: config)
+        let frame = Self.encodeFrame(lines,
                                      imageWidth: isQuarterTurned ? pixelHeight : pixelWidth,
                                      imageHeight: isQuarterTurned ? pixelWidth : pixelHeight,
                                      quarterTurns: 0)
@@ -395,26 +375,21 @@ final class TextSightCamera: NSObject {
     }
   }
 
-  /// Encodes observations into the self-describing per-frame map — byte-identical to the shape
-  /// the Android side emits over `com.lahaluhem.text_sight/captures`.
-  private static func encodeFrame(_ observations: [RecognizedTextObservation],
-                                  imageWidth: Double, imageHeight: Double,
-                                  quarterTurns: Int) -> [String: Any] {
-    let lines = observations.compactMap { observation -> [String: Any]? in
-      guard let candidate = observation.topCandidates(1).first else { return nil }
-
-      // A unit image size turns the lower-left normalized box into a top-left normalized one.
-      let box = observation.boundingBox.toImageCoordinates(Self.normalizedUnitSize, origin: .upperLeft)
-
-      return [
-        "text": candidate.string,
-        // Vision always supplies a per-candidate confidence (a Float) — like ML Kit, never null.
-        // Forwarded as a non-null Double the nullable RecognizedLine.confidence contract accepts.
-        "confidence": Double(candidate.confidence),
-        "left": box.minX,
-        "top": box.minY,
-        "width": box.width,
-        "height": box.height,
+  /// Encodes neutral recognized lines into the self-describing per-frame map — byte-identical to
+  /// the shape the Android side emits over `com.lahaluhem.text_sight/captures`. Internal (not
+  /// `private`) so `RunnerTests` can exercise it via `@testable import`.
+  static func encodeFrame(_ lines: [RecognizedLineData],
+                          imageWidth: Double, imageHeight: Double,
+                          quarterTurns: Int) -> [String: Any] {
+    let encodedLines = lines.map { line -> [String: Any] in
+      [
+        "text": line.text,
+        // A non-null Double, which the nullable `RecognizedLine.confidence` contract accepts.
+        "confidence": line.confidence,
+        "left": Double(line.box.minX),
+        "top": Double(line.box.minY),
+        "width": Double(line.box.width),
+        "height": Double(line.box.height),
         // Word-level elements are reserved for a future additive release.
         "elements": NSNull(),
       ]
@@ -424,7 +399,7 @@ final class TextSightCamera: NSObject {
       "imageWidth": imageWidth,
       "imageHeight": imageHeight,
       "quarterTurns": quarterTurns,
-      "lines": lines,
+      "lines": encodedLines,
     ]
   }
 
@@ -445,8 +420,6 @@ final class TextSightCamera: NSObject {
     default: return (0, .up, false)
     }
   }
-
-  private static let normalizedUnitSize = CGSize(width: 1, height: 1)
 }
 
 // MARK: - FlutterTexture
