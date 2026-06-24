@@ -2,6 +2,9 @@
 ### Added
 - \#14 Add native camera-permission handling (no third-party package needed)
 
+### Changed
+- \#5 Support iOS 13–17 via a Vision recognizer hybrid
+
 ### Fixed
 - iOS portrait-recognition orientation accuracy fix
 
