@@ -1,4 +1,4 @@
-## [Unreleased]
+## [0.1.1] - 2026-06-24
 ### Added
 - \#14 Add native camera-permission handling (no third-party package needed)
 
@@ -24,6 +24,6 @@
 - Recognizer configuration on the controller: region of interest (a normalized `Rect`), recognition level, language preferences, and torch.
 - A unified result model — per-line confidence and normalized `[0,1]` top-left bounding boxes, identical across platforms, with a rotation-aware preview.
 
-[Unreleased]: https://github.com/LahaLuhem/text_sight/compare/0.1.0...HEAD
+[0.1.1]: https://github.com/LahaLuhem/text_sight/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/LahaLuhem/text_sight/compare/0.0.1...0.1.0
 [0.0.1]: https://github.com/LahaLuhem/text_sight/releases/tag/0.0.1
