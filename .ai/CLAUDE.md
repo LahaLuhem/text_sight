@@ -58,9 +58,12 @@ for 7 days, and a tag push triggers an automated publish).
 - **`lib/src/` edits** are private. Refactor freely as long as the public re-exports stay
   stable. `lib/src/messages.g.dart` is **generated** — change `pigeons/text_sight.dart` and
   regenerate, never hand-edit the output.
-- **Native edits (`ios/`, `android/`)** carry the no-bundling contract. Adding a pod / SPM
-  dependency on the Apple side, or a non-gradle path to ML Kit, breaks the package's reason
-  to exist — see [hard rules 1–3 in AGENTS.md](./AGENTS.md#hard-rules). The frame-backpressure
+- **Native edits (`ios/`, `android/`)** carry the no-bundling contract. Bundling ML Kit (or
+  any lib that duplicates a system framework) on the Apple side, dragging in a CocoaPods
+  graph, or a non-gradle path to ML Kit, breaks the package's reason to exist — see
+  [hard rules 1–3 in AGENTS.md](./AGENTS.md#hard-rules). The contract is *prefer-native*, not
+  *zero-dependency*: a genuinely useful Apple-side lib with no native equivalent is allowed
+  (prefer SPM-clean), so flag-and-ask rather than assume any new SPM dep is forbidden. The frame-backpressure
   and off-main-thread invariants (hard rule 5) are the most common source of plugin bugs.
 - **`pigeons/text_sight.dart` edits** change the typed control-channel surface; regenerate
   `messages.g.dart` in the same change and treat signature changes as public-API-class.

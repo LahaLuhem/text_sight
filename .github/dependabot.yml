@@ -1,0 +1,88 @@
+# Dependabot version updates.
+# Reference: https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+#
+# Bot PRs branch as `dependabot/...` and carry no `sem-*` label. The
+# PR-convention and changelog workflows exempt `dependabot[bot]` from the
+# branch-name, sem-label and changelog jobs (see
+# .github/workflows/{pr-conventions,changelog}.yml), so these PRs land WITHOUT
+# an automatic CHANGELOG entry — add one by hand if a root-package bump is
+# user-visible. The commit-length / no-merge-commit gate still applies to them.
+#
+# Minor + patch bumps are grouped into one PR per ecosystem to cut noise; major
+# bumps still arrive as individual PRs so they can be reviewed in isolation.
+version: 2
+
+updates:
+  # --- Dart / Flutter: published library ---
+  # Bumps the version constraints in the root pubspec.yaml. pub.dev packages
+  # only — git / path deps are not eligible.
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      pub:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # --- Dart / Flutter: example app ---
+  - package-ecosystem: "pub"
+    directory: "/example"
+    schedule:
+      interval: "weekly"
+    groups:
+      pub-example:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # --- Android / Gradle: plugin module ---
+  # The plugin's own Gradle build — and the only place recognition/camera deps
+  # are allowed to live (no-bundling is the *iOS* contract). These ship to every
+  # downstream Android consumer via the AAR's POM: ML Kit / Play Services,
+  # CameraX, exifinterface. Also covers the AGP/plugin version in
+  # settings.gradle.kts, the JVM test stack (mockito / robolectric / junit), and
+  # the wrapper. Bumps here are publish-relevant — weigh the transitive-closure
+  # impact per PR.
+  - package-ecosystem: "gradle"
+    directory: "/android"
+    schedule:
+      interval: "weekly"
+    groups:
+      gradle-plugin:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # --- Android / Gradle: example app ---
+  # Covers the plugins/deps in the *.gradle.kts files AND the Gradle wrapper
+  # version in gradle/wrapper/gradle-wrapper.properties
+  # (dependabot-core#7124, shipped Feb 2026).
+  - package-ecosystem: "gradle"
+    directory: "/example/android"
+    schedule:
+      interval: "weekly"
+    groups:
+      gradle-example:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # --- GitHub Actions ---
+  # `directory: "/"` scans everything under .github/ — the workflows and the
+  # local composite action at .github/actions/setup-flutter.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # --- No `swift` (SPM) ecosystem (yet) ---
+  # Deliberately absent — and NOT because Apple-side deps are banned. The
+  # contract is *prefer-native*, not *zero-dependency* (AGENTS.md hard rule 2):
+  # a legit SPM lib with no system-framework equivalent would be allowed. There
+  # is just nothing to track today — the plugin's Package.swift carries only a
+  # local `path:` dep (FlutterFramework), and the example's SPM manifest is
+  # Flutter-generated + gitignored, so no committed, version-resolved manifest
+  # exists for Dependabot to act on. Add a `swift` block here the day a real SPM
+  # *registry* dependency lands.
