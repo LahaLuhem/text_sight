@@ -11,6 +11,12 @@ concurrency:
 permissions:
   contents: read
 
+# Prebuilt multi-arch image bundling the CLI linters (shellcheck, actionlint, ...), pulled
+# anonymously from GHCR (it's public, no login). One ref here is the single source of truth, so a
+# future tag bump or digest pin is a one-line change. https://github.com/LahaLuhem/linterpol
+env:
+  LINTERPOL_IMAGE: ghcr.io/lahaluhem/linterpol:latest
+
 jobs:
   format:
     name: Dart format
@@ -24,3 +30,21 @@ jobs:
       # is reserved for jobs that need resolved dependencies — skipping it here
       # saves ~10-30s per run.
       - run: dart format --output=none --set-exit-if-changed .
+
+  shellcheck:
+    name: ShellCheck (scripts/)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # scripts/*.sh expands on the runner against the workspace root, then resolves inside the
+      # container against the read-only /work mount (same root). Same target as release.sh.
+      - run: docker run --rm -v "$PWD:/work:ro" "$LINTERPOL_IMAGE" shellcheck scripts/*.sh
+
+  actionlint:
+    name: actionlint (workflows)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # actionlint auto-discovers .github/workflows/ from the mount root, and also runs shellcheck
+      # over run: blocks (shellcheck is on PATH in the same image).
+      - run: docker run --rm -v "$PWD:/work:ro" "$LINTERPOL_IMAGE" actionlint

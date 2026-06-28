@@ -65,6 +65,11 @@ fi
 
 MAIN_BRANCH="main"
 
+# Prebuilt multi-arch image bundling the CLI linters (shellcheck, ...), pulled anonymously from
+# GHCR. Single source of truth for the ref: bump the tag or pin a digest here only.
+# https://github.com/LahaLuhem/linterpol
+LINTERPOL_IMAGE="ghcr.io/lahaluhem/linterpol:latest"
+
 # Files the release moves in lockstep. example/pubspec.lock is included only
 # when an example/ app exists — it tracks the parent version via `path: ../`,
 # so it must be resynced after each bump. Freshly-scaffolded repos have no
@@ -102,10 +107,10 @@ Options:
 Preflight (all must pass):
   - `flutter` resolvable (via `.fvm/flutter_sdk/bin/` if FVM is set up, else PATH)
   - cider on PATH
-  - shellcheck on PATH
+  - docker on PATH + daemon running (shellcheck runs via the linterpol image)
   - working tree clean, on `main`, in sync with origin/main (fetches first)
   - CHANGELOG.md has a non-empty `## Unreleased` (or `## [Unreleased]`) section
-  - `shellcheck scripts/*.sh` clean
+  - `shellcheck scripts/*.sh` clean (via the linterpol image)
   - `dart format --output=none --set-exit-if-changed .` clean
   - `flutter --no-version-check analyze .` clean
   - `flutter --no-version-check test` green
@@ -191,11 +196,18 @@ if ! command -v cider >/dev/null 2>&1; then
     exit 1
 fi
 log 'cider available.'
-if ! command -v shellcheck >/dev/null 2>&1; then
-    err 'shellcheck not on PATH. Install: brew install shellcheck'
+# ShellCheck runs via the linterpol image (no hand-installed linters). `command -v docker` alone
+# passes even with the daemon down, so probe `docker info` too and fail fast with a clear message
+# instead of a cryptic socket error mid-preflight.
+if ! command -v docker >/dev/null 2>&1; then
+    err 'docker not on PATH. Install Docker; the preflight lints shell via the linterpol image.'
     exit 1
 fi
-log 'shellcheck available.'
+if ! docker info >/dev/null 2>&1; then
+    err 'docker is installed but its daemon is not running. Start Docker and re-run.'
+    exit 1
+fi
+log 'docker available (daemon up).'
 
 # ---------------------------------------------------------------------------
 # Preflight: git state
@@ -298,8 +310,10 @@ log "'## Unreleased' populated."
 # ---------------------------------------------------------------------------
 # Preflight: format / analyze / test (cheapest → slowest)
 # ---------------------------------------------------------------------------
-step 'Preflight: shellcheck scripts/'
-if ! shellcheck scripts/*.sh; then
+step 'Preflight: shellcheck scripts/ (via linterpol image)'
+# Mount REPO_ROOT (not $PWD) read-only at /work. scripts/*.sh expands here against REPO_ROOT and
+# resolves inside the container against the same root.
+if ! docker run --rm -v "${REPO_ROOT}:/work:ro" "$LINTERPOL_IMAGE" shellcheck scripts/*.sh; then
     err 'shellcheck failed on one or more shell scripts.'
     exit 1
 fi

@@ -740,9 +740,14 @@ these.
 <a id="shell-scripts"></a>
 ## Shell scripts
 
-- **`shellcheck` is the lint contract** for `scripts/*.sh`, mirroring `flutter analyze`
-  for Dart. Run via `shellcheck scripts/*.sh`; `scripts/release.sh` preflight enforces
-  it. Install with `brew install shellcheck`.
+- **`shellcheck` is the lint contract** for `scripts/*.sh`, mirroring `flutter analyze` for
+  Dart. It runs through the prebuilt [`linterpol`](https://github.com/LahaLuhem/linterpol) image,
+  so Docker is the only thing to install. Both the `scripts/release.sh` preflight and the
+  `repo.yml` CI job run it the same way:
+
+  ```bash
+  docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest shellcheck scripts/*.sh
+  ```
 - **Prefer `# shellcheck disable=SC<code>` + a one-line "why" comment over refactoring
   for simple cases.** Refactor when the warning points at a real bug or the rewrite is
   genuinely clearer; reach for the directive when the code is correct as-is and
