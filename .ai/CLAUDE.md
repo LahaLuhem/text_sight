@@ -158,6 +158,11 @@ is **not** in the routine-edit list. All move together only when the user explic
 - **detekt + SwiftLint clean** — native lint gates (`android/detekt.yml`; `ios/.swiftlint.yml` +
   `example/ios/.swiftlint.yml`, run in CI).
   Generated `Messages.g.*` is excluded; for a new deviation, tune the config (not the generated code).
+- **Shell + workflow lint clean via the [`linterpol`](https://github.com/LahaLuhem/linterpol)
+  image** (run as `repo.yml` CI jobs, pulled anonymously from public GHCR): `shellcheck
+  scripts/*.sh` (also gated in the `scripts/release.sh` preflight) and `actionlint` over
+  `.github/workflows/`. Locally:
+  `docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest <tool> …`.
 - When native capture/recognition changed: build and run the example on **both** an Android
   emulator and an iOS simulator — or explicitly call out what you did NOT verify (e.g.
   "didn't exercise on iOS — only ran the Android emulator").
