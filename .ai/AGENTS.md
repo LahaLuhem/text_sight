@@ -270,6 +270,13 @@ sections, markdown conventions — go to [`../CODESTYLE.md`](../CODESTYLE.md).
   choice feels small — small choices compound.
 - **Mark recommendations with `★`.** Prefix your preferred option in every set with `★` so
   the user can scan and reply by echoing or overriding (e.g. "★ for 1–4, change 5 to B").
+- **Refactor first when it sets up the change.** When a feature would land cleaner, more
+  stable, or more scalable on a different structure than today's, do the enabling,
+  behavior-preserving refactor as its own step *before* the feature, instead of bolting it
+  onto a shape that doesn't fit and paying for that on every later change. Long-term health
+  of the repo outranks the speed of any single change. A preparatory refactor is itself a
+  technical choice: propose it first the same way you would any other (above), keep it
+  behavior-preserving, and scope it to what the change rests on.
 - **Verify the no-bundling actually held.** After adding `text_sight` to the example and
   building iOS, `rg -i 'mlkit|googlemlkit|MLImage' example/ios` must return **no matches**, and
   no ML Kit package may appear in the iOS Swift Package Manager graph (the example is SPM-based,
