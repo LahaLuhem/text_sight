@@ -126,10 +126,10 @@ dependencies {
     // Robolectric runs under its JUnit 4 runner; the vintage engine executes those tests on the
     // JUnit Platform configured above (useJUnitPlatform).
     testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.0")
+    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.1")
     // JUnit Platform launcher — required on the test runtime classpath for useJUnitPlatform().
     // The legacy AGP DSL / kotlin-android setup provided it implicitly; AGP 9's new DSL does not.
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.0")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.1")
 }
 
 // ── Standalone-only ──────────────────────────────────────────────────────────────────────────────
