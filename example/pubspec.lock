@@ -181,10 +181,10 @@ packages:
     dependency: transitive
     description:
       name: cupertino_ui
-      sha256: "1fa3c6bf0925e96c7235ab4f1a6c701cc07e3c7abe13aa4e3d1219e651586615"
+      sha256: "427360789a03b76eaf659c37131570d2fc98e381f80d55f252bd9e30f37e7126"
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.1"
+    version: "0.0.2"
   dart_style:
     dependency: transitive
     description:
@@ -255,18 +255,18 @@ packages:
     dependency: transitive
     description:
       name: flutter_gen_core
-      sha256: "1413fbd0b67f76ac17800989013438caec3b64564c9ffd1eea6cd7e170d9b0e5"
+      sha256: "8ccb1f809642b34eb4857d8d7c4e5b41430a8cba8206177aae2ffe9d72b5eef3"
       url: "https://pub.dev"
     source: hosted
-    version: "5.14.1"
+    version: "5.15.0"
   flutter_gen_runner:
     dependency: "direct dev"
     description:
       name: flutter_gen_runner
-      sha256: db00922dd5f4c1aa33aeab7f74117f1cd224e7a1e8bea1e312b8d09b8101a909
+      sha256: "2b0fff517a75a14ed2eff749c1da2d6b8b568e542ad2b1c967356669a4c29bb2"
       url: "https://pub.dev"
     source: hosted
-    version: "5.14.1"
+    version: "5.15.0"
   flutter_hooks:
     dependency: transitive
     description:
@@ -275,6 +275,11 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.18.6"
+  flutter_localizations:
+    dependency: transitive
+    description: flutter
+    source: sdk
+    version: "0.0.0"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -354,6 +359,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  intl:
+    dependency: transitive
+    description:
+      name: intl
+      sha256: "3df61194eb431efc39c4ceba583b95633a403f46c9fd341e550ce0bfa50e9aa5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.20.2"
   io:
     dependency: transitive
     description:
@@ -422,10 +435,10 @@ packages:
     dependency: "direct main"
     description:
       name: material_ui
-      sha256: "47b4acbb50683230000996cedd2a5ea511c2106c818db8ee28155ba0f0e26063"
+      sha256: e1fa67393d807bd1841e5ece1ec260ed84f440ae7351e40b6406f733e4fe31cf
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.1"
+    version: "0.0.2"
   meta:
     dependency: transitive
     description:
@@ -494,10 +507,10 @@ packages:
     dependency: "direct main"
     description:
       name: platform_adaptive_widgets
-      sha256: "489da575172e4033ae2cc2ebba24539f39ca681d309acb53b4babba5d1d09219"
+      sha256: "41d737812dcd2460989461e9c7debc82c5d801b25b81dd87462b01b64f6af1e2"
       url: "https://pub.dev"
     source: hosted
-    version: "2.1.0"
+    version: "2.1.1"
   platform_icons:
     dependency: "direct main"
     description:
