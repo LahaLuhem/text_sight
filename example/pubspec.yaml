@@ -22,9 +22,9 @@ dependencies:
   # (platform_adaptive_widgets, better_internet_connectivity_checker). All pure-Dart/Flutter:
   # nothing here links a native ML/camera library, so the iOS no-bundling check still holds.
   pmvvm: ^4.0.1
-  platform_adaptive_widgets: ^2.1.1
+  platform_adaptive_widgets: ^2.1.2
   platform_icons: ^0.1.1
-  material_ui: ^0.0.2
+  material_ui: ^1.0.0
   gap: ^3.0.1
   tap_debouncer: ^2.2.0
   cupertino_icons: ^1.0.9 # iOS nav-bar back chevron glyph under PlatformApp
@@ -37,7 +37,7 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-  build_runner: ^2.15.1
+  build_runner: ^2.16.0
   bdd_framework: ^4.0.7
   checks: ^0.3.1
   flutter_gen_runner: 5.15.0
