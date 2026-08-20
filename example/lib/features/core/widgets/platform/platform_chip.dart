@@ -22,13 +22,7 @@ class PlatformChip extends StatelessWidget {
   /// Outline of the chip.
   final BorderSide? side;
 
-  const new({
-    required this.label,
-    this.avatar,
-    this.backgroundColor,
-    this.side,
-    super.key,
-  });
+  const new({required this.label, this.avatar, this.backgroundColor, this.side, super.key});
 
   @override
   Widget build(BuildContext context) => PlatformWidget(
