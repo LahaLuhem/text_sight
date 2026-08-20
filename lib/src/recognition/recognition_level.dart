@@ -18,5 +18,5 @@ enum RecognitionLevel {
   /// latency, which is why [fast] leaves it off.
   final bool usesLanguageCorrection;
 
-  const RecognitionLevel({required this.usesLanguageCorrection});
+  new({required this.usesLanguageCorrection});
 }

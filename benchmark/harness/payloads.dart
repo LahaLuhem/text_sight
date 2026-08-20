@@ -21,7 +21,7 @@ enum PayloadProfile {
   /// Worst case: a very dense frame.
   dense(minLines: 100, maxLines: 140, minTextLen: 8, maxTextLen: 40);
 
-  const PayloadProfile({
+  new({
     required this.minLines,
     required this.maxLines,
     required this.minTextLen,

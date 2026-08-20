@@ -7,7 +7,7 @@ void main() => runApp(const TextSightExampleApp());
 
 /// Showcase app for `text_sight` — a landing hub onto each feature demo.
 class TextSightExampleApp extends StatelessWidget {
-  const TextSightExampleApp({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) =>

@@ -8,7 +8,7 @@ import 'platform/platform_chip.dart';
 class ConfidenceChip extends StatelessWidget {
   final double? confidence;
 
-  const ConfidenceChip({required this.confidence, super.key});
+  const new({required this.confidence, super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -20,7 +20,7 @@ final class RecognizedElement {
   final double? confidence;
 
   /// Creates a recognized element.
-  const RecognizedElement({required this.text, required this.boundingBox, this.confidence});
+  const new({required this.text, required this.boundingBox, this.confidence});
 
   @override
   String toString() =>

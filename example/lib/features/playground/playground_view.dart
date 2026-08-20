@@ -12,7 +12,7 @@ import 'playground_view_model.dart';
 
 /// Recognizer-config playground: tune level + region-of-interest on a still and compare.
 class PlaygroundView extends StatelessWidget {
-  const PlaygroundView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -63,7 +63,7 @@ class PlaygroundView extends StatelessWidget {
 class _SamplePreview extends StatelessWidget {
   final PlaygroundViewModel viewModel;
 
-  const _SamplePreview({required this.viewModel});
+  const new({required this.viewModel});
 
   @override
   Widget build(BuildContext context) => PlatformCard(
@@ -88,7 +88,7 @@ class _SamplePreview extends StatelessWidget {
 class _LevelControl extends StatelessWidget {
   final PlaygroundViewModel viewModel;
 
-  const _LevelControl({required this.viewModel});
+  const new({required this.viewModel});
 
   @override
   Widget build(BuildContext context) => Column(
@@ -113,7 +113,7 @@ class _LevelControl extends StatelessWidget {
 class _RoiControls extends StatelessWidget {
   final PlaygroundViewModel viewModel;
 
-  const _RoiControls({required this.viewModel});
+  const new({required this.viewModel});
 
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
@@ -151,7 +151,7 @@ class _RoiEditor extends StatefulWidget {
   final Color color;
   final ValueChanged<Rect> onRectChanged;
 
-  const _RoiEditor({required this.config, required this.color, required this.onRectChanged});
+  const new({required this.config, required this.color, required this.onRectChanged});
 
   @override
   State<_RoiEditor> createState() => _RoiEditorState();
@@ -258,7 +258,7 @@ class _RoiPainter extends CustomPainter {
   final Rect? roi;
   final Color color;
 
-  _RoiPainter(this.roi, this.color);
+  new(this.roi, this.color);
 
   static const _handleRadius = 6.0;
 

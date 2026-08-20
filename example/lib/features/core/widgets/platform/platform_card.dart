@@ -21,7 +21,7 @@ class PlatformCard extends StatelessWidget {
   /// Outer margin. Defaults to Material [Card]'s own default on both platforms.
   final EdgeInsetsGeometry? margin;
 
-  const PlatformCard({required this.child, this.margin, super.key});
+  const new({required this.child, this.margin, super.key});
 
   /// Mirror of Material [Card]'s default margin, applied on the Cupertino branch (the
   /// Material branch lets [Card] apply its own when [margin] is null).

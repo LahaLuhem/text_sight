@@ -23,7 +23,7 @@ import 'pigeon_text_sight_platform.dart';
 /// supply its own via the [instance] setter.
 abstract class TextSightPlatform extends PlatformInterface {
   /// Constructs the interface, passing the verification token to [PlatformInterface].
-  TextSightPlatform() : super(token: _token);
+  new() : super(token: _token);
 
   static final _token = Object();
 

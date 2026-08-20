@@ -8,7 +8,7 @@ import 'confidence_chip.dart';
 class RecognizedLineRow extends StatelessWidget {
   final RecognizedLine line;
 
-  const RecognizedLineRow({required this.line, super.key});
+  const new({required this.line, super.key});
 
   @override
   Widget build(BuildContext context) => Padding(

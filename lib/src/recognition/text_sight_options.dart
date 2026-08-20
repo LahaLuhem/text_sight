@@ -28,7 +28,7 @@ final class TextSightOptions {
   final Rect? roi;
 
   /// Creates recognizer options; every field has a live-oriented default.
-  const TextSightOptions({
+  const new({
     this.level = .fast,
     this.languages = const [Locale.fromSubtags(languageCode: 'en', countryCode: 'US')],
     this.roi,

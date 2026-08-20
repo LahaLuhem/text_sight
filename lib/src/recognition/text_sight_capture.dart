@@ -21,7 +21,7 @@ final class TextSightCapture {
   final int quarterTurns;
 
   /// Creates a capture.
-  const TextSightCapture({required this.lines, required this.imageSize, this.quarterTurns = 0});
+  const new({required this.lines, required this.imageSize, this.quarterTurns = 0});
 
   @override
   String toString() =>
