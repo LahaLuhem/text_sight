@@ -1,6 +1,7 @@
 ## [Unreleased]
 ### Changed
 - \[#0\] use linterpol for lints
+- Bumped Dart to ^3.13
 
 ## [0.1.1] - 2026-06-24
 ### Added
