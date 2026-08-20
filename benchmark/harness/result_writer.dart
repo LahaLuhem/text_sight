@@ -8,7 +8,7 @@ import 'dart:io';
 /// the `candidate` / `payload` / `line_count` pivots this suite sweeps. One
 /// writer per process: [open], one [writeRecord] per measurement, then [close].
 final class ResultWriter {
-  ResultWriter._(
+  new _(
     this._sink, {
     required this.benchmark,
     required this.sdkVersion,

@@ -154,9 +154,8 @@ void main() {
 
         final options = (call.payload! as List<Object?>).single! as TextSightOptionsMessage;
         check(options.level).equals(ctx.example.val('twin') as RecognitionLevelMessage);
-        check<Iterable<Object?>>(
-          options.languages,
-        ).deepEquals(ctx.example.val('tags') as List<String>);
+        check<Iterable<Object?>>(options.languages)
+            .deepEquals(ctx.example.val('tags') as List<String>);
         check(options.roi).isNull();
         check(returned).equals(textureId);
       });
@@ -357,9 +356,8 @@ void main() {
 
         final payload = call.payload! as List<Object?>;
         check<Iterable<int>>(payload.first! as Uint8List).deepEquals(bytes);
-        check(
-          (payload[1]! as TextSightOptionsMessage).level,
-        ).equals(ctx.example.val('twin') as RecognitionLevelMessage);
+        check((payload[1]! as TextSightOptionsMessage).level)
+            .equals(ctx.example.val('twin') as RecognitionLevelMessage);
         check(capture.imageSize).equals(Size(imageWidth.toDouble(), imageHeight.toDouble()));
         check(capture.quarterTurns).equals(0);
         check<Iterable<Object?>>(capture.lines).length.equals(1);
@@ -391,9 +389,8 @@ void main() {
 
         final payload = call.payload! as List<Object?>;
         check(payload.first).equals(path);
-        check(
-          (payload[1]! as TextSightOptionsMessage).level,
-        ).equals(RecognitionLevelMessage.accurate);
+        check((payload[1]! as TextSightOptionsMessage).level)
+            .equals(RecognitionLevelMessage.accurate);
         check(capture.imageSize).equals(Size(imageWidth.toDouble(), imageHeight.toDouble()));
         check(capture.quarterTurns).equals(0);
       });

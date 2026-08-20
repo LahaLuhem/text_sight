@@ -8,7 +8,7 @@
 /// downloading, or unavailable when Play Services is missing or a fetch fails.
 sealed class TextSightReadinessState {
   /// Const base constructor for the sealed hierarchy.
-  const TextSightReadinessState();
+  const new();
 }
 
 /// The recognition model is present; recognition will produce results.
@@ -17,7 +17,7 @@ sealed class TextSightReadinessState {
 /// model, or once the unbundled model has finished downloading.
 final class ModelReady extends TextSightReadinessState {
   /// Creates the ready state.
-  const ModelReady();
+  const new();
 
   @override
   String toString() => 'ModelReady()';
@@ -33,7 +33,7 @@ final class ModelDownloading extends TextSightReadinessState {
   final double? progress;
 
   /// Creates the downloading state, optionally carrying [progress].
-  const ModelDownloading({this.progress});
+  const new({this.progress});
 
   @override
   String toString() => 'ModelDownloading(progress: $progress)';
@@ -53,7 +53,7 @@ final class ModelUnavailable extends TextSightReadinessState {
   final String? details;
 
   /// Creates the unavailable state with its [reason] and optional [details].
-  const ModelUnavailable({required this.reason, this.details});
+  const new({required this.reason, this.details});
 
   @override
   String toString() => 'ModelUnavailable(reason: $reason, details: $details)';

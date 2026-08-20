@@ -12,7 +12,7 @@ import 'live_scanner_view_model.dart';
 /// Live camera OCR: the preview with a confidence-coloured box overlay, a torch
 /// toggle, and a scrolling recognized-text panel.
 class LiveScannerView extends StatelessWidget {
-  const LiveScannerView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -93,7 +93,7 @@ class LiveScannerView extends StatelessWidget {
 class _ScannerView extends StatelessWidget {
   final LiveScannerViewModel viewModel;
 
-  const _ScannerView({required this.viewModel});
+  const new({required this.viewModel});
 
   @override
   Widget build(BuildContext context) => Stack(
@@ -144,7 +144,7 @@ class _ScannerView extends StatelessWidget {
 class _RecognizedTextPanel extends StatelessWidget {
   final TextSightCapture? capture;
 
-  const _RecognizedTextPanel({required this.capture});
+  const new({required this.capture});
 
   @override
   Widget build(BuildContext context) {
@@ -170,7 +170,7 @@ class _ConfidenceBoxPainter extends CustomPainter {
   final List<RecognizedLine> lines;
   final Color Function(double? confidence) colorFor;
 
-  _ConfidenceBoxPainter(this.lines, this.colorFor);
+  new(this.lines, this.colorFor);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -203,7 +203,7 @@ class _PreparingModel extends StatelessWidget {
   final double? progress;
   final String message;
 
-  const _PreparingModel({required this.message, this.progress});
+  const new({required this.message, this.progress});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -228,7 +228,7 @@ class _MessageView extends StatelessWidget {
   final String actionLabel;
   final VoidCallback onAction;
 
-  const _MessageView({
+  const new({
     required this.icon,
     required this.message,
     required this.actionLabel,

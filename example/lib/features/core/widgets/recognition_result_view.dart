@@ -14,7 +14,7 @@ class RecognitionResultView extends StatelessWidget {
   final String idleHint;
   final String emptyHint;
 
-  const RecognitionResultView({
+  const new({
     required this.result,
     required this.idleHint,
     this.emptyHint = 'No text recognized.',
@@ -40,7 +40,7 @@ class _CaptureCard extends StatelessWidget {
   final TextSightCapture capture;
   final String emptyHint;
 
-  const _CaptureCard({required this.capture, required this.emptyHint});
+  const new({required this.capture, required this.emptyHint});
 
   @override
   Widget build(BuildContext context) => PlatformCard(
@@ -70,7 +70,7 @@ class _CaptureCard extends StatelessWidget {
 class _MessageCard extends StatelessWidget {
   final String message;
 
-  const _MessageCard(this.message);
+  const new(this.message);
 
   @override
   Widget build(BuildContext context) => PlatformCard(

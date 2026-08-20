@@ -120,7 +120,7 @@ double _measure(BenchmarkBase bench) {
 /// Decodes a fixed encoded buffer per `run()`. The result feeds a checksum so
 /// the optimiser cannot eliminate the decode as dead code.
 final class _DecodeBench extends BenchmarkBase {
-  _DecodeBench(this._codec, this._bytes) : super('decode');
+  new(this._codec, this._bytes) : super('decode');
 
   final CaptureCodec _codec;
   final Uint8List _bytes;
@@ -141,7 +141,7 @@ final class _DecodeBench extends BenchmarkBase {
 /// Encodes a fixed capture per `run()`, checksumming the byte length for the
 /// same dead-code-elimination guard as [_DecodeBench].
 final class _EncodeBench extends BenchmarkBase {
-  _EncodeBench(this._codec, this._capture) : super('encode');
+  new(this._codec, this._capture) : super('encode');
 
   final CaptureCodec _codec;
   final BenchCapture _capture;

@@ -9,8 +9,11 @@ import '../recognition/text_sight_capture.dart';
 ///
 /// The [constraints] are the preview's, so a painter can map a line's
 /// normalized box onto the displayed pixels.
-typedef TextSightOverlayBuilder =
-    Widget Function(BuildContext context, TextSightCapture capture, BoxConstraints constraints);
+typedef TextSightOverlayBuilder = Widget Function(
+  BuildContext context,
+  TextSightCapture capture,
+  BoxConstraints constraints,
+);
 
 /// A live camera preview that recognizes text, driven by a [TextSightController].
 ///
@@ -39,7 +42,7 @@ final class TextSightView extends StatefulWidget {
   final WidgetBuilder? placeholderBuilder;
 
   /// Creates a view bound to [controller].
-  const TextSightView({
+  const new({
     required this.controller,
     this.onResult,
     this.overlayBuilder,

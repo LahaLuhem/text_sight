@@ -15,7 +15,7 @@ class AsyncIconActionButton extends StatelessWidget {
   final String idleLabel;
   final String busyLabel;
 
-  const AsyncIconActionButton({
+  const new({
     required this.onPressed,
     required this.idleIcon,
     required this.idleLabel,

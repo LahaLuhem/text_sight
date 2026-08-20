@@ -13,7 +13,7 @@ import 'home_view_model.dart';
 
 /// Landing hub: one tile per feature demo, each pushed as its own route.
 class HomeView extends StatelessWidget {
-  const HomeView({super.key});
+  const new({super.key});
 
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -80,7 +80,7 @@ class _DemoTile extends StatelessWidget {
   final String description;
   final WidgetBuilder pageBuilder;
 
-  const _DemoTile({
+  const new({
     required this.icon,
     required this.title,
     required this.description,

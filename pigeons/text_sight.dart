@@ -27,12 +27,7 @@ enum RecognitionLevelMessage { fast, accurate }
 
 /// Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
 class RegionOfInterestMessage {
-  RegionOfInterestMessage({
-    required this.left,
-    required this.top,
-    required this.width,
-    required this.height,
-  });
+  new({required this.left, required this.top, required this.width, required this.height});
 
   double left;
   double top;
@@ -42,7 +37,7 @@ class RegionOfInterestMessage {
 
 /// Transport twin of the public `TextSightOptions`.
 class TextSightOptionsMessage {
-  TextSightOptionsMessage({required this.level, required this.languages, this.roi});
+  new({required this.level, required this.languages, this.roi});
 
   RecognitionLevelMessage level;
   List<String> languages;

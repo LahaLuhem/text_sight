@@ -27,17 +27,15 @@ final class TextSightController extends ChangeNotifier {
 
   /// Creates a controller seeded from [options] (the shared recognizer config) and an initial torch state.
   /// Nothing opens the camera until [start].
-  TextSightController({
-    TextSightOptions options = const TextSightOptions(),
-    bool torchEnabled = false,
-  }) : assert(
-         options.roi.isNormalizedRoi,
-         'Region-of-interest must be a normalized [0,1] rect with positive extent.',
-       ),
-       _level = options.level,
-       _languages = options.languages.toList(growable: false),
-       _roi = options.roi,
-       _isTorchEnabled = torchEnabled;
+  new({TextSightOptions options = const TextSightOptions(), bool torchEnabled = false})
+    : assert(
+        options.roi.isNormalizedRoi,
+        'Region-of-interest must be a normalized [0,1] rect with positive extent.',
+      ),
+      _level = options.level,
+      _languages = options.languages.toList(growable: false),
+      _roi = options.roi,
+      _isTorchEnabled = torchEnabled;
 
   /// The current accuracy/latency level.
   RecognitionLevel get recognitionLevel => _level;

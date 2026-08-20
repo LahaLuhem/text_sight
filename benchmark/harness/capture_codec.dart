@@ -35,7 +35,7 @@ const allCodecs = <CaptureCodec>[
 /// Decode mirrors `_decodeCapture` / `_decodeLine` exactly (cast each value via `num`).
 final class MapStdCodec implements CaptureCodec {
   /// Creates the codec.
-  const MapStdCodec();
+  const new();
 
   static const _codec = StandardMessageCodec();
 
@@ -93,7 +93,7 @@ final class MapStdCodec implements CaptureCodec {
 /// Positional `List` (no per-field keys) through `StandardMessageCodec`.
 final class ListStdCodec implements CaptureCodec {
   /// Creates the codec.
-  const ListStdCodec();
+  const new();
 
   static const _codec = StandardMessageCodec();
 
@@ -145,7 +145,7 @@ final class ListStdCodec implements CaptureCodec {
 /// the shape (tag + field list) mirrors Pigeon.
 final class PigeonReplicaCodec implements CaptureCodec {
   /// Creates the codec.
-  const PigeonReplicaCodec();
+  const new();
 
   static const _codec = _PigeonCodec();
 
@@ -164,7 +164,7 @@ final class PigeonReplicaCodec implements CaptureCodec {
 }
 
 final class _PigeonCodec extends StandardMessageCodec {
-  const _PigeonCodec();
+  const new();
 
   static const _lineType = 129;
   static const _captureType = 130;
@@ -236,7 +236,7 @@ final class _PigeonCodec extends StandardMessageCodec {
 /// sentinel — the complexity tax the keyed / positional forms sidestep.
 final class PackedCodec implements CaptureCodec {
   /// Creates a packed codec with the given [name] and float width.
-  const PackedCodec({required this.name, required this.floatBytes})
+  const new({required this.name, required this.floatBytes})
     : assert(floatBytes == 4 || floatBytes == 8, 'floatBytes must be 4 or 8');
 
   @override
@@ -320,7 +320,7 @@ final class PackedCodec implements CaptureCodec {
 
 /// Sequential little-endian reader backing [PackedCodec.decode].
 final class _PackedReader {
-  _PackedReader(this._data, this._floatBytes);
+  new(this._data, this._floatBytes);
 
   final ByteData _data;
   final int _floatBytes;

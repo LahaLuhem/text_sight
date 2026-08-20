@@ -31,12 +31,7 @@ final class RecognizedLine {
   final List<RecognizedElement>? elements;
 
   /// Creates a recognized line.
-  const RecognizedLine({
-    required this.text,
-    required this.boundingBox,
-    this.confidence,
-    this.elements,
-  });
+  const new({required this.text, required this.boundingBox, this.confidence, this.elements});
 
   @override
   String toString() =>

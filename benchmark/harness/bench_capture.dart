@@ -13,7 +13,7 @@ library;
 /// One recognition pass: the analyzed-image size, a display-rotation hint, and the recognized [lines].
 final class BenchCapture {
   /// Creates a capture.
-  const BenchCapture({
+  const new({
     required this.imageWidth,
     required this.imageHeight,
     required this.quarterTurns,
@@ -37,7 +37,7 @@ final class BenchCapture {
 /// bounding box as four flat doubles.
 final class BenchLine {
   /// Creates a line.
-  const BenchLine({
+  const new({
     required this.text,
     required this.confidence,
     required this.left,

@@ -11,7 +11,7 @@ import 'dart:io';
 ///
 /// Hand-parsed — the surface is too small to justify a `package:args` dep.
 final class ScenarioArgs {
-  const ScenarioArgs._({
+  const new _({
     required this.iterations,
     required this.outputPath,
     required this.gitSha,
@@ -20,7 +20,7 @@ final class ScenarioArgs {
 
   /// Parses [argv]; exits with code 64 (`EX_USAGE`) on any parse failure —
   /// benchmarks are non-interactive, so there is no one to catch a throw.
-  factory ScenarioArgs.parse(List<String> argv) {
+  factory parse(List<String> argv) {
     final flags = <String, String>{};
     for (var i = 0; i < argv.length; i++) {
       final arg = argv[i];
