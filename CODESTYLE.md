@@ -551,6 +551,9 @@ Public symbols carry `///` dartdoc that explains *why*, not *what* — types alr
 the *what*. See [hard rule on dartdoc in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules)
 for the contract.
 
+Keep them to a line or two. Rationale that needs a paragraph belongs in
+[`APPENDIX.md`](./APPENDIX.md) behind a one-line pointer, not inline.
+
 ### `@docImport` for dartdoc-only references
 
 When a file needs a symbol *only* for `[Name]` references in dartdoc (not in code), do
@@ -760,6 +763,8 @@ these.
 <a id="documentation-conventions-markdown"></a>
 ## Documentation conventions (Markdown)
 
+- **Say it once, then stop.** Docs carry the *why* and the surprising bits; no restating a
+  point in three phrasings and no padding a section to look thorough.
 - **APPENDIX.md is the source of truth for rationale.** Hard rules, pitfalls, and
   workflow stay in `.ai/AGENTS.md` and `.ai/CLAUDE.md`; the "why we do it this way"
   essays live in [`APPENDIX.md`](./APPENDIX.md).

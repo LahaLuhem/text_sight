@@ -1,6 +1,7 @@
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [`AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`](#agentsmd-and-claudemd-are-symlinks-into-ai)
+- [Dependabot automerges the boring tier, behind four aggregate checks](#dependabot-automerge)
 - [No-bundling: native dependencies never touch the Dart `pubspec.yaml`](#no-bundling-native-dependencies-never-touch-the-dart-pubspecyaml)
 - [Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview](#channel-topology-pigeon-control-api--eventchannel-results--texture-preview)
 - [Coordinate normalization: top-left `[0,1]` in native code](#coordinate-normalization-top-left-01-in-native-code)
@@ -19,7 +20,7 @@ technical trade-offs.
 READMEs, [`CODESTYLE.md`](./CODESTYLE.md), and [`.ai/AGENTS.md`](./.ai/AGENTS.md)
 reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
-> **Status:** the symlink, channel-topology, coordinate-normalization, iOS-capture-strategy,
+> **Status:** the symlink, dependabot-automerge, channel-topology, coordinate-normalization, iOS-capture-strategy,
 > model-readiness, known-limitations, and public-API sections are written. `#no-bundling` and
 > `#federation-deferred` stay stubs — locked decisions whose rationale is filled in when the
 > corresponding code lands. Anchors are stable; only stub bodies grow.
@@ -56,6 +57,44 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
   and keep real files at root, hand-syncing the content.
 - **`CODESTYLE.md` is not symlinked** — it sits directly at the repo root, since style
   serves humans and agents alike and is not AI-specific.
+
+---
+
+<a id="dependabot-automerge"></a>
+## Dependabot automerges the boring tier, behind four aggregate checks
+[`dependabot-automerge.yml`](./.github/workflows/dependabot-automerge.yml) arms GitHub's native
+auto-merge (rebase) for patch and minor bumps in `github-actions`, `gradle` (both `/android` and
+`/example/android`), and `pub` under `/example`. Root `pub` and every major wait for a human.
+Dependabot has no `automerge` config key the way Renovate does, so the mechanism is a workflow. The
+sibling
+[`better_internet_connectivity_checker`](https://github.com/LahaLuhem/better_internet_connectivity_checker)
+and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos run the same shape.
+
+- **Root `pub` stays manual.** It reaches every consumer's resolution and is semver-relevant, and
+  bots are exempt from [`changelog.yml`](./.github/workflows/changelog.yml), so an automerged bump
+  would ship with no release note.
+- **`/android` gradle automerges anyway, unlike the siblings.** Its deps ride the AAR's POM to every
+  downstream Android consumer (ML Kit, Play Services, CameraX), so these bumps *are*
+  publish-relevant; `Android example build + unit tests` stands in for the read-through. The cost is
+  the missing changelog entry, not the build — check the Android deps before a release if one landed.
+- **Minor, not just patch,** because `dependabot.yml` groups both and `fetch-metadata` reports a
+  group's *highest* semver step; patch-only would skip most batches.
+- **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks, so this is
+  safe only while `main`'s ruleset is **active** and requires `repo-ok`, `package-ok`, `example-ok`,
+  `conventions-ok`. Keep `required_signatures` off it: rebase-merge emits unsigned commits, so it
+  would block every automerge.
+- **`GITHUB_TOKEN` enables the merge, not the changelog App.** The App sits in the ruleset's bypass
+  list, and a bypass covers status checks too, so merging as it would skip the gate this rests on.
+  Its merges also trigger no further workflows, which costs nothing here: `package.yml`'s `gate`
+  already skips post-merge pushes to `main`.
+- **Aggregates, not the real job names.** `Dart format` and `Flutter analyze` each appear in two
+  workflows, so a required list of real contexts is ambiguous, and a renamed one leaves every PR
+  waiting forever. Each workflow instead closes with one `*-ok` job that `needs` its siblings and
+  fails on `failure` or `cancelled`. They read `needs.*.result` by hand because a skipped job
+  reports success — which is what keeps `conventions-ok` green on bot PRs and `package-ok` green on
+  a post-merge push.
+- **`pull_request_target`** because Dependabot's `pull_request` runs get a read-only token and
+  enabling auto-merge needs write. Safe as `changelog.yml`: PR code is never checked out.
 
 ---
 

@@ -48,3 +48,21 @@ jobs:
       # actionlint auto-discovers .github/workflows/ from the mount root, and also runs shellcheck
       # over run: blocks (shellcheck is on PATH in the same image).
       - run: docker run --rm -v "$PWD:/work:ro" "$LINTERPOL_IMAGE" actionlint
+
+  # Single required-check contract for the ruleset. APPENDIX.md#dependabot-automerge
+  repo-ok:
+    needs: [format, shellcheck, actionlint]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          RESULTS: >-
+            format=${{ needs.format.result }}
+            shellcheck=${{ needs.shellcheck.result }}
+            actionlint=${{ needs.actionlint.result }}
+        run: |
+          echo "$RESULTS"
+          exit 1

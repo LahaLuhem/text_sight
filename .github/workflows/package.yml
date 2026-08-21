@@ -235,3 +235,27 @@ jobs:
             echo "::error::Pigeon output is stale — run: dart run pigeon --input pigeons/text_sight.dart && dart format lib/src/platform/messages.g.dart"
             exit 1
           fi
+
+  # Single required-check contract for the ruleset. APPENDIX.md#dependabot-automerge
+  package-ok:
+    needs: [gate, analyze, format, detekt, deps, test, android-example, ios-example, pigeon-freshness]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          RESULTS: >-
+            gate=${{ needs.gate.result }}
+            analyze=${{ needs.analyze.result }}
+            format=${{ needs.format.result }}
+            detekt=${{ needs.detekt.result }}
+            deps=${{ needs.deps.result }}
+            test=${{ needs.test.result }}
+            android-example=${{ needs.android-example.result }}
+            ios-example=${{ needs.ios-example.result }}
+            pigeon-freshness=${{ needs.pigeon-freshness.result }}
+        run: |
+          echo "$RESULTS"
+          exit 1
