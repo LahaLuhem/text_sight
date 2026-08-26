@@ -104,7 +104,7 @@ dependencies {
     // ModuleInstallClient — the app-controlled fetch + download progress behind
     // TextSightModel.ensureReady(). The readiness code references it regardless of `useBundled`
     // (the bundled path just never calls it), so keep it on the classpath; ML Kit pulls it anyway.
-    implementation("com.google.android.gms:play-services-base:18.10.0")
+    implementation("com.google.android.gms:play-services-base:18.10.1")
 
     implementation("androidx.camera:camera-core:1.6.1")
     implementation("androidx.camera:camera-camera2:1.6.1")
