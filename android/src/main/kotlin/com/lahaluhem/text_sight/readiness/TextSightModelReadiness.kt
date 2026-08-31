@@ -14,6 +14,8 @@ import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.lahaluhem.text_sight.BuildConfig
 import io.flutter.plugin.common.EventChannel
+import kotlin.coroutines.resume
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * Owns the model-readiness EventChannel and the app-controlled fetch of the on-device ML Kit model.
@@ -54,26 +56,26 @@ internal class TextSightModelReadiness(
     }
 
     /**
-     * Triggers a check-and-fetch of the model and reports the terminal state via [callback];
-     * intermediate [ModuleInstallStatusUpdate] progress streams on the readiness channel. Resolves
-     * immediately when the model is already present — always so with the bundled model.
+     * Triggers a check-and-fetch of the model and returns the terminal state; intermediate
+     * [ModuleInstallStatusUpdate] progress streams on the readiness channel. Resolves immediately
+     * when the model is already present — always so with the bundled model.
      */
-    fun ensureModelReady(callback: (Result<Map<String, Any?>>) -> Unit) {
-        var settled = false
-        val finish = { state: Map<String, Any?> ->
-            if (!settled) {
-                settled = true
-                emit(state)
-                callback(Result.success(state))
+    suspend fun ensureModelReady(): Map<String, Any?> {
+        if (BuildConfig.USE_BUNDLED) {
+            return readyState().also { emit(it) }
+        }
+
+        return suspendCancellableCoroutine { continuation ->
+            // The install listener fires repeatedly but must settle the caller once.
+            var settled = false
+            checkThenInstall { state ->
+                if (!settled) {
+                    settled = true
+                    emit(state)
+                    continuation.resume(state)
+                }
             }
         }
-
-        if (BuildConfig.USE_BUNDLED) {
-            finish(readyState())
-            return
-        }
-
-        checkThenInstall(finish)
     }
 
     private fun checkThenInstall(finish: (Map<String, Any?>) -> Unit) {

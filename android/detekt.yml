@@ -28,6 +28,11 @@ style:
     active: false
 
 exceptions:
+  SwallowedException:
+    # The control methods convert a CameraX / ML Kit failure into the FlutterError code the Dart side
+    # switches on. Pigeon's generated FlutterError has no `cause` slot, so forwarding the message is
+    # the only channel there is — the rule's fix is unavailable, not declined.
+    active: false
   TooGenericExceptionCaught:
     # The camera init converts any native failure into a `FlutterError` at the channel boundary — a
     # deliberate broad catch. (Re-enable and `@Suppress` that single site if stricter checking is wanted.)

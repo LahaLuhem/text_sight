@@ -7,6 +7,12 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.EventChannel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * The text_sight Android plugin.
@@ -23,6 +29,12 @@ class TextSightPlugin :
     FlutterPlugin,
     ActivityAware,
     TextSightHostApi {
+    /**
+     * Parents every in-flight control call, so [onDetachedFromEngine] cancels them instead of
+     * letting a reply land on a torn-down engine.
+     */
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
     private var camera: TextSightCamera? = null
     private var modelReadiness: TextSightModelReadiness? = null
     private var permissions: CameraPermissionRequester? = null
@@ -42,6 +54,7 @@ class TextSightPlugin :
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         TextSightHostApi.setUp(binding.binaryMessenger, null)
+        scope.cancel()
 
         camera?.dispose()
         camera = null
@@ -52,25 +65,27 @@ class TextSightPlugin :
     override fun initialize(options: TextSightOptionsMessage, callback: (Result<Long>) -> Unit) {
         val activeCamera = camera ?: return callback(detached())
 
-        activeCamera.initialize(options, callback)
+        adapt(callback) { activeCamera.initialize(options) }
     }
 
     override fun start(callback: (Result<Unit>) -> Unit) {
         val activeCamera = camera ?: return callback(detached())
 
-        activeCamera.start(callback)
+        activeCamera.start()
+        callback(Result.success(Unit))
     }
 
     override fun stop(callback: (Result<Unit>) -> Unit) {
         val activeCamera = camera ?: return callback(detached())
 
-        activeCamera.stop(callback)
+        activeCamera.stop()
+        callback(Result.success(Unit))
     }
 
     override fun dispose(callback: (Result<Unit>) -> Unit) {
         val activeCamera = camera ?: return callback(detached())
 
-        activeCamera.disposeSession(callback)
+        adapt(callback) { activeCamera.disposeSession() }
     }
 
     override fun checkCameraPermission(): CameraPermissionStatusMessage {
@@ -82,7 +97,7 @@ class TextSightPlugin :
     override fun requestCameraPermission(callback: (Result<CameraPermissionStatusMessage>) -> Unit) {
         val activePermissions = permissions ?: return callback(detached())
 
-        activePermissions.request(callback)
+        adapt(callback) { activePermissions.request() }
     }
 
     override fun setRegionOfInterest(roi: RegionOfInterestMessage?) {
@@ -104,7 +119,7 @@ class TextSightPlugin :
     override fun ensureModelReady(callback: (Result<Map<String, Any?>>) -> Unit) {
         val activeReadiness = modelReadiness ?: return callback(detached())
 
-        activeReadiness.ensureModelReady(callback)
+        adapt(callback) { activeReadiness.ensureModelReady() }
     }
 
     override fun recognizeImage(
@@ -114,7 +129,7 @@ class TextSightPlugin :
     ) {
         val activeCamera = camera ?: return callback(detached())
 
-        activeCamera.recognizeImage(bytes, options, callback)
+        adapt(callback) { activeCamera.recognizeImage(bytes, options) }
     }
 
     override fun recognizePath(
@@ -124,7 +139,19 @@ class TextSightPlugin :
     ) {
         val activeCamera = camera ?: return callback(detached())
 
-        activeCamera.recognizePath(path, options, callback)
+        adapt(callback) { activeCamera.recognizePath(path, options) }
+    }
+
+    /**
+     * Temporary: adapts the suspending session API back to Pigeon 27's callback signatures. Deleted
+     * when the schema flips to `@async` and Pigeon launches these itself.
+     */
+    private fun <T> adapt(callback: (Result<T>) -> Unit, work: suspend () -> T) {
+        scope.launch {
+            val result = runCatching { work() }
+            // A cancelled scope means the engine detached mid-flight, so there is nobody to reply to.
+            if (isActive) callback(result)
+        }
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
