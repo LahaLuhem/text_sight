@@ -4,6 +4,7 @@ import CoreMedia
 import CoreVideo
 import Flutter
 import ImageIO
+import UIKit
 
 /// Owns the `AVCaptureSession`, the Vision recognizer, and the preview texture for one live
 /// recognition session — the iOS twin of the Android `TextSightCamera`.
@@ -35,6 +36,12 @@ final class TextSightCamera: NSObject {
   private var textureId: Int64?
   private var latestPixelBuffer: CVPixelBuffer?
   private var captureDevice: AVCaptureDevice?
+
+  /// Torch intent, re-asserted on foreground return: the hardware drops the torch with the
+  /// camera. Touched only on `sessionQueue`.
+  private var torchEnabled = false
+  /// Background/foreground observer tokens, registered in `init`, removed in `deinit`.
+  private var appLifecycleObservers: [NSObjectProtocol] = []
   // Type-erased: the concrete `AVCaptureDevice.RotationCoordinator` is iOS 17+, but this class
   // deploys to 13. Held only to keep the coordinator alive for its KVO; stays nil on iOS 13–16.
   private var rotationCoordinator: Any?
@@ -58,6 +65,11 @@ final class TextSightCamera: NSObject {
   init(textureRegistry: FlutterTextureRegistry) {
     self.textureRegistry = textureRegistry
     super.init()
+    observeAppLifecycle()
+  }
+
+  deinit {
+    appLifecycleObservers.forEach { NotificationCenter.default.removeObserver($0) }
   }
 
   // MARK: Control channel (delegated from TextSightPlugin's TextSightHostApi conformance)
@@ -135,17 +147,10 @@ final class TextSightCamera: NSObject {
 
   func setTorchEnabled(enabled: Bool) {
     sessionQueue.async { [weak self] in
-      guard let device = self?.captureDevice, device.hasTorch, device.isTorchAvailable else {
-        return
-      }
+      guard let self else { return }
 
-      do {
-        try device.lockForConfiguration()
-        device.torchMode = enabled ? .on : .off
-        device.unlockForConfiguration()
-      } catch {
-        // The device was busy; a failed torch toggle is not session-fatal, so drop it.
-      }
+      self.torchEnabled = enabled
+      self.applyTorch(enabled)
     }
   }
 
@@ -212,6 +217,54 @@ final class TextSightCamera: NSObject {
     stateLock.lock()
     currentRotationAngle = angle
     stateLock.unlock()
+  }
+
+  /// Stops capture while the app is backgrounded and restarts it on return. Stopping explicitly
+  /// releases the camera instead of riding the system interruption, and the restart re-asserts
+  /// the torch.
+  private func observeAppLifecycle() {
+    let center = NotificationCenter.default
+    let onBackground = center.addObserver(
+      forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil
+    ) { [weak self] _ in
+      guard let self else { return }
+
+      self.sessionQueue.async { self.suspendSession() }
+    }
+    let onForeground = center.addObserver(
+      forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil
+    ) { [weak self] _ in
+      guard let self else { return }
+
+      self.sessionQueue.async { self.resumeSession() }
+    }
+    appLifecycleObservers = [onBackground, onForeground]
+  }
+
+  /// Runs on `sessionQueue`.
+  private func suspendSession() {
+    if session.isRunning { session.stopRunning() }
+  }
+
+  /// Runs on `sessionQueue`. Restarts only a configured session, then re-asserts the dropped torch.
+  private func resumeSession() {
+    guard captureDevice != nil, !session.isRunning else { return }
+
+    session.startRunning()
+    applyTorch(torchEnabled)
+  }
+
+  /// Runs on `sessionQueue`.
+  private func applyTorch(_ enabled: Bool) {
+    guard let device = captureDevice, device.hasTorch, device.isTorchAvailable else { return }
+
+    do {
+      try device.lockForConfiguration()
+      device.torchMode = enabled ? .on : .off
+      device.unlockForConfiguration()
+    } catch {
+      // The device was busy; a failed torch toggle is not session-fatal, so drop it.
+    }
   }
 
   /// Releases every per-session resource. Idempotent — safe on dispose and on engine detach.
