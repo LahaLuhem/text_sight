@@ -5,6 +5,7 @@
 
 ### Fixed
 - \[#40\] Crash on engine detach when no capture session ever started
+- Live session auto-pauses in the background and restores the torch on return
 
 ## [0.1.1] - 2026-06-24
 ### Added
