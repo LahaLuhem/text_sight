@@ -24,7 +24,7 @@ dependencies:
   pmvvm: ^4.0.1
   platform_adaptive_widgets: ^2.1.2
   platform_icons: ^0.1.1
-  material_ui: ^1.0.1
+  material_ui: ^1.1.0
   gap: ^3.0.1
   tap_debouncer: ^2.2.0
   cupertino_icons: ^1.0.9 # iOS nav-bar back chevron glyph under PlatformApp
