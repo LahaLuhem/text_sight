@@ -1,6 +1,6 @@
 import Vision
 
-/// Vision's Swift `RecognizeTextRequest` backend — value-typed, `async`, `Sendable` (the WWDC 2024
+/// Vision's Swift `RecognizeTextRequest` backend: value-typed, `async`, `Sendable` (the WWDC 2024
 /// API, iOS 18+). Mirrors `RecognizedTextObservation`s into the neutral `RecognizedLineData`.
 @available(iOS 18, *)
 struct ModernTextRecognizer: TextRecognizer {
@@ -32,7 +32,7 @@ struct ModernTextRecognizer: TextRecognizer {
       request.recognitionLanguages = config.languages.map { Locale.Language(identifier: $0) }
     }
     if let roi = config.roi {
-      // Vision's region-of-interest is lower-left normalized; flip the incoming top-left rect.
+      // Vision's region-of-interest is lower-left normalized, so flip the incoming top-left rect.
       request.regionOfInterest = NormalizedRect(x: roi.left, y: 1 - (roi.top + roi.height),
                                                 width: roi.width, height: roi.height)
     }

@@ -13,6 +13,12 @@ import io.flutter.plugin.common.StandardMethodCodec
 import io.flutter.plugin.common.StandardMessageCodec
 import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 private object MessagesPigeonUtils {
 
   fun wrapResult(result: Any?): List<Any?> {
@@ -370,23 +376,26 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
 
 /**
  * The typed control channel. Per-frame results stream over a plain
- * EventChannel and the preview is a texture — neither rides this API.
+ * EventChannel and the preview is a texture. Neither rides this API.
  *
  * Generated interface from Pigeon that represents a handler of messages from Flutter.
  */
 interface TextSightHostApi {
-  /** Opens the camera with [options]; returns the preview texture id. */
-  fun initialize(options: TextSightOptionsMessage, callback: (Result<Long>) -> Unit)
-  /** Begins frame delivery and recognition. */
-  fun start(callback: (Result<Unit>) -> Unit)
-  /** Pauses recognition, keeping the session open for a later [start]. */
-  fun stop(callback: (Result<Unit>) -> Unit)
+  /** Opens the camera with [options]. Returns the preview texture id. */
+  suspend fun initialize(options: TextSightOptionsMessage): Long
+  /**
+   * Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
+   * Dart signature is `Future<void>` either way.
+   */
+  fun start()
+  /** Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start]. */
+  fun stop()
   /** Releases the camera and texture. */
-  fun dispose(callback: (Result<Unit>) -> Unit)
+  suspend fun dispose()
   /** Reports the current camera-permission status without prompting. */
   fun checkCameraPermission(): CameraPermissionStatusMessage
   /** Prompts for camera permission when it has not yet been decided, resolving to the resulting status. */
-  fun requestCameraPermission(callback: (Result<CameraPermissionStatusMessage>) -> Unit)
+  suspend fun requestCameraPermission(): CameraPermissionStatusMessage
   /** Restricts recognition to [roi], or clears it (whole frame) when null. */
   fun setRegionOfInterest(roi: RegionOfInterestMessage?)
   /** Switches the recognizer's accuracy/latency level. */
@@ -399,11 +408,11 @@ interface TextSightHostApi {
    * Ensures the recognition model is present (fetching the unbundled ML Kit model via
    * Google Play Services when needed) and returns the terminal readiness state.
    */
-  fun ensureModelReady(callback: (Result<Map<String, Any?>>) -> Unit)
+  suspend fun ensureModelReady(): Map<String, Any?>
   /** Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options]. */
-  fun recognizeImage(bytes: ByteArray, options: TextSightOptionsMessage, callback: (Result<Map<String, Any?>>) -> Unit)
+  suspend fun recognizeImage(bytes: ByteArray, options: TextSightOptionsMessage): Map<String, Any?>
   /** Recognizes text in the image at file [path], honouring [options]. */
-  fun recognizePath(path: String, options: TextSightOptionsMessage, callback: (Result<Map<String, Any?>>) -> Unit)
+  suspend fun recognizePath(path: String, options: TextSightOptionsMessage): Map<String, Any?>
 
   companion object {
     /** The codec used by TextSightHostApi. */
@@ -420,14 +429,13 @@ interface TextSightHostApi {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val optionsArg = args[0] as TextSightOptionsMessage
-            api.initialize(optionsArg) { result: Result<Long> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(MessagesPigeonUtils.wrapError(error))
-              } else {
-                val data = result.getOrNull()
-                reply.reply(MessagesPigeonUtils.wrapResult(data))
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.initialize(optionsArg))
+              } catch (exception: Throwable) {
+                MessagesPigeonUtils.wrapError(exception)
               }
+              reply.reply(wrapped)
             }
           }
         } else {
@@ -438,14 +446,13 @@ interface TextSightHostApi {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.start$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
-            api.start{ result: Result<Unit> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(MessagesPigeonUtils.wrapError(error))
-              } else {
-                reply.reply(MessagesPigeonUtils.wrapResult(null))
-              }
+            val wrapped: List<Any?> = try {
+              api.start()
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
             }
+            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)
@@ -455,14 +462,13 @@ interface TextSightHostApi {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.stop$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
-            api.stop{ result: Result<Unit> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(MessagesPigeonUtils.wrapError(error))
-              } else {
-                reply.reply(MessagesPigeonUtils.wrapResult(null))
-              }
+            val wrapped: List<Any?> = try {
+              api.stop()
+              listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
             }
+            reply.reply(wrapped)
           }
         } else {
           channel.setMessageHandler(null)
@@ -472,13 +478,14 @@ interface TextSightHostApi {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.dispose$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
-            api.dispose{ result: Result<Unit> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(MessagesPigeonUtils.wrapError(error))
-              } else {
-                reply.reply(MessagesPigeonUtils.wrapResult(null))
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                api.dispose()
+                listOf(null)
+              } catch (exception: Throwable) {
+                MessagesPigeonUtils.wrapError(exception)
               }
+              reply.reply(wrapped)
             }
           }
         } else {
@@ -504,14 +511,13 @@ interface TextSightHostApi {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.requestCameraPermission$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
-            api.requestCameraPermission{ result: Result<CameraPermissionStatusMessage> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(MessagesPigeonUtils.wrapError(error))
-              } else {
-                val data = result.getOrNull()
-                reply.reply(MessagesPigeonUtils.wrapResult(data))
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.requestCameraPermission())
+              } catch (exception: Throwable) {
+                MessagesPigeonUtils.wrapError(exception)
               }
+              reply.reply(wrapped)
             }
           }
         } else {
@@ -594,14 +600,13 @@ interface TextSightHostApi {
         val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.ensureModelReady$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
-            api.ensureModelReady{ result: Result<Map<String, Any?>> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(MessagesPigeonUtils.wrapError(error))
-              } else {
-                val data = result.getOrNull()
-                reply.reply(MessagesPigeonUtils.wrapResult(data))
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.ensureModelReady())
+              } catch (exception: Throwable) {
+                MessagesPigeonUtils.wrapError(exception)
               }
+              reply.reply(wrapped)
             }
           }
         } else {
@@ -615,14 +620,13 @@ interface TextSightHostApi {
             val args = message as List<Any?>
             val bytesArg = args[0] as ByteArray
             val optionsArg = args[1] as TextSightOptionsMessage
-            api.recognizeImage(bytesArg, optionsArg) { result: Result<Map<String, Any?>> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(MessagesPigeonUtils.wrapError(error))
-              } else {
-                val data = result.getOrNull()
-                reply.reply(MessagesPigeonUtils.wrapResult(data))
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.recognizeImage(bytesArg, optionsArg))
+              } catch (exception: Throwable) {
+                MessagesPigeonUtils.wrapError(exception)
               }
+              reply.reply(wrapped)
             }
           }
         } else {
@@ -636,14 +640,13 @@ interface TextSightHostApi {
             val args = message as List<Any?>
             val pathArg = args[0] as String
             val optionsArg = args[1] as TextSightOptionsMessage
-            api.recognizePath(pathArg, optionsArg) { result: Result<Map<String, Any?>> ->
-              val error = result.exceptionOrNull()
-              if (error != null) {
-                reply.reply(MessagesPigeonUtils.wrapError(error))
-              } else {
-                val data = result.getOrNull()
-                reply.reply(MessagesPigeonUtils.wrapResult(data))
+            CoroutineScope(Dispatchers.Main).launch {
+              val wrapped: List<Any?> = try {
+                listOf(api.recognizePath(pathArg, optionsArg))
+              } catch (exception: Throwable) {
+                MessagesPigeonUtils.wrapError(exception)
               }
+              reply.reply(wrapped)
             }
           }
         } else {

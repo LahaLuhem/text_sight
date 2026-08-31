@@ -4,7 +4,7 @@ import Flutter
 ///
 /// Wires the Pigeon control channel (`TextSightHostApi`), the per-frame captures
 /// `EventChannel`, and the preview texture, delegating capture and recognition to
-/// `TextSightCamera`. No recognition library crosses into the Dart pubspec — the Apple side
+/// `TextSightCamera`. No recognition library crosses into the Dart pubspec. The Apple side
 /// imports only system frameworks (Vision / AVFoundation), the no-bundling contract.
 ///
 /// The control methods are `internal`: `TextSightHostApi` (Pigeon-generated) and its message
@@ -34,36 +34,33 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     let readinessChannel = FlutterEventChannel(name: readinessChannelName, binaryMessenger: messenger)
     readinessChannel.setStreamHandler(modelReadiness)
 
-    // Anchor the plugin's lifetime to the registrar; the texture registry retains the camera, and
+    // Anchor the plugin's lifetime to the registrar. The texture registry retains the camera, and
     // the plugin retains the readiness handler.
     registrar.publish(plugin)
   }
 
-  func initialize(options: TextSightOptionsMessage,
-                  completion: @escaping (Result<Int64, Error>) -> Void) {
-    adapt(completion) { try await self.camera.initialize(options: options) }
+  func initialize(options: TextSightOptionsMessage) async throws -> Int64 {
+    try await camera.initialize(options: options)
   }
 
-  func start(completion: @escaping (Result<Void, Error>) -> Void) {
+  func start() throws {
     camera.start()
-    completion(.success(()))
   }
 
-  func stop(completion: @escaping (Result<Void, Error>) -> Void) {
+  func stop() throws {
     camera.stop()
-    completion(.success(()))
   }
 
-  func dispose(completion: @escaping (Result<Void, Error>) -> Void) {
-    adapt(completion) { try await self.camera.dispose() }
+  func dispose() async throws {
+    try await camera.dispose()
   }
 
   func checkCameraPermission() throws -> CameraPermissionStatusMessage {
     CameraPermission.current()
   }
 
-  func requestCameraPermission(completion: @escaping (Result<CameraPermissionStatusMessage, Error>) -> Void) {
-    adapt(completion) { await CameraPermission.request() }
+  func requestCameraPermission() async throws -> CameraPermissionStatusMessage {
+    await CameraPermission.request()
   }
 
   func setRegionOfInterest(roi: RegionOfInterestMessage?) throws {
@@ -82,31 +79,18 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     camera.setTorchEnabled(enabled: enabled)
   }
 
-  func ensureModelReady(completion: @escaping (Result<[String: Any?], Error>) -> Void) {
-    adapt(completion) { await self.modelReadiness.ensureModelReady() }
+  func ensureModelReady() async throws -> [String: Any?] {
+    await modelReadiness.ensureModelReady()
   }
 
-  func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage,
-                      completion: @escaping (Result<[String: Any?], Error>) -> Void) {
-    adapt(completion) { try await self.camera.recognizeImage(bytes: bytes, options: options) }
+  func recognizeImage(bytes: FlutterStandardTypedData,
+                      options: TextSightOptionsMessage) async throws -> [String: Any?] {
+    try await camera.recognizeImage(bytes: bytes, options: options)
   }
 
-  func recognizePath(path: String, options: TextSightOptionsMessage,
-                     completion: @escaping (Result<[String: Any?], Error>) -> Void) {
-    adapt(completion) { try await self.camera.recognizePath(path: path, options: options) }
-  }
-
-  /// Temporary: adapts the async session API back to Pigeon 27's callback signatures. Deleted when
-  /// the schema flips to `@async` and Pigeon awaits these directly.
-  private func adapt<T>(_ completion: @escaping (Result<T, Error>) -> Void,
-                        _ work: @escaping () async throws -> T) {
-    Task {
-      do {
-        completion(.success(try await work()))
-      } catch {
-        completion(.failure(error))
-      }
-    }
+  func recognizePath(path: String,
+                     options: TextSightOptionsMessage) async throws -> [String: Any?] {
+    try await camera.recognizePath(path: path, options: options)
   }
 }
 

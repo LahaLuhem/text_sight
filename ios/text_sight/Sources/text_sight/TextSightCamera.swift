@@ -7,15 +7,15 @@ import ImageIO
 import UIKit
 
 /// Owns the `AVCaptureSession`, the Vision recognizer, and the preview texture for one live
-/// recognition session — the iOS twin of the Android `TextSightCamera`.
+/// recognition session, the iOS twin of the Android `TextSightCamera`.
 ///
 /// Recognition runs off the platform main thread (Vision's own async executor, kicked off the
-/// capture-delegate queue); boxes are normalized to top-left `[0, 1]` here — Vision yields
-/// lower-left normalized rects — and marshalled back to main before reaching the captures
+/// capture-delegate queue). Boxes are normalized to top-left `[0, 1]` here (Vision yields
+/// lower-left normalized rects) and marshalled back to main before reaching the captures
 /// `EventChannel` sink. Backpressure is a single in-flight recognition plus
 /// `alwaysDiscardsLateVideoFrames`: a late frame is dropped, never queued. Only system
-/// frameworks are imported (here: AVFoundation / CoreMedia / CoreVideo / Flutter; Vision sits
-/// behind the `TextRecognizer`) — the no-bundling contract holds structurally on the Apple side.
+/// frameworks are imported (here: AVFoundation / CoreMedia / CoreVideo / Flutter, with Vision
+/// behind the `TextRecognizer`), so the no-bundling contract holds structurally on the Apple side.
 final class TextSightCamera: NSObject {
   private let textureRegistry: FlutterTextureRegistry
   private let session = AVCaptureSession()
@@ -23,7 +23,7 @@ final class TextSightCamera: NSObject {
   private let captureQueue = DispatchQueue(label: "com.lahaluhem.text_sight.capture")
 
   /// The Vision backend behind the `TextRecognizer` seam, chosen once by OS (modern on iOS 18+,
-  /// legacy on 13–17). Stateless w.r.t. config (it is passed per call), so the live path and the
+  /// legacy on 13-17). Stateless w.r.t. config (it is passed per call), so the live path and the
   /// one-shot share this one instance, race-free.
   private let recognizer: any TextRecognizer = TextRecognizerFactory.make()
 
@@ -43,13 +43,13 @@ final class TextSightCamera: NSObject {
   /// Background/foreground observer tokens, registered in `init`, removed in `deinit`.
   private var appLifecycleObservers: [NSObjectProtocol] = []
   // Type-erased: the concrete `AVCaptureDevice.RotationCoordinator` is iOS 17+, but this class
-  // deploys to 13. Held only to keep the coordinator alive for its KVO; stays nil on iOS 13–16.
+  // deploys to 13. Held only to keep the coordinator alive for its KVO, and stays nil on iOS 13-16.
   private var rotationCoordinator: Any?
   private var rotationObservation: NSKeyValueObservation?
 
   /// Clockwise degrees (from the rotation coordinator) to rotate the sensor buffer upright. The
-  /// buffer is delivered unrotated; this drives the Vision orientation and the reported
-  /// `quarterTurns` that `TextSightView` applies to the preview texture. Stays `0` on iOS 13–16
+  /// buffer is delivered unrotated. This drives the Vision orientation and the reported
+  /// `quarterTurns` that `TextSightView` applies to the preview texture. Stays `0` on iOS 13-16
   /// (no `RotationCoordinator`): preview and recognition do not follow live rotation there.
   private var currentRotationAngle: CGFloat = 0
 
@@ -142,7 +142,7 @@ final class TextSightCamera: NSObject {
   // MARK: Session lifecycle
 
   /// Builds the capture graph (back camera → BGRA video output), registers the preview texture,
-  /// and starts the session. Runs on `sessionQueue`; `startRunning()` must never block main.
+  /// and starts the session. Runs on `sessionQueue`, since `startRunning()` must never block main.
   private func configureSession() throws -> Int64 {
     session.beginConfiguration()
     session.sessionPreset = .high
@@ -164,7 +164,7 @@ final class TextSightCamera: NSObject {
 
     session.commitConfiguration()
 
-    // iOS 13–16 has no `RotationCoordinator`; rotation stays untracked there (documented).
+    // iOS 13-16 has no `RotationCoordinator`, so rotation stays untracked there (documented).
     if #available(iOS 17, *) { startTrackingRotation(for: device) }
 
     let id = textureRegistry.register(self)
@@ -178,10 +178,10 @@ final class TextSightCamera: NSObject {
   }
 
   /// Tracks the device→upright rotation via an `AVCaptureDevice.RotationCoordinator` (iOS 17+).
-  /// The buffer itself is delivered unrotated — cheaper, and it avoids relying on data-output
-  /// rotation; instead the angle is reported to Dart as `quarterTurns` (so `TextSightView` rotates
+  /// The buffer itself is delivered unrotated, which is cheaper and avoids relying on data-output
+  /// rotation. Instead the angle is reported to Dart as `quarterTurns` (so `TextSightView` rotates
   /// the preview texture) and is used to orient Vision so recognition stays upright and boxes come
-  /// out display-oriented. Gated to 17+: on iOS 13–16 the angle stays `0` — a deliberate degraded
+  /// out display-oriented. Gated to 17+: on iOS 13-16 the angle stays `0`, a deliberate degraded
   /// fallback (no live rotation), not a full pre-17 rotation path. See APPENDIX / the README note.
   @available(iOS 17, *)
   private func startTrackingRotation(for device: AVCaptureDevice) {
@@ -248,11 +248,11 @@ final class TextSightCamera: NSObject {
       device.torchMode = enabled ? .on : .off
       device.unlockForConfiguration()
     } catch {
-      // The device was busy; a failed torch toggle is not session-fatal, so drop it.
+      // The device was busy. A failed torch toggle is not session-fatal, so drop it.
     }
   }
 
-  /// Releases every per-session resource. Idempotent — safe on dispose and on engine detach.
+  /// Releases every per-session resource. Idempotent, so it is safe on dispose and engine detach.
   private func releaseSession() {
     rotationObservation?.invalidate()
     rotationObservation = nil
@@ -290,7 +290,7 @@ final class TextSightCamera: NSObject {
 
     let rotation = Self.displayRotation(forCaptureAngle: angle)
 
-    // The buffer is sensor-oriented; report its display-oriented size (axes swap on a quarter
+    // The buffer is sensor-oriented, so report its display-oriented size (axes swap on a quarter
     // turn) to match the boxes Vision returns in the oriented space.
     let bufferWidth = Double(CVPixelBufferGetWidth(pixelBuffer))
     let bufferHeight = Double(CVPixelBufferGetHeight(pixelBuffer))
@@ -330,7 +330,7 @@ final class TextSightCamera: NSObject {
 
   // MARK: Static one-shot recognition (no session, texture, or permission)
 
-  /// Recognizes text in encoded image `bytes`; delegated from the plugin's `TextSightHostApi`.
+  /// Recognizes text in encoded image `bytes`. Delegated from the plugin's `TextSightHostApi`.
   func recognizeImage(bytes: FlutterStandardTypedData,
                       options: TextSightOptionsMessage) async throws -> [String: Any?] {
     // Untested: CGImageSourceCreateWithData returns a source for any Data, so this only guards
@@ -343,7 +343,7 @@ final class TextSightCamera: NSObject {
     return try await recognizeStill(source, options: options)
   }
 
-  /// Recognizes text in the image file at `path`; delegated from the plugin's `TextSightHostApi`.
+  /// Recognizes text in the image file at `path`. Delegated from the plugin's `TextSightHostApi`.
   func recognizePath(path: String,
                      options: TextSightOptionsMessage) async throws -> [String: Any?] {
     guard FileManager.default.fileExists(atPath: path) else {
@@ -358,8 +358,8 @@ final class TextSightCamera: NSObject {
   }
 
   /// Decodes a still from `source` (honouring EXIF orientation) and returns the same per-frame map
-  /// the live path emits — `quarterTurns` 0, since a still is already upright. No session, texture,
-  /// or sink is touched.
+  /// the live path emits, with `quarterTurns` 0 since a still is already upright. No session,
+  /// texture, or sink is touched.
   private func recognizeStill(_ source: CGImageSource,
                               options: TextSightOptionsMessage) async throws -> [String: Any?] {
     let config = RecognitionConfig(level: options.level, languages: options.languages,
@@ -403,7 +403,7 @@ final class TextSightCamera: NSObject {
     return orientation
   }
 
-  /// Hops to main and emits on the sink read under lock — a sink call from a background thread
+  /// Hops to main and emits on the sink read under lock. A sink call from a background thread
   /// is a crash waiting to happen, and the sink can be torn down concurrently by `onCancel`.
   private func emit(_ frame: [String: Any]) {
     DispatchQueue.main.async { [weak self] in
@@ -417,7 +417,7 @@ final class TextSightCamera: NSObject {
     }
   }
 
-  /// Encodes neutral recognized lines into the self-describing per-frame map — byte-identical to
+  /// Encodes neutral recognized lines into the self-describing per-frame map, byte-identical to
   /// the shape the Android side emits over `com.lahaluhem.text_sight/captures`. Internal (not
   /// `private`) so `RunnerTests` can exercise it via `@testable import`.
   static func encodeFrame(_ lines: [RecognizedLineData],
@@ -453,7 +453,7 @@ final class TextSightCamera: NSObject {
   static func displayRotation(forCaptureAngle angle: CGFloat)
     -> (quarterTurns: Int, orientation: CGImagePropertyOrientation, isQuarterTurned: Bool) {
     switch (Int(angle.rounded()) % 360 + 360) % 360 {
-    // Back camera: a 90° clockwise-to-upright angle (portrait) is EXIF `.right`; the opposite
+    // Back camera: a 90° clockwise-to-upright angle (portrait) is EXIF `.right`, and the opposite
     // quarter-turn (270°) is `.left`. Swapping the two feeds Vision a 180°-rotated image, which
     // wrecks recognition in portrait while landscape (`.up`/`.down`) still looks fine.
     case 90: return (1, .right, true)
@@ -511,7 +511,7 @@ extension TextSightCamera: AVCaptureVideoDataOutputSampleBufferDelegate {
     let activeTextureId = textureId
     stateLock.unlock()
 
-    // Keep the preview live every frame; recognition is throttled by the single-in-flight flag.
+    // Keep the preview live every frame. Recognition is throttled by the single-in-flight flag.
     activeTextureId.map { textureRegistry.textureFrameAvailable($0) }
 
     if shouldRecognize { recognize(pixelBuffer) }

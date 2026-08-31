@@ -14,12 +14,12 @@ import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
- * Drives the Android camera-permission flow with built-in Kotlin + AndroidX only — no third-party
- * permission library — mapping the outcome onto [CameraPermissionStatusMessage].
+ * Drives the Android camera-permission flow with built-in Kotlin + AndroidX only (no third-party
+ * permission library), mapping the outcome onto [CameraPermissionStatusMessage].
  *
  * A runtime request needs a foreground [Activity], which the plugin feeds in via [activity] across
  * the `ActivityAware` lifecycle. As a [RequestPermissionsResultListener] this receives the system
- * result on the main thread and resumes the pending caller there — off the capture pipeline.
+ * result on the main thread and resumes the pending caller there, off the capture pipeline.
  *
  * `denied` vs `permanentlyDenied` is the standard heuristic: after a refusal, if the system no
  * longer shows a rationale the user chose "don't ask again" (or policy blocks it), so only the OS
@@ -33,7 +33,7 @@ internal class CameraPermissionRequester(
 
     private var pending: CancellableContinuation<CameraPermissionStatusMessage>? = null
 
-    /** The current status without prompting — needs no Activity. */
+    /** The current status without prompting. Needs no Activity. */
     fun check(): CameraPermissionStatusMessage =
         if (isGranted()) CameraPermissionStatusMessage.GRANTED else CameraPermissionStatusMessage.DENIED
 

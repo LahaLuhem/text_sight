@@ -35,7 +35,7 @@ import kotlinx.coroutines.withContext
  *
  * Recognition runs off the platform main thread on [analysisExecutor], and results marshal back to
  * main before reaching the [EventChannel] sink. The [ImageProxy.close] in the completion listener
- * is mandatory backpressure release — without it the stream stalls.
+ * is mandatory backpressure release. Without it the stream stalls.
  */
 internal class TextSightCamera(
     context: Context,
@@ -71,7 +71,7 @@ internal class TextSightCamera(
 
     suspend fun initialize(options: TextSightOptionsMessage): Long {
         // Recognition level and languages have no ML Kit Latin equivalent (see the
-        // TextSightOptions docs); only the region-of-interest is honoured here.
+        // TextSightOptions docs). Only the region-of-interest is honoured here.
         regionOfInterest = options.roi
 
         return session.open()
@@ -89,8 +89,8 @@ internal class TextSightCamera(
 
     fun setTorchEnabled(enabled: Boolean) = session.setTorchEnabled(enabled)
 
-    // Static one-shot recognition — no camera session, texture, or permission. Decoding and
-    // recognition run on the analysis executor; the result is marshalled back to the main thread.
+    // Static one-shot recognition: no camera session, texture, or permission. Decode and
+    // recognition both run on the analysis dispatcher.
 
     suspend fun recognizeImage(
         bytes: ByteArray,
@@ -123,8 +123,8 @@ internal class TextSightCamera(
     /**
      * Recognizes [bitmap], rotated upright by [rotationDegrees] (its EXIF orientation), with a
      * transient pass over the shared recognizer. When [roi] is set, the upright bitmap is cropped
-     * to it first so ML Kit reads only that region — a true crop, unlike the live path's
-     * centre-containment filter. Returns the same per-frame map the live path emits — quarterTurns
+     * to it first so ML Kit reads only that region: a true crop, unlike the live path's
+     * centre-containment filter. Returns the same per-frame map the live path emits, with quarterTurns
      * 0, since a still is already upright.
      */
     private suspend fun recognizeStill(
@@ -137,7 +137,7 @@ internal class TextSightCamera(
         val imageHeight = if (isQuarterTurned) bitmap.width else bitmap.height
 
         // With an ROI, crop the upright bitmap so ML Kit reads only that region: a true crop that
-        // isolates partial-line text (matching iOS Vision) and recognizes fewer pixels — unlike the
+        // isolates partial-line text (matching iOS Vision) and recognizes fewer pixels, unlike the
         // live path, where cropping every frame would cost too much. The crop's origin offsets the
         // recognized boxes back into full-image coordinates.
         val crop = roi?.toPixelRect(imageWidth, imageHeight)

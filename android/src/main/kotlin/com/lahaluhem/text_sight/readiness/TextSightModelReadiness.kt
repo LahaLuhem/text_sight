@@ -24,8 +24,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
  * here rather than on the camera session. With the bundled model ([BuildConfig.USE_BUNDLED]) the
  * model ships in the APK, so readiness is always "ready" and no Google Play Services work happens.
  * With the default unbundled model the recognizer doubles as the `OptionalModuleApi` token:
- * [ModuleInstallClient] reports availability, downloads on request, and streams progress; a missing
- * Play Services or a failed download is reported as a terminal "unavailable" — a real state, never a
+ * [ModuleInstallClient] reports availability, downloads on request, and streams progress. A missing
+ * Play Services or a failed download is reported as a terminal "unavailable", a real state and never a
  * crash.
  *
  * Every event (and the terminal map [ensureModelReady] returns) is the same self-describing shape
@@ -56,9 +56,9 @@ internal class TextSightModelReadiness(
     }
 
     /**
-     * Triggers a check-and-fetch of the model and returns the terminal state; intermediate
+     * Triggers a check-and-fetch of the model and returns the terminal state. Intermediate
      * [ModuleInstallStatusUpdate] progress streams on the readiness channel. Resolves immediately
-     * when the model is already present — always so with the bundled model.
+     * when the model is already present, always so with the bundled model.
      */
     suspend fun ensureModelReady(): Map<String, Any?> {
         if (BuildConfig.USE_BUNDLED) {
@@ -159,8 +159,8 @@ internal class TextSightModelReadiness(
     }
 }
 
-// The readiness wire-map builders are file-level `internal` — like the captures `encodeFrame` /
-// `encodeLine` — so the host-side unit tests can assert the shapes the Dart side decodes without a
+// The readiness wire-map builders are file-level `internal`, like the captures `encodeFrame` /
+// `encodeLine`, so the host-side unit tests can assert the shapes the Dart side decodes without a
 // Google Play Services round-trip. (The module installation can't be triggered on an emulator.)
 
 /** The "ready" readiness wire map. */
@@ -169,7 +169,7 @@ internal fun readyState(): Map<String, Any?> = mapOf("state" to "ready")
 /**
  * The "downloading" readiness wire map from a Play Services [ModuleInstallStatusUpdate]: `progress`
  * is `bytesDownloaded / totalBytesToDownload` in `[0, 1]`, or `null` when no byte counts are reported
- * yet (or the total is zero — never divide by it).
+ * yet, or when the total is zero (never divide by it).
  */
 internal fun downloadingState(update: ModuleInstallStatusUpdate): Map<String, Any?> {
     val progress = update.progressInfo?.let { info ->

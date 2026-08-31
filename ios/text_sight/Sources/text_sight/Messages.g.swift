@@ -357,22 +357,23 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 
 
 /// The typed control channel. Per-frame results stream over a plain
-/// EventChannel and the preview is a texture — neither rides this API.
+/// EventChannel and the preview is a texture. Neither rides this API.
 ///
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol TextSightHostApi {
-  /// Opens the camera with [options]; returns the preview texture id.
-  func initialize(options: TextSightOptionsMessage, completion: @escaping (Result<Int64, Error>) -> Void)
-  /// Begins frame delivery and recognition.
-  func start(completion: @escaping (Result<Void, Error>) -> Void)
-  /// Pauses recognition, keeping the session open for a later [start].
-  func stop(completion: @escaping (Result<Void, Error>) -> Void)
+  /// Opens the camera with [options]. Returns the preview texture id.
+  func initialize(options: TextSightOptionsMessage) async throws -> Int64
+  /// Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
+  /// Dart signature is `Future<void>` either way.
+  func start() throws
+  /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
+  func stop() throws
   /// Releases the camera and texture.
-  func dispose(completion: @escaping (Result<Void, Error>) -> Void)
+  func dispose() async throws
   /// Reports the current camera-permission status without prompting.
   func checkCameraPermission() throws -> CameraPermissionStatusMessage
   /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
-  func requestCameraPermission(completion: @escaping (Result<CameraPermissionStatusMessage, Error>) -> Void)
+  func requestCameraPermission() async throws -> CameraPermissionStatusMessage
   /// Restricts recognition to [roi], or clears it (whole frame) when null.
   func setRegionOfInterest(roi: RegionOfInterestMessage?) throws
   /// Switches the recognizer's accuracy/latency level.
@@ -383,11 +384,11 @@ protocol TextSightHostApi {
   func setTorchEnabled(enabled: Bool) throws
   /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
   /// Google Play Services when needed) and returns the terminal readiness state.
-  func ensureModelReady(completion: @escaping (Result<[String: Any?], Error>) -> Void)
+  func ensureModelReady() async throws -> [String: Any?]
   /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
-  func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage, completion: @escaping (Result<[String: Any?], Error>) -> Void)
+  func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage) async throws -> [String: Any?]
   /// Recognizes text in the image at file [path], honouring [options].
-  func recognizePath(path: String, options: TextSightOptionsMessage, completion: @escaping (Result<[String: Any?], Error>) -> Void)
+  func recognizePath(path: String, options: TextSightOptionsMessage) async throws -> [String: Any?]
 }
 
 /// Generated setup class from Pigeon to handle messages through the `binaryMessenger`.
@@ -396,17 +397,17 @@ class TextSightHostApiSetup {
   /// Sets up an instance of `TextSightHostApi` to handle messages through the `binaryMessenger`.
   static func setUp(binaryMessenger: FlutterBinaryMessenger, api: TextSightHostApi?, messageChannelSuffix: String = "") {
     let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
-    /// Opens the camera with [options]; returns the preview texture id.
+    /// Opens the camera with [options]. Returns the preview texture id.
     let initializeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.initialize\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       initializeChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let optionsArg = args[0] as! TextSightOptionsMessage
-        api.initialize(options: optionsArg) { result in
-          switch result {
-          case .success(let res):
-            reply(wrapResult(res))
-          case .failure(let error):
+        Task { @MainActor in
+          do {
+            let result = try await api.initialize(options: optionsArg)
+            reply(wrapResult(result))
+          } catch {
             reply(wrapError(error))
           }
         }
@@ -414,33 +415,30 @@ class TextSightHostApiSetup {
     } else {
       initializeChannel.setMessageHandler(nil)
     }
-    /// Begins frame delivery and recognition.
+    /// Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
+    /// Dart signature is `Future<void>` either way.
     let startChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.start\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       startChannel.setMessageHandler { _, reply in
-        api.start { result in
-          switch result {
-          case .success:
-            reply(wrapResult(nil))
-          case .failure(let error):
-            reply(wrapError(error))
-          }
+        do {
+          try api.start()
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
         }
       }
     } else {
       startChannel.setMessageHandler(nil)
     }
-    /// Pauses recognition, keeping the session open for a later [start].
+    /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
     let stopChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.stop\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       stopChannel.setMessageHandler { _, reply in
-        api.stop { result in
-          switch result {
-          case .success:
-            reply(wrapResult(nil))
-          case .failure(let error):
-            reply(wrapError(error))
-          }
+        do {
+          try api.stop()
+          reply(wrapResult(nil))
+        } catch {
+          reply(wrapError(error))
         }
       }
     } else {
@@ -450,11 +448,11 @@ class TextSightHostApiSetup {
     let disposeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.dispose\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       disposeChannel.setMessageHandler { _, reply in
-        api.dispose { result in
-          switch result {
-          case .success:
+        Task { @MainActor in
+          do {
+            try await api.dispose()
             reply(wrapResult(nil))
-          case .failure(let error):
+          } catch {
             reply(wrapError(error))
           }
         }
@@ -480,11 +478,11 @@ class TextSightHostApiSetup {
     let requestCameraPermissionChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.requestCameraPermission\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       requestCameraPermissionChannel.setMessageHandler { _, reply in
-        api.requestCameraPermission { result in
-          switch result {
-          case .success(let res):
-            reply(wrapResult(res))
-          case .failure(let error):
+        Task { @MainActor in
+          do {
+            let result = try await api.requestCameraPermission()
+            reply(wrapResult(result))
+          } catch {
             reply(wrapError(error))
           }
         }
@@ -561,11 +559,11 @@ class TextSightHostApiSetup {
     let ensureModelReadyChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.ensureModelReady\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       ensureModelReadyChannel.setMessageHandler { _, reply in
-        api.ensureModelReady { result in
-          switch result {
-          case .success(let res):
-            reply(wrapResult(res))
-          case .failure(let error):
+        Task { @MainActor in
+          do {
+            let result = try await api.ensureModelReady()
+            reply(wrapResult(result))
+          } catch {
             reply(wrapError(error))
           }
         }
@@ -580,11 +578,11 @@ class TextSightHostApiSetup {
         let args = message as! [Any?]
         let bytesArg = args[0] as! FlutterStandardTypedData
         let optionsArg = args[1] as! TextSightOptionsMessage
-        api.recognizeImage(bytes: bytesArg, options: optionsArg) { result in
-          switch result {
-          case .success(let res):
-            reply(wrapResult(res))
-          case .failure(let error):
+        Task { @MainActor in
+          do {
+            let result = try await api.recognizeImage(bytes: bytesArg, options: optionsArg)
+            reply(wrapResult(result))
+          } catch {
             reply(wrapError(error))
           }
         }
@@ -599,11 +597,11 @@ class TextSightHostApiSetup {
         let args = message as! [Any?]
         let pathArg = args[0] as! String
         let optionsArg = args[1] as! TextSightOptionsMessage
-        api.recognizePath(path: pathArg, options: optionsArg) { result in
-          switch result {
-          case .success(let res):
-            reply(wrapResult(res))
-          case .failure(let error):
+        Task { @MainActor in
+          do {
+            let result = try await api.recognizePath(path: pathArg, options: optionsArg)
+            reply(wrapResult(result))
+          } catch {
             reply(wrapError(error))
           }
         }
