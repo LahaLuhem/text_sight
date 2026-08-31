@@ -7,34 +7,22 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.EventChannel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 /**
  * The text_sight Android plugin.
  *
  * Wires the Pigeon control channel ([TextSightHostApi]), the per-frame captures
  * [EventChannel], and the preview texture, delegating capture and recognition to
- * [TextSightCamera]. No recognition library crosses into the Dart pubspec — ML Kit
+ * [TextSightCamera]. No recognition library crosses into the Dart pubspec. ML Kit
  * and CameraX are declared only in build.gradle.kts (the no-bundling contract).
  */
 // Instantiated reflectively by Flutter's generated registrant (declared as `pluginClass` in
-// pubspec.yaml), never referenced from Kotlin — the IDE's "never used" report is a false positive.
+// pubspec.yaml), never referenced from Kotlin, so the IDE's "never used" report is a false positive.
 @Suppress("unused")
 class TextSightPlugin :
     FlutterPlugin,
     ActivityAware,
     TextSightHostApi {
-    /**
-     * Parents every in-flight control call, so [onDetachedFromEngine] cancels them instead of
-     * letting a reply land on a torn-down engine.
-     */
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-
     private var camera: TextSightCamera? = null
     private var modelReadiness: TextSightModelReadiness? = null
     private var permissions: CameraPermissionRequester? = null
@@ -54,7 +42,6 @@ class TextSightPlugin :
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         TextSightHostApi.setUp(binding.binaryMessenger, null)
-        scope.cancel()
 
         camera?.dispose()
         camera = null
@@ -62,30 +49,28 @@ class TextSightPlugin :
         permissions = null
     }
 
-    override fun initialize(options: TextSightOptionsMessage, callback: (Result<Long>) -> Unit) {
-        val activeCamera = camera ?: return callback(detached())
+    override suspend fun initialize(options: TextSightOptionsMessage): Long {
+        val activeCamera = camera ?: throw detachedError()
 
-        adapt(callback) { activeCamera.initialize(options) }
+        return activeCamera.initialize(options)
     }
 
-    override fun start(callback: (Result<Unit>) -> Unit) {
-        val activeCamera = camera ?: return callback(detached())
+    override fun start() {
+        val activeCamera = camera ?: throw detachedError()
 
         activeCamera.start()
-        callback(Result.success(Unit))
     }
 
-    override fun stop(callback: (Result<Unit>) -> Unit) {
-        val activeCamera = camera ?: return callback(detached())
+    override fun stop() {
+        val activeCamera = camera ?: throw detachedError()
 
         activeCamera.stop()
-        callback(Result.success(Unit))
     }
 
-    override fun dispose(callback: (Result<Unit>) -> Unit) {
-        val activeCamera = camera ?: return callback(detached())
+    override suspend fun dispose() {
+        val activeCamera = camera ?: throw detachedError()
 
-        adapt(callback) { activeCamera.disposeSession() }
+        activeCamera.disposeSession()
     }
 
     override fun checkCameraPermission(): CameraPermissionStatusMessage {
@@ -94,10 +79,10 @@ class TextSightPlugin :
         return activePermissions.check()
     }
 
-    override fun requestCameraPermission(callback: (Result<CameraPermissionStatusMessage>) -> Unit) {
-        val activePermissions = permissions ?: return callback(detached())
+    override suspend fun requestCameraPermission(): CameraPermissionStatusMessage {
+        val activePermissions = permissions ?: throw detachedError()
 
-        adapt(callback) { activePermissions.request() }
+        return activePermissions.request()
     }
 
     override fun setRegionOfInterest(roi: RegionOfInterestMessage?) {
@@ -116,42 +101,28 @@ class TextSightPlugin :
         camera?.setTorchEnabled(enabled)
     }
 
-    override fun ensureModelReady(callback: (Result<Map<String, Any?>>) -> Unit) {
-        val activeReadiness = modelReadiness ?: return callback(detached())
+    override suspend fun ensureModelReady(): Map<String, Any?> {
+        val activeReadiness = modelReadiness ?: throw detachedError()
 
-        adapt(callback) { activeReadiness.ensureModelReady() }
+        return activeReadiness.ensureModelReady()
     }
 
-    override fun recognizeImage(
+    override suspend fun recognizeImage(
         bytes: ByteArray,
         options: TextSightOptionsMessage,
-        callback: (Result<Map<String, Any?>>) -> Unit,
-    ) {
-        val activeCamera = camera ?: return callback(detached())
+    ): Map<String, Any?> {
+        val activeCamera = camera ?: throw detachedError()
 
-        adapt(callback) { activeCamera.recognizeImage(bytes, options) }
+        return activeCamera.recognizeImage(bytes, options)
     }
 
-    override fun recognizePath(
+    override suspend fun recognizePath(
         path: String,
         options: TextSightOptionsMessage,
-        callback: (Result<Map<String, Any?>>) -> Unit,
-    ) {
-        val activeCamera = camera ?: return callback(detached())
+    ): Map<String, Any?> {
+        val activeCamera = camera ?: throw detachedError()
 
-        adapt(callback) { activeCamera.recognizePath(path, options) }
-    }
-
-    /**
-     * Temporary: adapts the suspending session API back to Pigeon 27's callback signatures. Deleted
-     * when the schema flips to `@async` and Pigeon launches these itself.
-     */
-    private fun <T> adapt(callback: (Result<T>) -> Unit, work: suspend () -> T) {
-        scope.launch {
-            val result = runCatching { work() }
-            // A cancelled scope means the engine detached mid-flight, so there is nobody to reply to.
-            if (isActive) callback(result)
-        }
+        return activeCamera.recognizePath(path, options)
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -170,7 +141,7 @@ class TextSightPlugin :
         unbindActivity()
     }
 
-    // The runtime permission request needs a foreground Activity and a result listener; both arrive
+    // The runtime permission request needs a foreground Activity and a result listener. Both arrive
     // and depart with the ActivityAware lifecycle. The capture pipeline binds to a headless
     // LifecycleOwner, so the camera is unaffected by Activity attach/detach.
     private fun bindActivity(binding: ActivityPluginBinding) {
@@ -195,7 +166,5 @@ class TextSightPlugin :
 
         fun detachedError(): FlutterError =
             FlutterError("detached", "The plugin is not attached to a Flutter engine.")
-
-        fun <T> detached(): Result<T> = Result.failure(detachedError())
     }
 }

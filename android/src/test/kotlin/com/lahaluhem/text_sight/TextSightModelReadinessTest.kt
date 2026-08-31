@@ -16,17 +16,17 @@ import org.robolectric.annotation.Config
 /**
  * Host-side unit tests for the readiness wire-map builders behind the model-readiness channel.
  *
- * The Play Services model download can't be triggered on an emulator — the OCR module is effectively
+ * The Play Services model download can't be triggered on an emulator, since the OCR module is
  * always present, so a real fetch never runs. These tests instead simulate what Play Services would
- * report mid-download — a [ModuleInstallStatusUpdate] carrying byte progress — and assert the
+ * report mid-download (a [ModuleInstallStatusUpdate] carrying byte progress) and assert the
  * self-describing map the Dart side decodes into a `ModelDownloading` / `ModelReady` /
- * `ModelUnavailable`. No real ModuleInstallClient, Play Services, or network is involved; the GMS
+ * `ModelUnavailable`. No real ModuleInstallClient, Play Services, or network is involved. The GMS
  * value type is mocked, exactly as ML Kit's `Text` graph is in the camera tests.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
 class TextSightModelReadinessTest {
-    // region downloadingState — a Play Services progress update -> the {downloading, progress} map.
+    // region downloadingState: a Play Services progress update -> the {downloading, progress} map.
 
     @Test
     fun `downloadingState reports the byte fraction as progress`() {
@@ -61,7 +61,7 @@ class TextSightModelReadinessTest {
 
     // endregion
 
-    // region ready / unavailable — the terminal wire maps.
+    // region ready / unavailable: the terminal wire maps.
 
     @Test
     fun `readyState is the ready wire map`() {

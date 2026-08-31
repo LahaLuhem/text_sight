@@ -6,8 +6,8 @@ import com.google.mlkit.vision.text.Text
 import com.lahaluhem.text_sight.RegionOfInterestMessage
 
 /**
- * Encodes [visionText] into the self-describing per-frame map that the capture channel emits — the same
- * shape the iOS side produces. [roi] (when set) centre-filters lines on the live path; the crop
+ * Encodes [visionText] into the self-describing per-frame map that the capture channel emits. The same
+ * shape the iOS side produces. [roi] (when set) centre-filters lines on the live path. The crop
  * origin [offsetX]/[offsetY] maps still-image boxes back into full-image coordinates.
  */
 @VisibleForTesting
@@ -54,7 +54,7 @@ internal fun encodeLine(
 ): Map<String, Any?> =
     mapOf(
         "text" to line.text,
-        // ML Kit always supplies a per-line confidence (a primitive float) — never null.
+        // ML Kit always supplies a per-line confidence (a primitive float), never null.
         // Forwarded as a non-null Double the nullable RecognizedLine.confidence contract accepts.
         "confidence" to line.confidence.toDouble(),
         // The crop origin (0 on the live path) maps boxes back into full-image coordinates.

@@ -19,14 +19,14 @@ import org.robolectric.annotation.Config
 
 /**
  * Host-side unit tests for the pure box-geometry and per-frame encoding helpers behind the captures
- * wire contract. Robolectric supplies a real [android.graphics.Rect]; ML Kit's [Text] graph is
+ * wire contract. Robolectric supplies a real [android.graphics.Rect]. ML Kit's [Text] graph is
  * mocked, since its value types expose no public constructors. No camera, recognizer, or texture is
- * involved — only the platform-independent arithmetic.
+ * involved, only the platform-independent arithmetic.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
 class TextSightCameraTest {
-    // region toPixelRect — normalized [0, 1] top-left -> clamped pixel Rect, never empty.
+    // region toPixelRect: normalized [0, 1] top-left -> clamped pixel Rect, never empty.
 
     @Test
     fun `toPixelRect maps a centered roi to the matching pixel rect`() {
@@ -52,7 +52,7 @@ class TextSightCameraTest {
 
         val rect = roi.toPixelRect(imageWidth = 1000, imageHeight = 1000)
 
-        // right/bottom clamp to the image edge; left/top stay inside so the rect is non-empty.
+        // right/bottom clamp to the image edge. left/top stay inside so the rect is non-empty.
         assertEquals(Rect(800, 800, 1000, 1000), rect)
         assertTrue(rect.width() > 0)
         assertTrue(rect.height() > 0)
@@ -64,7 +64,7 @@ class TextSightCameraTest {
 
         val rect = roi.toPixelRect(imageWidth = 640, imageHeight = 480)
 
-        // left/top coerced one pixel inside the far edge; right/bottom at least one past them.
+        // left/top coerced one pixel inside the far edge, right/bottom at least one past them.
         assertEquals(639, rect.left)
         assertEquals(479, rect.top)
         assertEquals(640, rect.right)
@@ -75,7 +75,7 @@ class TextSightCameraTest {
 
     // endregion
 
-    // region centerWithin — does the box center fall inside the (normalized) roi?
+    // region centerWithin: does the box center fall inside the (normalized) roi?
 
     @Test
     fun `centerWithin is always true when the roi is null`() {
@@ -105,7 +105,7 @@ class TextSightCameraTest {
     @Test
     fun `centerWithin includes a box centered exactly on the roi edge`() {
         val roi = RegionOfInterestMessage(left = 0.0, top = 0.0, width = 0.5, height = 0.5)
-        // Center exactly (0.5, 0.5) == the roi's right/bottom edge; the bounds are inclusive.
+        // Center exactly (0.5, 0.5) == the roi's right/bottom edge, and the bounds are inclusive.
         val box = Rect(400, 400, 600, 600)
 
         assertTrue(box.centerWithin(roi, imageWidth = 1000.0, imageHeight = 1000.0))
@@ -113,7 +113,7 @@ class TextSightCameraTest {
 
     // endregion
 
-    // region encodeLine — one recognized line -> its per-frame wire map.
+    // region encodeLine: one recognized line -> its per-frame wire map.
 
     @Test
     fun `encodeLine normalizes the box and forwards confidence`() {
@@ -154,7 +154,7 @@ class TextSightCameraTest {
 
     // endregion
 
-    // region encodeFrame — the full Text graph -> the self-describing per-frame map.
+    // region encodeFrame: the full Text graph -> the self-describing per-frame map.
 
     @Test
     fun `encodeFrame builds the self-describing frame map and flattens blocks`() {
@@ -175,7 +175,7 @@ class TextSightCameraTest {
 
     @Test
     fun `encodeFrame drops lines whose center falls outside the roi`() {
-        // Left line center ~ (0.05, 0.25) is outside; right line center ~ (0.85, 0.25) is inside.
+        // Left line center ~ (0.05, 0.25) is outside, right line center ~ (0.85, 0.25) is inside.
         val text = twoLineText("OUT", Rect(0, 0, 20, 50), "IN", Rect(150, 0, 190, 50))
         val roi = RegionOfInterestMessage(left = 0.5, top = 0.0, width = 0.5, height = 1.0)
 

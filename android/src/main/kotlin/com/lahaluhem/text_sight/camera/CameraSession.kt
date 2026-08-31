@@ -159,7 +159,7 @@ internal class CameraSession(
             setSurfaceProvider(mainExecutor) { request ->
                 producer.setSize(request.resolution.width, request.resolution.height)
                 request.provideSurface(producer.surface, mainExecutor) { _ ->
-                    // Flutter owns the Surface via the SurfaceProducer; nothing to release here.
+                    // Flutter owns the Surface via the SurfaceProducer, so nothing to release here.
                 }
             }
         }

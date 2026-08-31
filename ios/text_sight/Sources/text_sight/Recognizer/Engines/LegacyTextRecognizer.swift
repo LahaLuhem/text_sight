@@ -1,6 +1,6 @@
 import Vision
 
-/// Vision's legacy `VNRecognizeTextRequest` backend (iOS 13–17) — the fallback below the modern
+/// Vision's legacy `VNRecognizeTextRequest` backend (iOS 13-17), the fallback below the modern
 /// API's iOS 18 floor, running the *same* Vision text engine. The request is reference-typed and
 /// the handler's `perform` is *synchronous*: it runs on a dedicated serial queue and is bridged to
 /// `async` via a continuation, so a blocking recognition never stalls a Swift-concurrency
@@ -42,7 +42,7 @@ struct LegacyTextRecognizer: TextRecognizer {
       request.recognitionLanguages = config.languages
     }
     if let roi = config.roi {
-      // Vision's region-of-interest is lower-left normalized; flip the incoming top-left rect.
+      // Vision's region-of-interest is lower-left normalized, so flip the incoming top-left rect.
       request.regionOfInterest = CGRect(x: roi.left, y: 1 - (roi.top + roi.height),
                                         width: roi.width, height: roi.height)
     }
@@ -50,7 +50,7 @@ struct LegacyTextRecognizer: TextRecognizer {
     return request
   }
 
-  /// Runs the blocking `work` on the recognition queue, bridged to `async` — keeps the synchronous
+  /// Runs the blocking `work` on the recognition queue, bridged to `async`. Keeps the synchronous
   /// Vision perform off the cooperative pool.
   private func runOffCooperativePool(
     _ work: @escaping () throws -> [RecognizedLineData]

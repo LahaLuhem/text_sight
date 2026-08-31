@@ -256,7 +256,7 @@ class _PigeonCodec extends StandardMessageCodec {
 }
 
 /// The typed control channel. Per-frame results stream over a plain
-/// EventChannel and the preview is a texture — neither rides this API.
+/// EventChannel and the preview is a texture. Neither rides this API.
 class TextSightHostApi {
   /// Constructor for [TextSightHostApi]. The [binaryMessenger] named argument is
   /// available for dependency injection. If it is left null, the default
@@ -272,7 +272,7 @@ class TextSightHostApi {
 
   final String pigeonVar_messageChannelSuffix;
 
-  /// Opens the camera with [options]; returns the preview texture id.
+  /// Opens the camera with [options]. Returns the preview texture id.
   Future<int> initialize(TextSightOptionsMessage options) async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.initialize$pigeonVar_messageChannelSuffix';
@@ -292,7 +292,8 @@ class TextSightHostApi {
     return pigeonVar_replyValue! as int;
   }
 
-  /// Begins frame delivery and recognition.
+  /// Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
+  /// Dart signature is `Future<void>` either way.
   Future<void> start() async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.start$pigeonVar_messageChannelSuffix';
@@ -307,7 +308,7 @@ class TextSightHostApi {
     _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
   }
 
-  /// Pauses recognition, keeping the session open for a later [start].
+  /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
   Future<void> stop() async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.stop$pigeonVar_messageChannelSuffix';
