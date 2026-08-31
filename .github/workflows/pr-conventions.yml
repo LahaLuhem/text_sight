@@ -11,7 +11,8 @@ on:
 
 concurrency:
   group: pr-${{ github.event.pull_request.number }}-conventions
-  cancel-in-progress: true
+  # A cancelled run strands a red `conventions-ok`, so label events don't cancel. Force-pushes do.
+  cancel-in-progress: ${{ github.event.action != 'labeled' && github.event.action != 'unlabeled' }}
 
 permissions:
   contents: read

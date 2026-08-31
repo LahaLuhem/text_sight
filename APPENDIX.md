@@ -64,7 +64,8 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 ## Dependabot automerges the boring tier, behind four aggregate checks
 [`dependabot-automerge.yml`](./.github/workflows/dependabot-automerge.yml) arms GitHub's native
 auto-merge (rebase) for patch and minor bumps in `github-actions`, `gradle` (both `/android` and
-`/example/android`), and `pub` under `/example`. Root `pub` and every major wait for a human.
+`/example/android`), and `pub` under `/example`, plus `github-actions` **majors**. Root `pub`,
+and gradle / pub majors, wait for a human.
 Dependabot has no `automerge` config key the way Renovate does, so the mechanism is a workflow. The
 sibling
 [`better_internet_connectivity_checker`](https://github.com/LahaLuhem/better_internet_connectivity_checker)
@@ -79,6 +80,12 @@ and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos ru
   the missing changelog entry, not the build — check the Android deps before a release if one landed.
 - **Minor, not just patch,** because `dependabot.yml` groups both and `fetch-metadata` reports a
   group's *highest* semver step; patch-only would skip most batches.
+- **`github-actions` majors automerge too.** Actions reach no consumer, and a bad bump breaks the
+  very CI that gates the merge. It is also the only shape this ecosystem produces: the `actions`
+  group covers minor and patch, so majors always arrive alone, and #17, #18, #19 and #41 were all
+  merged by hand under the patch/minor-only gate. Not covered by the gate, check these by hand:
+  `actions/create-github-app-token` (only in `changelog.yml`, whose cider job skips bot PRs) and
+  `publish.yml`'s tag-only OIDC path.
 - **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks, so this is
   safe only while `main`'s ruleset is **active** and requires `repo-ok`, `package-ok`, `example-ok`,
   `conventions-ok`. Keep `required_signatures` off it: rebase-merge emits unsigned commits, so it
@@ -92,7 +99,9 @@ and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos ru
   waiting forever. Each workflow instead closes with one `*-ok` job that `needs` its siblings and
   fails on `failure` or `cancelled`. They read `needs.*.result` by hand because a skipped job
   reports success — which is what keeps `conventions-ok` green on bot PRs and `package-ok` green on
-  a post-merge push.
+  a post-merge push. Corollary: a cancelled `pr-conventions` run strands a red `conventions-ok` on
+  the SHA, so `cancel-in-progress` skips `labeled` / `unlabeled` (Dependabot labels its own PR
+  seconds after opening, which hit every bot PR) and stays on for a force-push.
 - **`pull_request_target`** because Dependabot's `pull_request` runs get a read-only token and
   enabling auto-merge needs write. Safe as `changelog.yml`: PR code is never checked out.
 
