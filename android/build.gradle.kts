@@ -118,7 +118,15 @@ dependencies {
     // androidx.lifecycle artifact consumers resolve to the same version.
     implementation("androidx.lifecycle:lifecycle-process:2.11.0")
 
+    // Suspend bridges over CameraX's ListenableFuture and ML Kit's Task (Await.kt). Transitive via
+    // CameraX already, declared because it's used directly. Lifts consumers from 1.9.0.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
+
     testImplementation("org.jetbrains.kotlin:kotlin-test")
+    // runTest and the cancellation assertions for Await.kt.
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    // ResolvableFuture, a settable ListenableFuture for the Await.kt tests. No POM impact.
+    testImplementation("androidx.concurrent:concurrent-futures:1.1.0")
     // mockito-core also carries the inline mock-maker agent that testOptions points -javaagent at.
     testImplementation("org.mockito:mockito-core:5.23.0")
     // Real android.graphics.Rect (and friends) on the JVM, so the box-geometry helpers test
