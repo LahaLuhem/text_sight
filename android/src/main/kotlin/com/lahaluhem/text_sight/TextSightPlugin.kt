@@ -23,6 +23,8 @@ class TextSightPlugin :
     FlutterPlugin,
     ActivityAware,
     TextSightHostApi {
+    private val engine = EngineScope()
+
     private var camera: TextSightCamera? = null
     private var modelReadiness: TextSightModelReadiness? = null
     private var permissions: CameraPermissionRequester? = null
@@ -42,6 +44,7 @@ class TextSightPlugin :
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         TextSightHostApi.setUp(binding.binaryMessenger, null)
+        engine.cancel()
 
         camera?.dispose()
         camera = null
@@ -52,7 +55,7 @@ class TextSightPlugin :
     override suspend fun initialize(options: TextSightOptionsMessage): Long {
         val activeCamera = camera ?: throw detachedError()
 
-        return activeCamera.initialize(options)
+        return engine.run { activeCamera.initialize(options) }
     }
 
     override fun start() {
@@ -70,7 +73,7 @@ class TextSightPlugin :
     override suspend fun dispose() {
         val activeCamera = camera ?: throw detachedError()
 
-        activeCamera.disposeSession()
+        engine.run { activeCamera.disposeSession() }
     }
 
     override fun checkCameraPermission(): CameraPermissionStatusMessage {
@@ -82,7 +85,7 @@ class TextSightPlugin :
     override suspend fun requestCameraPermission(): CameraPermissionStatusMessage {
         val activePermissions = permissions ?: throw detachedError()
 
-        return activePermissions.request()
+        return engine.run { activePermissions.request() }
     }
 
     override fun setRegionOfInterest(roi: RegionOfInterestMessage?) {
@@ -104,7 +107,7 @@ class TextSightPlugin :
     override suspend fun ensureModelReady(): Map<String, Any?> {
         val activeReadiness = modelReadiness ?: throw detachedError()
 
-        return activeReadiness.ensureModelReady()
+        return engine.run { activeReadiness.ensureModelReady() }
     }
 
     override suspend fun recognizeImage(
@@ -113,7 +116,7 @@ class TextSightPlugin :
     ): Map<String, Any?> {
         val activeCamera = camera ?: throw detachedError()
 
-        return activeCamera.recognizeImage(bytes, options)
+        return engine.run { activeCamera.recognizeImage(bytes, options) }
     }
 
     override suspend fun recognizePath(
@@ -122,7 +125,7 @@ class TextSightPlugin :
     ): Map<String, Any?> {
         val activeCamera = camera ?: throw detachedError()
 
-        return activeCamera.recognizePath(path, options)
+        return engine.run { activeCamera.recognizePath(path, options) }
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
