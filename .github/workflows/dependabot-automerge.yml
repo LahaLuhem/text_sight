@@ -27,9 +27,10 @@ jobs:
         id: meta
         uses: dependabot/fetch-metadata@v3
 
-      # Eligible: github_actions, gradle (both dirs), and pub under /example; root `pub` and
-      # every major stay manual. `package-ecosystem` is the branch-name segment, so
-      # github-actions arrives underscored; `update-type` is the group's *highest* semver step.
+      # Eligible: patch/minor on github_actions, gradle (both dirs) and pub under /example, plus
+      # github_actions majors; root `pub` and gradle/pub majors stay manual. `package-ecosystem`
+      # is the branch-name segment, so github-actions arrives underscored; `update-type` is the
+      # group's *highest* semver step.
       - name: Decide eligibility
         id: gate
         env:
@@ -50,6 +51,14 @@ jobs:
                       eligible=true
                       ;;
                   esac
+                  ;;
+              esac
+              ;;
+            version-update:semver-major)
+              # Actions reach no consumer, and a bad bump breaks the CI gating this merge.
+              case "$ECOSYSTEM" in
+                github_actions)
+                  eligible=true
                   ;;
               esac
               ;;
