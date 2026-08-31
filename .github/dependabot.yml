@@ -20,8 +20,16 @@ updates:
   # --- Dart / Flutter: published library ---
   # Bumps the version constraints in the root pubspec.yaml. pub.dev packages
   # only — git / path deps are not eligible.
+  #
+  # `versioning-strategy: increase` so bumps land as `^28.0.0`, not
+  # `">=27.3.2 <29.0.0"`. On `auto` Dependabot sees `version:`, reads this as a
+  # library, and widens the range instead of raising the floor (no caret spans
+  # two majors, hence the long form). Widening buys nothing here, most root deps
+  # are dev-only and consumers never resolve those. /example is fine on `auto`,
+  # its `publish_to: none` already reads as an app.
   - package-ecosystem: "pub"
     directory: "/"
+    versioning-strategy: "increase"
     schedule:
       interval: "weekly"
     groups:
