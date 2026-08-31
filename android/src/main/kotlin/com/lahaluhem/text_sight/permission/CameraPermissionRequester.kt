@@ -9,6 +9,9 @@ import androidx.core.content.ContextCompat
 import com.lahaluhem.text_sight.CameraPermissionStatusMessage
 import com.lahaluhem.text_sight.FlutterError
 import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CancellableContinuation
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 /**
  * Drives the Android camera-permission flow with built-in Kotlin + AndroidX only — no third-party
@@ -16,7 +19,7 @@ import io.flutter.plugin.common.PluginRegistry.RequestPermissionsResultListener
  *
  * A runtime request needs a foreground [Activity], which the plugin feeds in via [activity] across
  * the `ActivityAware` lifecycle. As a [RequestPermissionsResultListener] this receives the system
- * result on the main thread and resolves the pending callback there — off the capture pipeline.
+ * result on the main thread and resumes the pending caller there — off the capture pipeline.
  *
  * `denied` vs `permanentlyDenied` is the standard heuristic: after a refusal, if the system no
  * longer shows a rationale the user chose "don't ask again" (or policy blocks it), so only the OS
@@ -28,29 +31,30 @@ internal class CameraPermissionRequester(
     /** The current foreground Activity, maintained by the plugin across the `ActivityAware` lifecycle. */
     var activity: Activity? = null
 
-    private var pending: ((Result<CameraPermissionStatusMessage>) -> Unit)? = null
+    private var pending: CancellableContinuation<CameraPermissionStatusMessage>? = null
 
     /** The current status without prompting — needs no Activity. */
     fun check(): CameraPermissionStatusMessage =
         if (isGranted()) CameraPermissionStatusMessage.GRANTED else CameraPermissionStatusMessage.DENIED
 
-    /** Prompts when not yet granted, resolving [callback] with the resulting status. */
-    fun request(callback: (Result<CameraPermissionStatusMessage>) -> Unit) {
-        val currentActivity = activity
-        when {
-            isGranted() -> callback(Result.success(CameraPermissionStatusMessage.GRANTED))
-            currentActivity == null ->
-                callback(Result.failure(FlutterError("no-activity", NO_ACTIVITY_MESSAGE)))
-            pending != null ->
-                callback(Result.failure(FlutterError("already-requesting", ALREADY_REQUESTING_MESSAGE)))
-            else -> {
-                pending = callback
-                ActivityCompat.requestPermissions(
-                    currentActivity,
-                    arrayOf(Manifest.permission.CAMERA),
-                    REQUEST_CODE,
-                )
-            }
+    /** Prompts when not yet granted, then reports the resulting status. */
+    suspend fun request(): CameraPermissionStatusMessage {
+        if (isGranted()) return CameraPermissionStatusMessage.GRANTED
+
+        val currentActivity = activity ?: throw FlutterError("no-activity", NO_ACTIVITY_MESSAGE)
+        if (pending != null) throw FlutterError("already-requesting", ALREADY_REQUESTING_MESSAGE)
+
+        return suspendCancellableCoroutine { continuation ->
+            pending = continuation
+            // A cancelled caller must not leave the slot occupied, or every later request reports
+            // already-requesting.
+            continuation.invokeOnCancellation { pending = null }
+
+            ActivityCompat.requestPermissions(
+                currentActivity,
+                arrayOf(Manifest.permission.CAMERA),
+                REQUEST_CODE,
+            )
         }
     }
 
@@ -59,8 +63,8 @@ internal class CameraPermissionRequester(
         permissions: Array<out String>,
         grantResults: IntArray,
     ): Boolean {
-        val callback = pending
-        if (requestCode != REQUEST_CODE || callback == null) return false
+        val continuation = pending
+        if (requestCode != REQUEST_CODE || continuation == null) return false
 
         pending = null
         val status = when {
@@ -69,7 +73,7 @@ internal class CameraPermissionRequester(
             shouldShowRationale() -> CameraPermissionStatusMessage.DENIED
             else -> CameraPermissionStatusMessage.PERMANENTLY_DENIED
         }
-        callback(Result.success(status))
+        continuation.resume(status)
         return true
     }
 

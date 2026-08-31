@@ -16,15 +16,20 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.lahaluhem.text_sight.FlutterError
+import com.lahaluhem.text_sight.await
 import io.flutter.view.TextureRegistry
 import java.util.concurrent.Executor
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * The CameraX half of a live session: provider, use-case binding, preview texture, torch.
  *
  * **Main-confined:** CameraX's `LiveData` observers and [SessionLifecycleOwner]'s registry both
- * reject other threads, so [mainExecutor] has to be one. Recognition lives in [TextSightCamera];
- * this class only knows the [analyzer] and the executor to run it on.
+ * reject other threads. The suspending entry points establish that once via [mainDispatcher], so no
+ * call site re-establishes it. The synchronous ones must already be on main, which every Flutter
+ * lifecycle callback is. Recognition lives in [TextSightCamera].
  */
 internal class CameraSession(
     private val context: Context,
@@ -32,7 +37,11 @@ internal class CameraSession(
     private val analysisExecutor: Executor,
     private val analyzer: ImageAnalysis.Analyzer,
     private val mainExecutor: Executor = ContextCompat.getMainExecutor(context),
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
 ) {
+    // Resumes the provider future on whatever thread CameraX completed it on. mainDispatcher is
+    // what puts the LiveData work back on main, so this deliberately does not hop.
+    private val directExecutor = Executor(Runnable::run)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
     private val lifecycleOwner = SessionLifecycleOwner()
@@ -78,33 +87,26 @@ internal class CameraSession(
     }
 
     /** Opens the camera and returns the preview texture id. */
-    fun open(callback: (Result<Long>) -> Unit) {
+    suspend fun open(): Long = withContext(mainDispatcher) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) !=
             PackageManager.PERMISSION_GRANTED
         ) {
-            callback(
-                Result.failure(
-                    FlutterError("permission-denied", "Camera permission has not been granted."),
-                ),
-            )
-            return
+            throw FlutterError("permission-denied", "Camera permission has not been granted.")
         }
 
         val producer = textureRegistry.createSurfaceProducer()
         producer.setCallback(surfaceCallback)
         surfaceProducer = producer
 
-        val providerFuture = ProcessCameraProvider.getInstance(context)
-        providerFuture.addListener({
-            try {
-                cameraProvider = providerFuture.get()
-                lifecycleOwner.resume()
-                bindUseCases()
-                callback(Result.success(producer.id()))
-            } catch (error: Exception) {
-                callback(Result.failure(FlutterError("initialization-failed", error.message)))
-            }
-        }, mainExecutor)
+        try {
+            cameraProvider = ProcessCameraProvider.getInstance(context).await(directExecutor)
+            lifecycleOwner.resume()
+            bindUseCases()
+
+            producer.id()
+        } catch (error: Exception) {
+            throw FlutterError("initialization-failed", error.message)
+        }
     }
 
     fun startAnalysis() {
@@ -123,7 +125,16 @@ internal class CameraSession(
     }
 
     /** Tears down the session but keeps the owner alive for a later [open]. */
-    fun release() {
+    suspend fun release() = withContext(mainDispatcher) { releaseNow() }
+
+    /** Releases everything, including the lifecycle owner. No [open] after this. Main thread only. */
+    fun dispose() {
+        displayManager.unregisterDisplayListener(displayListener)
+        releaseNow()
+        lifecycleOwner.destroy()
+    }
+
+    private fun releaseNow() {
         imageAnalysis?.clearAnalyzer()
         camera?.cameraInfo?.cameraState?.removeObservers(lifecycleOwner)
         cameraProvider?.unbindAll()
@@ -134,13 +145,6 @@ internal class CameraSession(
         imageAnalysis = null
         cameraProvider = null
         surfaceProducer = null
-    }
-
-    /** Releases everything, including the lifecycle owner. No [open] after this. */
-    fun dispose() {
-        displayManager.unregisterDisplayListener(displayListener)
-        release()
-        lifecycleOwner.destroy()
     }
 
     /** The live display rotation as a `Surface.ROTATION_*`, driving [ImageAnalysis]'s target. */

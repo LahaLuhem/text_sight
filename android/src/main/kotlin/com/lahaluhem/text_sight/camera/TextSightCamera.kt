@@ -17,6 +17,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.lahaluhem.text_sight.FlutterError
 import com.lahaluhem.text_sight.RegionOfInterestMessage
 import com.lahaluhem.text_sight.TextSightOptionsMessage
+import com.lahaluhem.text_sight.await
 import com.lahaluhem.text_sight.recognition.encodeFrame
 import com.lahaluhem.text_sight.recognition.toPixelRect
 import com.lahaluhem.text_sight.recognition.uprightBy
@@ -25,6 +26,8 @@ import io.flutter.view.TextureRegistry
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.concurrent.Executors
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
 
 /**
  * Recognition for one live session: the ML Kit recognizer, the per-frame encode, and the one-shot
@@ -41,6 +44,7 @@ internal class TextSightCamera(
 ) : EventChannel.StreamHandler {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val analysisExecutor = Executors.newSingleThreadExecutor()
+    private val analysisDispatcher = analysisExecutor.asCoroutineDispatcher()
     private val recognizer: TextRecognizer =
         TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private val session = CameraSession(
@@ -65,31 +69,19 @@ internal class TextSightCamera(
         eventSink = null
     }
 
-    fun initialize(options: TextSightOptionsMessage, callback: (Result<Long>) -> Unit) {
+    suspend fun initialize(options: TextSightOptionsMessage): Long {
         // Recognition level and languages have no ML Kit Latin equivalent (see the
         // TextSightOptions docs); only the region-of-interest is honoured here.
         regionOfInterest = options.roi
 
-        session.open(callback)
+        return session.open()
     }
 
-    fun start(callback: (Result<Unit>) -> Unit) {
-        session.startAnalysis()
+    fun start() = session.startAnalysis()
 
-        callback(Result.success(Unit))
-    }
+    fun stop() = session.stopAnalysis()
 
-    fun stop(callback: (Result<Unit>) -> Unit) {
-        session.stopAnalysis()
-
-        callback(Result.success(Unit))
-    }
-
-    fun disposeSession(callback: (Result<Unit>) -> Unit) {
-        session.release()
-
-        callback(Result.success(Unit))
-    }
+    suspend fun disposeSession() = session.release()
 
     fun setRegionOfInterest(roi: RegionOfInterestMessage?) {
         regionOfInterest = roi
@@ -100,62 +92,46 @@ internal class TextSightCamera(
     // Static one-shot recognition — no camera session, texture, or permission. Decoding and
     // recognition run on the analysis executor; the result is marshalled back to the main thread.
 
-    fun recognizeImage(
+    suspend fun recognizeImage(
         bytes: ByteArray,
         options: TextSightOptionsMessage,
-        callback: (Result<Map<String, Any?>>) -> Unit,
-    ) {
-        analysisExecutor.execute {
-            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-            if (bitmap == null) {
-                mainHandler.post { callback(decodeFailed("The image bytes could not be decoded.")) }
-                return@execute
-            }
+    ): Map<String, Any?> = withContext(analysisDispatcher) {
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            ?: throw decodeFailed("The image bytes could not be decoded.")
+        val rotation = runCatching {
+            ExifInterface(ByteArrayInputStream(bytes)).rotationDegrees
+        }.getOrDefault(0)
 
-            val rotation = runCatching {
-                ExifInterface(ByteArrayInputStream(bytes)).rotationDegrees
-            }.getOrDefault(0)
-            recognizeStill(bitmap, rotation, options.roi, callback)
-        }
+        recognizeStill(bitmap, rotation, options.roi)
     }
 
-    fun recognizePath(
+    suspend fun recognizePath(
         path: String,
         options: TextSightOptionsMessage,
-        callback: (Result<Map<String, Any?>>) -> Unit,
-    ) {
-        analysisExecutor.execute {
-            if (!File(path).exists()) {
-                mainHandler.post {
-                    callback(Result.failure(FlutterError("file-not-found", "No file exists at $path.")))
-                }
-                return@execute
-            }
-
-            val bitmap = BitmapFactory.decodeFile(path)
-            if (bitmap == null) {
-                mainHandler.post { callback(decodeFailed("The image at $path could not be decoded.")) }
-                return@execute
-            }
-
-            val rotation = runCatching { ExifInterface(path).rotationDegrees }.getOrDefault(0)
-            recognizeStill(bitmap, rotation, options.roi, callback)
+    ): Map<String, Any?> = withContext(analysisDispatcher) {
+        if (!File(path).exists()) {
+            throw FlutterError("file-not-found", "No file exists at $path.")
         }
+
+        val bitmap = BitmapFactory.decodeFile(path)
+            ?: throw decodeFailed("The image at $path could not be decoded.")
+        val rotation = runCatching { ExifInterface(path).rotationDegrees }.getOrDefault(0)
+
+        recognizeStill(bitmap, rotation, options.roi)
     }
 
     /**
      * Recognizes [bitmap], rotated upright by [rotationDegrees] (its EXIF orientation), with a
      * transient pass over the shared recognizer. When [roi] is set, the upright bitmap is cropped
      * to it first so ML Kit reads only that region — a true crop, unlike the live path's
-     * centre-containment filter. Completes on the main thread with the same per-frame map the live
-     * path emits — quarterTurns 0, since a still is already upright.
+     * centre-containment filter. Returns the same per-frame map the live path emits — quarterTurns
+     * 0, since a still is already upright.
      */
-    private fun recognizeStill(
+    private suspend fun recognizeStill(
         bitmap: Bitmap,
         rotationDegrees: Int,
         roi: RegionOfInterestMessage?,
-        callback: (Result<Map<String, Any?>>) -> Unit,
-    ) {
+    ): Map<String, Any?> {
         val isQuarterTurned = rotationDegrees == 90 || rotationDegrees == 270
         val imageWidth = if (isQuarterTurned) bitmap.height else bitmap.width
         val imageHeight = if (isQuarterTurned) bitmap.width else bitmap.height
@@ -175,25 +151,23 @@ internal class TextSightCamera(
             )
         }
 
-        recognizer.process(input)
-            .addOnSuccessListener(analysisExecutor) { visionText ->
-                val frame = encodeFrame(
-                    visionText,
-                    imageWidth,
-                    imageHeight,
-                    0,
-                    offsetX = crop?.left ?: 0,
-                    offsetY = crop?.top ?: 0,
-                )
-                mainHandler.post { callback(Result.success(frame)) }
-            }
-            .addOnFailureListener(analysisExecutor) { error ->
-                mainHandler.post { callback(decodeFailed(error.message ?: "Recognition failed.")) }
-            }
+        val visionText = try {
+            recognizer.process(input).await(analysisExecutor)
+        } catch (error: Exception) {
+            throw decodeFailed(error.message ?: "Recognition failed.")
+        }
+
+        return encodeFrame(
+            visionText,
+            imageWidth,
+            imageHeight,
+            0,
+            offsetX = crop?.left ?: 0,
+            offsetY = crop?.top ?: 0,
+        )
     }
 
-    private fun decodeFailed(message: String): Result<Map<String, Any?>> =
-        Result.failure(FlutterError("decode-failed", message))
+    private fun decodeFailed(message: String): FlutterError = FlutterError("decode-failed", message)
 
     /** Releases every per-engine resource. Called when the plugin detaches from the engine. */
     fun dispose() {
