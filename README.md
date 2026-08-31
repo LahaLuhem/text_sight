@@ -68,6 +68,9 @@ Want a scan-box? Hand the controller a **region of interest** —
 it, the recognition level, or the torch while the session runs. It applies to the live preview and
 the one-shot alike.
 
+Backgrounding the app pauses the live session on its own: the camera is released and picked back up
+when returning.
+
 One Android thing worth knowing up front: the model downloads on first use, so
 [give it a head start](#the-recognition-model) when the user opens your scanner — otherwise that first
 scan comes back empty.

@@ -472,6 +472,14 @@ iOS (Vision) and are **no-ops on Android** (the ML Kit Latin recognizer exposes 
 Latin only). Per-line `confidence` is supplied by both, but the scales are **not comparable**. These
 are documented in the [README](./README.md); they are engine properties, not defects.
 
+**Background auto-pause (both platforms).** The live session stops itself when the app leaves the
+foreground and restarts on return, torch intent re-asserted. Rationale: both OSes forcibly gate the
+camera for backgrounded apps anyway (iOS interrupts the session, Android revokes the camera from
+idle UIDs), so leaning on that meant inheriting OS-owned recovery timing and a torch that silently
+stayed off after return. Android derives the headless session owner's state from
+`ProcessLifecycleOwner` capped by the session's intent; iOS listens for the background/foreground
+notifications and stops/starts the `AVCaptureSession` on its session queue.
+
 **Federation is deferred (and likely unneeded).** v1 ships as one package; the split into a
 platform-interface package + per-platform implementations is only worth it if third parties add
 platforms ([#federation-deferred](#federation-deferred)). Not tracked as an issue — revisit only if
