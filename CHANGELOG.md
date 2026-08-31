@@ -1,11 +1,11 @@
 ## [Unreleased]
 ### Changed
-- \[#0\] use linterpol for lints
 - Bumped Dart to ^3.13
 
 ### Fixed
 - \[#40\] Crash on engine detach when no capture session ever started
-- Live session auto-pauses in the background and restores the torch on return
+- \[#6\] Live session auto-pauses in the background and restores the torch on return
+- \[#39\] Migrate the Pigeon control channel to native suspend and async throws
 
 ## [0.1.1] - 2026-06-24
 ### Added
