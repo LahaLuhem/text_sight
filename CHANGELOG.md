@@ -3,6 +3,9 @@
 - \[#0\] use linterpol for lints
 - Bumped Dart to ^3.13
 
+### Fixed
+- \[#40\] Crash on engine detach when no capture session ever started
+
 ## [0.1.1] - 2026-06-24
 ### Added
 - \#14 Add native camera-permission handling (no third-party package needed)
