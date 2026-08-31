@@ -49,22 +49,24 @@ enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
 
 /// The typed control channel. Per-frame results stream over a plain
 /// EventChannel and the preview is a texture — neither rides this API.
+// `@asyncCallback` not `@async`: Pigeon 28 made `@async` emit `suspend` / `async throws`, which
+// needs both native sides rewritten. Holding the callback shape until #39.
 @HostApi()
 abstract class TextSightHostApi {
   /// Opens the camera with [options]; returns the preview texture id.
-  @async
+  @asyncCallback
   int initialize(TextSightOptionsMessage options);
 
   /// Begins frame delivery and recognition.
-  @async
+  @asyncCallback
   void start();
 
   /// Pauses recognition, keeping the session open for a later [start].
-  @async
+  @asyncCallback
   void stop();
 
   /// Releases the camera and texture.
-  @async
+  @asyncCallback
   void dispose();
 
   // Camera permission — the live camera path needs it; the static one-shot does not. The check is a
@@ -74,7 +76,7 @@ abstract class TextSightHostApi {
   CameraPermissionStatusMessage checkCameraPermission();
 
   /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
-  @async
+  @asyncCallback
   CameraPermissionStatusMessage requestCameraPermission();
 
   /// Restricts recognition to [roi], or clears it (whole frame) when null.
@@ -97,7 +99,7 @@ abstract class TextSightHostApi {
 
   /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
   /// Google Play Services when needed) and returns the terminal readiness state.
-  @async
+  @asyncCallback
   Map<String, Object?> ensureModelReady();
 
   // Static one-shot driver — no camera session, texture, or permission. Each call runs a
@@ -106,10 +108,10 @@ abstract class TextSightHostApi {
   // the result models need no Pigeon twin. `quarterTurns` is 0 — a still is already upright.
 
   /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
-  @async
+  @asyncCallback
   Map<String, Object?> recognizeImage(Uint8List bytes, TextSightOptionsMessage options);
 
   /// Recognizes text in the image at file [path], honouring [options].
-  @async
+  @asyncCallback
   Map<String, Object?> recognizePath(String path, TextSightOptionsMessage options);
 }
