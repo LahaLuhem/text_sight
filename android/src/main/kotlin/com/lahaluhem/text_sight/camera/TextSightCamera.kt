@@ -13,6 +13,7 @@ import android.view.Surface
 import androidx.annotation.OptIn
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.CameraState
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
@@ -65,6 +66,7 @@ internal class TextSightCamera(
     private var camera: Camera? = null
     private var regionOfInterest: RegionOfInterestMessage? = null
     private var isRecognizing = false
+    private var torchEnabled = false
 
     /**
      * Keeps [ImageAnalysis]'s target rotation in-step with the live display rotation, so the
@@ -155,6 +157,7 @@ internal class TextSightCamera(
     }
 
     fun setTorchEnabled(enabled: Boolean) {
+        torchEnabled = enabled
         camera?.cameraControl?.enableTorch(enabled)
     }
 
@@ -299,12 +302,22 @@ internal class TextSightCamera(
         imageAnalysis = analysis
 
         provider.unbindAll()
-        camera = provider.bindToLifecycle(
+        val bound = provider.bindToLifecycle(
             lifecycleOwner,
             CameraSelector.DEFAULT_BACK_CAMERA,
             preview,
             analysis,
         )
+        camera = bound
+
+        // The torch resets whenever the camera closes (backgrounding included), so re-assert the
+        // stored intent every time this camera reaches OPEN.
+        bound.cameraInfo.cameraState.removeObservers(lifecycleOwner)
+        bound.cameraInfo.cameraState.observe(lifecycleOwner) { state ->
+            if (state.type == CameraState.Type.OPEN && torchEnabled) {
+                bound.cameraControl.enableTorch(true)
+            }
+        }
 
         if (isRecognizing) {
             analysis.setAnalyzer(analysisExecutor, ::analyze)
@@ -335,6 +348,7 @@ internal class TextSightCamera(
 
     private fun releaseSession() {
         imageAnalysis?.clearAnalyzer()
+        camera?.cameraInfo?.cameraState?.removeObservers(lifecycleOwner)
         cameraProvider?.unbindAll()
         surfaceProducer?.release()
 

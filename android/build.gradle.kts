@@ -114,6 +114,10 @@ dependencies {
     // recognition lib) — already transitive via CameraX; declared directly since it's used directly.
     implementation("androidx.exifinterface:exifinterface:1.4.2")
 
+    // App foreground/background signal for the headless session owner. Atomic group: lifts every
+    // androidx.lifecycle artifact consumers resolve to the same version.
+    implementation("androidx.lifecycle:lifecycle-process:2.11.0")
+
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     // mockito-core also carries the inline mock-maker agent that testOptions points -javaagent at.
     testImplementation("org.mockito:mockito-core:5.23.0")
