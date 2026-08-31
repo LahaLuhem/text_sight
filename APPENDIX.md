@@ -9,6 +9,7 @@
 - [Model readiness and the bundled / unbundled axis (Android)](#model-readiness)
 - [Federation deferred: one plugin package for v1](#federation-deferred-one-plugin-package-for-v1)
 - [Known limitations, performance, and deferred work](#known-limitations)
+- [`@TaskQueue` on the control channel: measured, rejected for now](#taskqueue-rejected)
 - [Public API funnelled through `lib/text_sight.dart`](#public-api-funnelled-through-libtext_sightdart)
 - [Developing the Android module standalone in Android Studio](#android-standalone-dev)
 
@@ -21,7 +22,7 @@ READMEs, [`CODESTYLE.md`](./CODESTYLE.md), and [`.ai/AGENTS.md`](./.ai/AGENTS.md
 reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
 > **Status:** the symlink, dependabot-automerge, channel-topology, coordinate-normalization, iOS-capture-strategy,
-> model-readiness, known-limitations, and public-API sections are written. `#no-bundling` and
+> model-readiness, known-limitations, taskqueue-rejected, and public-API sections are written. `#no-bundling` and
 > `#federation-deferred` stay stubs — locked decisions whose rationale is filled in when the
 > corresponding code lands. Anchors are stable; only stub bodies grow.
 
@@ -484,6 +485,37 @@ notifications and stops/starts the `AVCaptureSession` on its session queue.
 platform-interface package + per-platform implementations is only worth it if third parties add
 platforms ([#federation-deferred](#federation-deferred)). Not tracked as an issue — revisit only if
 that need actually arises.
+
+---
+
+<a id="taskqueue-rejected"></a>
+## `@TaskQueue` on the control channel: measured, rejected for now
+
+`@TaskQueue(type: TaskQueueType.serialBackgroundThread)` moves a host method's message decode off the
+platform thread. Attractive for `recognizeImage`, the one control method carrying a real payload. It
+was measured on both platforms and **not kept**: it helps Android, clearly hurts iOS, and the
+annotation is per-method with no per-platform form.
+
+Measured by `example/integration_test/platform_thread_bench_test.dart`, which pings the synchronous
+`checkCameraPermission` while 40 undecodable 8 MiB payloads cross the channel, so the number is the
+channel hop and not inference. Read `p50` only, since `max` swings 2.4x run to run.
+
+Criterion, fixed before the after-run: loaded `p50` at or under 300 us in two of three runs.
+
+| Platform | baseline loaded `p50` | with `@TaskQueue` |
+|---|---|---|
+| Android emulator | 524 / 669 / 459 us | **216 / 233 / 319 us** |
+| iOS simulator | 110 / 104 / 113 / 124 / 116 / 115 us | **33 / 95 / 2295 / 2483 / 2553 / 2632 us** |
+
+Android's ranges do not overlap. iOS goes from tight and unimodal to bimodal, four of six runs about
+20x worse. Six runs a side because the first iOS run (33 us) looked like a win and was not. Why iOS
+degrades is unconfirmed, possibly contention on the serial queue `makeBackgroundTaskQueue` returns.
+
+**What would change the answer.** Per-platform annotation support, a different payload profile (the
+effect is payload-driven, so `recognizePath` and `ensureModelReady` were never candidates), real
+hardware instead of an emulator and simulator, or an upstream fix on the iOS side. `initialize` and
+`dispose` stay out regardless: they touch the texture registry and CameraX `LiveData`, which reject
+non-main threads.
 
 ---
 
