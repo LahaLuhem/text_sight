@@ -518,7 +518,7 @@ void main() {
         final states = await platform.modelReadiness.take(3).toList();
 
         check<Iterable<Object?>>(states).length.equals(3);
-        check(states[0]).isA<ModelDownloading>().has((s) => s.progress, 'progress').equals(0.25);
+        check(states.first).isA<ModelDownloading>().has((s) => s.progress, 'progress').equals(0.25);
         check(states[1]).isA<ModelDownloading>().has((s) => s.progress, 'progress').equals(0.8);
         check(states[2]).isA<ModelReady>();
       });
