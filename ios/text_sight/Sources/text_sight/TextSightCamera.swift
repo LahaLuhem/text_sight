@@ -74,8 +74,7 @@ final class TextSightCamera: NSObject {
 
   // MARK: Control channel (delegated from TextSightPlugin's TextSightHostApi conformance)
 
-  func initialize(options: TextSightOptionsMessage,
-                  completion: @escaping (Result<Int64, Error>) -> Void) {
+  func initialize(options: TextSightOptionsMessage) async throws -> Int64 {
     stateLock.lock()
     recognitionLevel = options.level
     recognitionLanguages = options.languages
@@ -83,48 +82,34 @@ final class TextSightCamera: NSObject {
     stateLock.unlock()
 
     guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
-      completion(.failure(PigeonError(code: "permission-denied",
-                                      message: "Camera permission has not been granted.",
-                                      details: nil)))
-      return
+      throw PigeonError(code: "permission-denied",
+                        message: "Camera permission has not been granted.", details: nil)
     }
 
-    sessionQueue.async { [weak self] in
-      guard let self else { return }
-
-      do {
-        let id = try self.configureSession()
-        DispatchQueue.main.async { completion(.success(id)) }
-      } catch {
-        DispatchQueue.main.async {
-          completion(.failure(PigeonError(code: "initialization-failed",
-                                          message: error.localizedDescription, details: nil)))
-        }
-      }
+    do {
+      return try await onSessionQueue { try self.configureSession() }
+    } catch {
+      throw PigeonError(code: "initialization-failed",
+                        message: error.localizedDescription, details: nil)
     }
   }
 
-  func start(completion: @escaping (Result<Void, Error>) -> Void) {
+  /// Synchronous: it only flips a flag under the lock, so it needs no queue hop.
+  func start() {
     stateLock.lock()
     isRecognizing = true
     stateLock.unlock()
-
-    completion(.success(()))
   }
 
-  func stop(completion: @escaping (Result<Void, Error>) -> Void) {
+  /// Synchronous, same as `start`.
+  func stop() {
     stateLock.lock()
     isRecognizing = false
     stateLock.unlock()
-
-    completion(.success(()))
   }
 
-  func dispose(completion: @escaping (Result<Void, Error>) -> Void) {
-    sessionQueue.async { [weak self] in
-      self?.releaseSession()
-      DispatchQueue.main.async { completion(.success(())) }
-    }
+  func dispose() async throws {
+    try await onSessionQueue { self.releaseSession() }
   }
 
   func setRegionOfInterest(roi: RegionOfInterestMessage?) {
@@ -334,79 +319,76 @@ final class TextSightCamera: NSObject {
     stateLock.unlock()
   }
 
+  /// Runs `work` on `sessionQueue`, bridged to `async`. The queue is the session's synchronisation
+  /// domain (`torchEnabled`, `suspendSession`, `resumeSession` all live on it), so callers keep the
+  /// hop rather than replacing it.
+  private func onSessionQueue<T>(_ work: @escaping () throws -> T) async throws -> T {
+    try await withCheckedThrowingContinuation { continuation in
+      sessionQueue.async { continuation.resume(with: Result(catching: work)) }
+    }
+  }
+
   // MARK: Static one-shot recognition (no session, texture, or permission)
 
   /// Recognizes text in encoded image `bytes`; delegated from the plugin's `TextSightHostApi`.
-  func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage,
-                      completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+  func recognizeImage(bytes: FlutterStandardTypedData,
+                      options: TextSightOptionsMessage) async throws -> [String: Any?] {
+    // Untested: CGImageSourceCreateWithData returns a source for any Data, so this only guards
+    // the documented nil case. The real decode failure surfaces in recognizeStill.
     guard let source = CGImageSourceCreateWithData(bytes.data as CFData, nil) else {
-      completion(.failure(PigeonError(code: "decode-failed",
-                                      message: "The image bytes could not be decoded.",
-                                      details: nil)))
-      return
+      throw PigeonError(code: "decode-failed",
+                        message: "The image bytes could not be decoded.", details: nil)
     }
 
-    recognizeStill(source, options: options, completion: completion)
+    return try await recognizeStill(source, options: options)
   }
 
   /// Recognizes text in the image file at `path`; delegated from the plugin's `TextSightHostApi`.
-  func recognizePath(path: String, options: TextSightOptionsMessage,
-                     completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+  func recognizePath(path: String,
+                     options: TextSightOptionsMessage) async throws -> [String: Any?] {
     guard FileManager.default.fileExists(atPath: path) else {
-      completion(.failure(PigeonError(code: "file-not-found",
-                                      message: "No file exists at \(path).", details: nil)))
-      return
+      throw PigeonError(code: "file-not-found", message: "No file exists at \(path).", details: nil)
     }
     guard let source = CGImageSourceCreateWithURL(URL(fileURLWithPath: path) as CFURL, nil) else {
-      completion(.failure(PigeonError(code: "decode-failed",
-                                      message: "The image at \(path) could not be decoded.",
-                                      details: nil)))
-      return
+      throw PigeonError(code: "decode-failed",
+                        message: "The image at \(path) could not be decoded.", details: nil)
     }
 
-    recognizeStill(source, options: options, completion: completion)
+    return try await recognizeStill(source, options: options)
   }
 
-  /// Decodes a still from `source` (honouring EXIF orientation), runs a transient recognizer off
-  /// the main thread, and completes on main with the same per-frame map the live path emits —
-  /// `quarterTurns` 0, since a still is already upright. No session, texture, or sink is touched.
-  private func recognizeStill(_ source: CGImageSource, options: TextSightOptionsMessage,
-                              completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+  /// Decodes a still from `source` (honouring EXIF orientation) and returns the same per-frame map
+  /// the live path emits — `quarterTurns` 0, since a still is already upright. No session, texture,
+  /// or sink is touched.
+  private func recognizeStill(_ source: CGImageSource,
+                              options: TextSightOptionsMessage) async throws -> [String: Any?] {
     let config = RecognitionConfig(level: options.level, languages: options.languages,
                                    roi: options.roi)
 
-    Task { [recognizer] in
-      guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-        DispatchQueue.main.async {
-          completion(.failure(PigeonError(code: "decode-failed",
-                                          message: "The image could not be decoded.", details: nil)))
-        }
-        return
-      }
+    guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+      throw PigeonError(code: "decode-failed", message: "The image could not be decoded.",
+                        details: nil)
+    }
 
-      let orientation = Self.orientation(of: source)
-      // Report the box space (display-oriented): axes swap when EXIF turns the image a quarter.
-      let isQuarterTurned = switch orientation {
-      case .left, .leftMirrored, .right, .rightMirrored: true
-      default: false
-      }
-      let pixelWidth = Double(cgImage.width)
-      let pixelHeight = Double(cgImage.height)
+    let orientation = Self.orientation(of: source)
+    // Report the box space (display-oriented): axes swap when EXIF turns the image a quarter.
+    let isQuarterTurned = switch orientation {
+    case .left, .leftMirrored, .right, .rightMirrored: true
+    default: false
+    }
+    let pixelWidth = Double(cgImage.width)
+    let pixelHeight = Double(cgImage.height)
 
-      do {
-        let lines = try await recognizer.recognize(cgImage: cgImage, orientation: orientation,
-                                                   config: config)
-        let frame = Self.encodeFrame(lines,
-                                     imageWidth: isQuarterTurned ? pixelHeight : pixelWidth,
-                                     imageHeight: isQuarterTurned ? pixelWidth : pixelHeight,
-                                     quarterTurns: 0)
-        DispatchQueue.main.async { completion(.success(frame)) }
-      } catch {
-        DispatchQueue.main.async {
-          completion(.failure(PigeonError(code: "decode-failed",
-                                          message: error.localizedDescription, details: nil)))
-        }
-      }
+    do {
+      let lines = try await recognizer.recognize(cgImage: cgImage, orientation: orientation,
+                                                 config: config)
+
+      return Self.encodeFrame(lines,
+                              imageWidth: isQuarterTurned ? pixelHeight : pixelWidth,
+                              imageHeight: isQuarterTurned ? pixelWidth : pixelHeight,
+                              quarterTurns: 0)
+    } catch {
+      throw PigeonError(code: "decode-failed", message: error.localizedDescription, details: nil)
     }
   }
 

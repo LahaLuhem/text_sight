@@ -15,15 +15,12 @@ enum CameraPermission {
   }
 
   /// Prompts when the authorization is still undetermined, then reports the resulting status.
-  static func request(completion: @escaping (CameraPermissionStatusMessage) -> Void) {
+  static func request() async -> CameraPermissionStatusMessage {
     guard AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined else {
-      completion(current())
-      return
+      return current()
     }
 
-    AVCaptureDevice.requestAccess(for: .video) { granted in
-      completion(granted ? .granted : .permanentlyDenied)
-    }
+    return await AVCaptureDevice.requestAccess(for: .video) ? .granted : .permanentlyDenied
   }
 
   private static func map(_ status: AVAuthorizationStatus) -> CameraPermissionStatusMessage {
