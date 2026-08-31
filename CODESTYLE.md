@@ -552,7 +552,9 @@ the *what*. See [hard rule on dartdoc in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-r
 for the contract.
 
 Keep them to a line or two. Rationale that needs a paragraph belongs in
-[`APPENDIX.md`](./APPENDIX.md) behind a one-line pointer, not inline.
+[`APPENDIX.md`](./APPENDIX.md) behind a one-line pointer, not inline. Applies to KDoc and
+Swift doc comments too, and to plain `//` comments. It's a default, not a ceiling: genuinely
+subtle code can earn more, it just shouldn't be the habit.
 
 ### `@docImport` for dartdoc-only references
 
