@@ -9,9 +9,10 @@ final class TextSightModelReadiness: NSObject {
   private var eventSink: FlutterEventSink?
 
   /// Resolves immediately to the ready state; delegated from the plugin's `TextSightHostApi`.
-  func ensureModelReady(completion: @escaping (Result<[String: Any?], Error>) -> Void) {
+  func ensureModelReady() async -> [String: Any?] {
     emit(Self.readyState)
-    completion(.success(Self.readyState))
+
+    return Self.readyState
   }
 
   /// Hops to main before touching the sink — a sink call off the main thread is a crash waiting to

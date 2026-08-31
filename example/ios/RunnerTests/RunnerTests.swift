@@ -1,4 +1,5 @@
 import CoreGraphics
+import Flutter
 import Foundation
 import ImageIO
 import UIKit
@@ -193,7 +194,7 @@ final class LegacyTextRecognizerTests: XCTestCase {
   }
 
   /// Renders `string` as large black text on a white field — clear enough for reliable recognition.
-  private static func renderText(_ string: String) -> UIImage {
+  static func renderText(_ string: String) -> UIImage {
     let size = CGSize(width: 512, height: 160)
 
     return UIGraphicsImageRenderer(size: size).image { context in
@@ -205,4 +206,91 @@ final class LegacyTextRecognizerTests: XCTestCase {
       ])
     }
   }
+}
+
+/// The async control surface on `TextSightCamera` and `TextSightModelReadiness`, reached via
+/// `@testable import`. Covers both outcomes of the continuation bridge: it resolves, and it throws
+/// instead of hanging. A hung continuation is the failure mode the async conversion introduces, and
+/// XCTest's own timeout is what catches it.
+final class AsyncControlSurfaceTests: XCTestCase {
+  private let options = TextSightOptionsMessage(level: .accurate, languages: [], roi: nil)
+
+  func testRecognizeImageResolvesForRenderedText() async throws {
+    let png = try XCTUnwrap(LegacyTextRecognizerTests.renderText("HELLO").pngData())
+
+    let frame = try await makeCamera().recognizeImage(
+      bytes: FlutterStandardTypedData(bytes: png), options: options
+    )
+
+    let lines = try XCTUnwrap(frame["lines"] as? [[String: Any?]])
+    let joined = lines.compactMap { $0["text"] as? String }.joined().uppercased()
+    XCTAssertTrue(joined.contains("HELLO"), "expected HELLO, got \"\(joined)\"")
+  }
+
+  func testRecognizeImageThrowsOnUndecodableBytes() async {
+    // Lands on the frame-decode guard, not the source guard: CGImageSourceCreateWithData returns a
+    // source for any Data, empty included.
+    let garbage = FlutterStandardTypedData(bytes: Data([0x00, 0x01, 0x02, 0x03]))
+
+    await assertThrowsPigeonError(code: "decode-failed",
+                                  message: "The image could not be decoded.") {
+      try await self.makeCamera().recognizeImage(bytes: garbage, options: self.options)
+    }
+  }
+
+  func testRecognizePathThrowsWhenTheFileIsMissing() async {
+    await assertThrowsPigeonError(code: "file-not-found") {
+      try await self.makeCamera().recognizePath(path: "/no/such/file.png", options: self.options)
+    }
+  }
+
+  func testInitializeThrowsWithoutCameraPermission() async {
+    // The test host is never authorized for capture, so this is the guard's real path.
+    await assertThrowsPigeonError(code: "permission-denied") {
+      _ = try await self.makeCamera().initialize(options: self.options)
+    }
+  }
+
+  func testEnsureModelReadyResolvesToReady() async {
+    let state = await TextSightModelReadiness().ensureModelReady()
+
+    XCTAssertEqual(state["state"] as? String, "ready")
+  }
+
+  func testDisposeResolvesOnAnUnopenedSession() async throws {
+    // Exercises the sessionQueue bridge on its own: release is idempotent, so this must resolve
+    // rather than hang waiting for a session that never opened.
+    try await makeCamera().dispose()
+  }
+
+  private func makeCamera() -> TextSightCamera {
+    TextSightCamera(textureRegistry: StubTextureRegistry())
+  }
+
+  private func assertThrowsPigeonError(
+    code: String, message: String? = nil, file: StaticString = #filePath, line: UInt = #line,
+    _ work: @escaping () async throws -> Void
+  ) async {
+    do {
+      try await work()
+      XCTFail("expected a PigeonError(\(code)), got success", file: file, line: line)
+    } catch let error as PigeonError {
+      XCTAssertEqual(error.code, code, file: file, line: line)
+      if let message {
+        XCTAssertEqual(error.message, message, file: file, line: line)
+      }
+    } catch {
+      XCTFail("expected a PigeonError(\(code)), got \(error)", file: file, line: line)
+    }
+  }
+}
+
+/// Satisfies `TextSightCamera`'s texture dependency for the one-shot and dispose paths, which never
+/// register a texture.
+private final class StubTextureRegistry: NSObject, FlutterTextureRegistry {
+  func register(_ texture: FlutterTexture) -> Int64 { 1 }
+
+  func textureFrameAvailable(_ textureId: Int64) {}
+
+  func unregisterTexture(_ textureId: Int64) {}
 }

@@ -41,19 +41,21 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
 
   func initialize(options: TextSightOptionsMessage,
                   completion: @escaping (Result<Int64, Error>) -> Void) {
-    camera.initialize(options: options, completion: completion)
+    adapt(completion) { try await self.camera.initialize(options: options) }
   }
 
   func start(completion: @escaping (Result<Void, Error>) -> Void) {
-    camera.start(completion: completion)
+    camera.start()
+    completion(.success(()))
   }
 
   func stop(completion: @escaping (Result<Void, Error>) -> Void) {
-    camera.stop(completion: completion)
+    camera.stop()
+    completion(.success(()))
   }
 
   func dispose(completion: @escaping (Result<Void, Error>) -> Void) {
-    camera.dispose(completion: completion)
+    adapt(completion) { try await self.camera.dispose() }
   }
 
   func checkCameraPermission() throws -> CameraPermissionStatusMessage {
@@ -61,9 +63,7 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
   }
 
   func requestCameraPermission(completion: @escaping (Result<CameraPermissionStatusMessage, Error>) -> Void) {
-    CameraPermission.request { status in
-      completion(.success(status))
-    }
+    adapt(completion) { await CameraPermission.request() }
   }
 
   func setRegionOfInterest(roi: RegionOfInterestMessage?) throws {
@@ -83,17 +83,30 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
   }
 
   func ensureModelReady(completion: @escaping (Result<[String: Any?], Error>) -> Void) {
-    modelReadiness.ensureModelReady(completion: completion)
+    adapt(completion) { await self.modelReadiness.ensureModelReady() }
   }
 
   func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage,
                       completion: @escaping (Result<[String: Any?], Error>) -> Void) {
-    camera.recognizeImage(bytes: bytes, options: options, completion: completion)
+    adapt(completion) { try await self.camera.recognizeImage(bytes: bytes, options: options) }
   }
 
   func recognizePath(path: String, options: TextSightOptionsMessage,
                      completion: @escaping (Result<[String: Any?], Error>) -> Void) {
-    camera.recognizePath(path: path, options: options, completion: completion)
+    adapt(completion) { try await self.camera.recognizePath(path: path, options: options) }
+  }
+
+  /// Temporary: adapts the async session API back to Pigeon 27's callback signatures. Deleted when
+  /// the schema flips to `@async` and Pigeon awaits these directly.
+  private func adapt<T>(_ completion: @escaping (Result<T, Error>) -> Void,
+                        _ work: @escaping () async throws -> T) {
+    Task {
+      do {
+        completion(.success(try await work()))
+      } catch {
+        completion(.failure(error))
+      }
+    }
   }
 }
 
