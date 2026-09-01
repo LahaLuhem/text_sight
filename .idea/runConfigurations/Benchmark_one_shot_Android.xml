@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Benchmark: one-shot (Android device)" type="ShConfigurationType">
+    <option name="SCRIPT_TEXT" value="ID=$(flutter devices --machine | python3 -c &quot;import json,sys;print(next((d['id'] for d in json.load(sys.stdin) if d.get('targetPlatform','').startswith('android') and not d.get('emulator')),''))&quot;); [ -n &quot;$ID&quot; ] || { echo 'no physical Android device connected'; exit 1; }; flutter drive --driver=test_driver/perf_driver.dart --target=integration_test/one_shot_latency_test.dart --profile -d &quot;$ID&quot; --dart-define=ITERATIONS=3 --dart-define=OUTPUT=&quot;$PWD/../results-local/current/one_shot_latency_android.json&quot; --dart-define=GIT_SHA=&quot;$(git rev-parse --short HEAD)&quot; --dart-define=PKG_VERSION=&quot;$(grep -m1 '^version:' ../../pubspec.yaml | cut -d' ' -f2)&quot;" />
+    <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
+    <option name="SCRIPT_PATH" value="" />
+    <option name="SCRIPT_OPTIONS" value="" />
+    <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
+    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$/benchmark/app" />
+    <option name="INDEPENDENT_INTERPRETER_PATH" value="true" />
+    <option name="INTERPRETER_PATH" value="/bin/bash" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="EXECUTE_IN_TERMINAL" value="true" />
+    <option name="EXECUTE_SCRIPT_FILE" value="false" />
+    <envs />
+    <method v="2" />
+  </configuration>
+</component>

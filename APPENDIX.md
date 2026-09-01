@@ -637,8 +637,11 @@ including `io.flutter.*`. This is *not* Flutter's default plugin layout; `flutte
 - **`android/gradle.properties`** — `useAndroidX` + JVM args only. (No `newDsl`/`builtInKotlin`
   opt-out flags; the standalone build runs AGP 9's built-in Kotlin + new DSL.)
 - **`android/build.gradle.kts`** — an `if (project == rootProject)` block that adds the Flutter
-  engine embedding (`io.flutter:flutter_embedding_debug:1.0.0-<engine.version>`) as `compileOnly`,
-  reading the version from the pinned SDK so it tracks the channel rather than being hardcoded.
+  engine embedding (`io.flutter:flutter_embedding_debug:1.0.0-<engine.version>`) as `compileOnly`
+  plus `testImplementation`, reading the version from the pinned SDK so it tracks the channel rather
+  than being hardcoded. Both configurations are needed: `compileOnly` covers the main source set
+  only, so without the second the unit tests cannot resolve `io.flutter.*` and the standalone build
+  fails to compile them.
 - the **Gradle wrapper** (`gradlew`, `gradle/wrapper/`).
 
 **Why Flutter doesn't do this for you.** A plugin's `android/` is a library module that Flutter only

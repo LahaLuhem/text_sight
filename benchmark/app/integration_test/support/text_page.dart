@@ -6,6 +6,8 @@ import 'package:flutter/painting.dart';
 
 /// Page shapes mirroring `harness/payloads.dart`, seeds included, so a `document` here has the same
 /// line count as one there. Duplicated because this host is its own package.
+// Benchmark
+//ignore: prefer-match-file-name
 enum PageProfile {
   /// A street sign or label: a few short lines.
   sign(minLines: 1, maxLines: 3, minTextLen: 3, maxTextLen: 14),
@@ -52,7 +54,7 @@ Future<RenderedPage> renderPage(PageProfile profile) async {
   final lineCount = profile.minLines + random.nextInt(profile.maxLines - profile.minLines + 1);
   final lines = List.generate(lineCount, (_) => _line(random, profile));
 
-  const textBoxHeight = _pageHeight - 2 * _margin;
+  const textBoxHeight = _pageHeight - _margin * 2;
   final fontSize = min(_maxFontSize, textBoxHeight / (lineCount * _lineHeight));
   final painter = TextPainter(
     text: TextSpan(
@@ -60,7 +62,7 @@ Future<RenderedPage> renderPage(PageProfile profile) async {
       style: TextStyle(color: const Color(0xFF000000), fontSize: fontSize, height: _lineHeight),
     ),
     textDirection: TextDirection.ltr,
-  )..layout(maxWidth: _pageWidth - 2 * _margin);
+  )..layout(maxWidth: _pageWidth - _margin * 2);
 
   final recorder = ui.PictureRecorder();
   final canvas = Canvas(recorder)

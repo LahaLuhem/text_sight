@@ -166,8 +166,11 @@ if (project == rootProject) {
         repositories {
             maven { url = uri("https://storage.googleapis.com/download.flutter.io") }
         }
+        val engineDependency = "io.flutter:flutter_embedding_debug:1.0.0-$engineVersion"
         dependencies {
-            compileOnly("io.flutter:flutter_embedding_debug:1.0.0-$engineVersion")
+            compileOnly(engineDependency)
+            // `compileOnly` covers the main source set only, so the unit tests need their own.
+            testImplementation(engineDependency)
         }
     } else {
         logger.warn(
