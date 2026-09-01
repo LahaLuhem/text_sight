@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreGraphics
+import CoreVideo
 import Flutter
 import Foundation
 import ImageIO
@@ -290,6 +291,52 @@ final class AsyncControlSurfaceTests: XCTestCase {
   }
 }
 
+/// Backpressure and cancellation on the live frame path, driven through `handle` with a parked
+/// recognizer so no camera is needed. The cancellation case is the interesting one: it times out if
+/// teardown never reaches work already in flight, the shape `EngineScopeTest` covers on Android.
+final class LiveFramePathTests: XCTestCase {
+  func testDisposeCancelsTheRecognitionInFlight() async throws {
+    let recognizer = ParkedRecognizer()
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), recognizer: recognizer)
+    _ = camera.onListen(withArguments: nil) { _ in XCTFail("a cancelled frame must not emit") }
+    camera.start()
+
+    camera.handle(try Self.makePixelBuffer())
+    await fulfillment(of: [recognizer.started], timeout: 5)
+
+    try await camera.dispose()
+
+    await fulfillment(of: [recognizer.cancelled], timeout: 5)
+  }
+
+  func testAFrameIsDroppedWhileAnotherIsStillRunning() async throws {
+    let recognizer = ParkedRecognizer()
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), recognizer: recognizer)
+    _ = camera.onListen(withArguments: nil) { _ in }
+    camera.start()
+    let pixelBuffer = try Self.makePixelBuffer()
+
+    camera.handle(pixelBuffer)
+    await fulfillment(of: [recognizer.started], timeout: 5)
+    camera.handle(pixelBuffer)
+
+    // Inverted, so this passes only while the second frame stays out of the recognizer.
+    await fulfillment(of: [recognizer.startedAgain], timeout: 0.5)
+
+    try await camera.dispose()
+    await fulfillment(of: [recognizer.cancelled], timeout: 5)
+  }
+
+  private static func makePixelBuffer() throws -> CVPixelBuffer {
+    var pixelBuffer: CVPixelBuffer?
+    let code = CVPixelBufferCreate(kCFAllocatorDefault, 64, 48, kCVPixelFormatType_32BGRA, nil,
+                                   &pixelBuffer)
+    XCTAssertEqual(code, kCVReturnSuccess)
+
+    return try XCTUnwrap(pixelBuffer)
+  }
+}
+
 /// Satisfies `TextSightCamera`'s texture dependency for the one-shot and dispose paths, which never
 /// register a texture.
 private final class StubTextureRegistry: NSObject, FlutterTextureRegistry {
@@ -298,4 +345,54 @@ private final class StubTextureRegistry: NSObject, FlutterTextureRegistry {
   func textureFrameAvailable(_ textureId: Int64) {}
 
   func unregisterTexture(_ textureId: Int64) {}
+}
+
+/// Never finishes on its own: it parks until its task is cancelled. Lets a test hold one recognition
+/// in flight and watch what teardown does to it.
+private final class ParkedRecognizer: TextRecognizer, @unchecked Sendable {
+  let started = XCTestExpectation(description: "the first frame reached the recognizer")
+  let cancelled = XCTestExpectation(description: "the parked recognition was cancelled")
+  /// Inverted, so waiting on it asserts that no second frame ever got through the gate.
+  let startedAgain: XCTestExpectation = {
+    let expectation = XCTestExpectation(description: "a second frame reached the recognizer")
+    expectation.isInverted = true
+
+    return expectation
+  }()
+
+  private let lock = NSLock()
+  private var starts = 0
+
+  func recognize(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    if isFirstStart() { started.fulfill() } else { startedAgain.fulfill() }
+
+    do {
+      // Long enough that only cancellation ends the wait.
+      try await Task.sleep(nanoseconds: 30 * NSEC_PER_SEC)
+    } catch {
+      cancelled.fulfill()
+      throw error
+    }
+
+    return []
+  }
+
+  func recognize(cgImage: CGImage, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    XCTFail("the live path must not take the still-image entry point")
+
+    return []
+  }
+
+  /// Counts this entry and says whether it was the first. Synchronous for the same reason
+  /// `TextSightCamera` keeps its locking out of async code.
+  private func isFirstStart() -> Bool {
+    lock.lock()
+    starts += 1
+    let isFirst = starts == 1
+    lock.unlock()
+
+    return isFirst
+  }
 }
