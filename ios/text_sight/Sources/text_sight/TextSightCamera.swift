@@ -22,10 +22,9 @@ final class TextSightCamera: NSObject {
   private let sessionQueue = DispatchQueue(label: "com.lahaluhem.text_sight.session")
   private let captureQueue = DispatchQueue(label: "com.lahaluhem.text_sight.capture")
 
-  /// The Vision backend behind the `TextRecognizer` seam, chosen once by OS (modern on iOS 18+,
-  /// legacy on 13-17). Stateless w.r.t. config (it is passed per call), so the live path and the
-  /// one-shot share this one instance, race-free.
-  private let recognizer: any TextRecognizer = TextRecognizerFactory.make()
+  /// The Vision backend behind the `TextRecognizer` seam. Stateless w.r.t. config (it is passed
+  /// per call), so the live path and the one-shot share this one instance, race-free.
+  private let recognizer: any TextRecognizer
 
   /// Guards every field touched from more than one thread: the latest pixel buffer (capture
   /// queue writes, raster thread reads via `copyPixelBuffer`), the sink, the recognizer config
@@ -62,8 +61,12 @@ final class TextSightCamera: NSObject {
   private var isRecognizing = false
   private var isProcessing = false
 
-  init(textureRegistry: FlutterTextureRegistry) {
+  /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 13-17). Tests
+  /// pass a stub instead.
+  init(textureRegistry: FlutterTextureRegistry,
+       recognizer: any TextRecognizer = TextRecognizerFactory.make()) {
     self.textureRegistry = textureRegistry
+    self.recognizer = recognizer
     super.init()
     observeAppLifecycle()
   }
