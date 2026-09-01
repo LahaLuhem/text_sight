@@ -334,7 +334,7 @@ model and the `Rect` ROI).
 **Decision.** The iOS live path is **roll-your-own** `AVCaptureSession` + Vision →
 `FlutterTexture`, mirroring the Android `TextSightCamera`. The primary recognizer is Vision's **Swift
 `RecognizeTextRequest`** — the WWDC 2024 API — with a legacy `VNRecognizeTextRequest` fallback for
-iOS 13–17 (the hybrid, below). The **deployment floor is 13.0** (`text_sight.podspec` +
+iOS 15–17 (the hybrid, below). The **deployment floor is 15.0** (`text_sight.podspec` +
 `Package.swift`); iOS 18+ runs the modern path, and a future macOS target would floor at 15.0 for it
 (the same API's macOS availability).
 
@@ -358,11 +358,12 @@ posture that puts Android on CameraX + ML Kit v2 and that the whole no-bundling 
 (off GoogleMLKit-on-iOS). It runs the **same** Vision text engine as the legacy request, so this is
 a modernity / ergonomics choice, **not** an accuracy or capability gain; `topCandidates(1)`
 confidence and a normalized `regionOfInterest` both carry over. The modern API *was* an iOS 18 floor;
-the hybrid below recovers iOS 13–17 through the legacy request while iOS 18+ keeps the modern path.
+the hybrid below recovers iOS 15–17 through the legacy request while iOS 18+ keeps the modern path.
 
-**Backwards-compatible hybrid (iOS 13–17) — as built (issue #5).** The floor is **13.0**. A
+**Backwards-compatible hybrid (iOS 15–17) — as built (issue #5).** The floor is **15.0**, raised
+from the original 13.0 once Flutter 3.47 made 15 its own minimum, leaving 13 and 14 unreachable. A
 `TextRecognizer` protocol abstracts two backends — `ModernTextRecognizer` (`@available(iOS 18, *)`,
-the Swift `RecognizeTextRequest`) and `LegacyTextRecognizer` (`VNRecognizeTextRequest`, iOS 13–17,
+the Swift `RecognizeTextRequest`) and `LegacyTextRecognizer` (`VNRecognizeTextRequest`, iOS 15–17,
 *not* deprecated) — and `TextRecognizerFactory.make()` is the **single** `#available(iOS 18, *)`
 site, resolved once at `TextSightCamera` init (kept out of the ~30 fps path). Both backends emit the
 identical neutral `RecognizedLineData`, so the captures-`EventChannel` map and the Y-flip stay shared
@@ -374,16 +375,16 @@ OS-version compare (not a per-frame tax), and the legacy code never runs there. 
 is *synchronous*, so it runs on a dedicated serial queue bridged to `async` via a continuation, never
 blocking the cooperative pool.
 
-**Lowering the floor was *not* recognizer-only — the rotation gotcha (option C).** Dropping to 13
+**Lowering the floor was *not* recognizer-only — the rotation gotcha (option C).** Dropping below 18
 also exposed `AVCaptureDevice.RotationCoordinator` (iOS 17+) in the *capture* pipeline; the earlier
 "only the recognizer-construction site branches" guess was wrong. Rather than carry a second rotation
 pipeline (the pre-17 `UIDevice` / `videoOrientation` path) for a device population we **do not expect
-in practice** — iOS 13–16 is a vanishing slice by 2026, and most iOS-17-capable devices also run 18 —
-the coordinator is gated `@available(iOS 17, *)` and on iOS 13–16 rotation is simply **not tracked**
+in practice** — iOS 15–16 is a vanishing slice by 2026, and most iOS-17-capable devices also run 18 —
+the coordinator is gated `@available(iOS 17, *)` and on iOS 15–16 rotation is simply **not tracked**
 (`currentRotationAngle` stays 0): basic, un-rotated *live* capture (the one-shot is unaffected — it
 reads EXIF). Recognition still works; the live preview just won't follow device rotation. This
-degraded fallback (**option C**) was chosen for near-free 13–16 reach at low maintenance; the full
-pre-17 rotation path (**option A**) is **deferred until real bug reports from actual 13–16 users
+degraded fallback (**option C**) was chosen for near-free 15–16 reach at low maintenance; the full
+pre-17 rotation path (**option A**) is **deferred until real bug reports from actual 15–16 users
 justify it** (caveated in the [README](./README.md)). Cross-ref: [#channel-topology](#channel-topology).
 
 ---
@@ -582,7 +583,7 @@ seam shows in the tree. Each public type gets its own file (per
   19.0.1) ML Kit v2 via `Text.Line.getConfidence()`. It is `null` only when the engine omits one
   for a given line; the two scales are **not guaranteed comparable** across platforms — nor, on
   iOS, across versions: the modern `RecognizeTextRequest` (18+) reports **coarse** confidence
-  (frequently `1.0`), whereas the legacy `VNRecognizeTextRequest` (13–17) is **graded** — the same
+  (frequently `1.0`), whereas the legacy `VNRecognizeTextRequest` (15–17) is **graded** — the same
   image read on an iOS 15 device scored `~0.5` for lines the iOS 18+ path scored `1.0`
   (device-verified). `null`
   means **"not supplied,"** *not* "low confidence" — never synthesize a value to fill it. A

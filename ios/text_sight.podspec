@@ -15,9 +15,10 @@ Live, on-device text recognition — Apple Vision on iOS, ML Kit on Android. The
   s.source           = { :path => '.' }
   s.source_files = 'text_sight/Sources/text_sight/**/*'
   s.dependency 'Flutter'
-  # iOS 13.0 — the hybrid recognizer availability-gates Vision's Swift `RecognizeTextRequest`
-  # (iOS 18+) against the legacy `VNRecognizeTextRequest` (iOS 13–17).
-  s.platform = :ios, '13.0'
+  # iOS 15.0: Flutter's own floor since 3.47, so nothing lower can load this plugin. The hybrid
+  # recognizer gates Vision's Swift `RecognizeTextRequest` (iOS 18+) against the legacy
+  # `VNRecognizeTextRequest` (iOS 15-17).
+  s.platform = :ios, '15.0'
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386' }

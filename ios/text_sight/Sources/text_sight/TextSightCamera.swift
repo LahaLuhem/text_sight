@@ -42,13 +42,13 @@ final class TextSightCamera: NSObject {
   /// Background/foreground observer tokens, registered in `init`, removed in `deinit`.
   private var appLifecycleObservers: [NSObjectProtocol] = []
   // Type-erased: the concrete `AVCaptureDevice.RotationCoordinator` is iOS 17+, but this class
-  // deploys to 13. Held only to keep the coordinator alive for its KVO, and stays nil on iOS 13-16.
+  // deploys to 15. Held only to keep the coordinator alive for its KVO, and stays nil on iOS 15-16.
   private var rotationCoordinator: Any?
   private var rotationObservation: NSKeyValueObservation?
 
   /// Clockwise degrees (from the rotation coordinator) to rotate the sensor buffer upright. The
   /// buffer is delivered unrotated. This drives the Vision orientation and the reported
-  /// `quarterTurns` that `TextSightView` applies to the preview texture. Stays `0` on iOS 13-16
+  /// `quarterTurns` that `TextSightView` applies to the preview texture. Stays `0` on iOS 15-16
   /// (no `RotationCoordinator`): preview and recognition do not follow live rotation there.
   private var currentRotationAngle: CGFloat = 0
 
@@ -64,7 +64,7 @@ final class TextSightCamera: NSObject {
   /// teardown cancels. Only the owning task clears it, see `releaseSession`.
   private var recognitionTask: Task<Void, Never>?
 
-  /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 13-17). Tests
+  /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 15-17). Tests
   /// pass a stub instead.
   init(textureRegistry: FlutterTextureRegistry,
        recognizer: any TextRecognizer = TextRecognizerFactory.make()) {
@@ -83,7 +83,12 @@ final class TextSightCamera: NSObject {
   // MARK: Control channel (delegated from TextSightPlugin's TextSightHostApi conformance)
 
   func initialize(options: TextSightOptionsMessage) async throws -> Int64 {
-    applyRecognitionConfig(options)
+    // One lock hold for all three, so a frame never snapshots a half-applied update.
+    stateLock.withLock {
+      recognitionLevel = options.level
+      recognitionLanguages = options.languages
+      regionOfInterest = options.roi
+    }
 
     guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
       throw PigeonError(code: "permission-denied",
@@ -100,16 +105,12 @@ final class TextSightCamera: NSObject {
 
   /// Synchronous: it only flips a flag under the lock, so it needs no queue hop.
   func start() {
-    stateLock.lock()
-    isRecognizing = true
-    stateLock.unlock()
+    stateLock.withLock { isRecognizing = true }
   }
 
   /// Synchronous, same as `start`.
   func stop() {
-    stateLock.lock()
-    isRecognizing = false
-    stateLock.unlock()
+    stateLock.withLock { isRecognizing = false }
   }
 
   func dispose() async throws {
@@ -117,21 +118,15 @@ final class TextSightCamera: NSObject {
   }
 
   func setRegionOfInterest(roi: RegionOfInterestMessage?) {
-    stateLock.lock()
-    regionOfInterest = roi
-    stateLock.unlock()
+    stateLock.withLock { regionOfInterest = roi }
   }
 
   func setRecognitionLevel(level: RecognitionLevelMessage) {
-    stateLock.lock()
-    recognitionLevel = level
-    stateLock.unlock()
+    stateLock.withLock { recognitionLevel = level }
   }
 
   func setLanguages(languages: [String]) {
-    stateLock.lock()
-    recognitionLanguages = languages
-    stateLock.unlock()
+    stateLock.withLock { recognitionLanguages = languages }
   }
 
   func setTorchEnabled(enabled: Bool) {
@@ -141,17 +136,6 @@ final class TextSightCamera: NSObject {
       self.torchEnabled = enabled
       self.applyTorch(enabled)
     }
-  }
-
-  /// Stores all three config fields under one lock, so a frame never sees a half-applied update.
-  /// Stays synchronous: `NSLock` wants the locking thread to unlock, and an `await` in the middle
-  /// of a critical section could resume on another one.
-  private func applyRecognitionConfig(_ options: TextSightOptionsMessage) {
-    stateLock.lock()
-    recognitionLevel = options.level
-    recognitionLanguages = options.languages
-    regionOfInterest = options.roi
-    stateLock.unlock()
   }
 
   // MARK: Session lifecycle
@@ -179,13 +163,11 @@ final class TextSightCamera: NSObject {
 
     session.commitConfiguration()
 
-    // iOS 13-16 has no `RotationCoordinator`, so rotation stays untracked there (documented).
+    // iOS 15-16 has no `RotationCoordinator`, so rotation stays untracked there (documented).
     if #available(iOS 17, *) { startTrackingRotation(for: device) }
 
     let id = textureRegistry.register(self)
-    stateLock.lock()
-    textureId = id
-    stateLock.unlock()
+    stateLock.withLock { textureId = id }
 
     session.startRunning()
 
@@ -196,7 +178,7 @@ final class TextSightCamera: NSObject {
   /// The buffer itself is delivered unrotated, which is cheaper and avoids relying on data-output
   /// rotation. Instead the angle is reported to Dart as `quarterTurns` (so `TextSightView` rotates
   /// the preview texture) and is used to orient Vision so recognition stays upright and boxes come
-  /// out display-oriented. Gated to 17+: on iOS 13-16 the angle stays `0`, a deliberate degraded
+  /// out display-oriented. Gated to 17+: on iOS 15-16 the angle stays `0`, a deliberate degraded
   /// fallback (no live rotation), not a full pre-17 rotation path. See APPENDIX / the README note.
   @available(iOS 17, *)
   private func startTrackingRotation(for device: AVCaptureDevice) {
@@ -214,9 +196,7 @@ final class TextSightCamera: NSObject {
   }
 
   private func updateRotationAngle(_ angle: CGFloat) {
-    stateLock.lock()
-    currentRotationAngle = angle
-    stateLock.unlock()
+    stateLock.withLock { currentRotationAngle = angle }
   }
 
   /// Stops capture while the app is backgrounded and restarts it on return. Stopping explicitly
@@ -280,16 +260,17 @@ final class TextSightCamera: NSObject {
     session.outputs.forEach { session.removeOutput($0) }
     session.commitConfiguration()
 
-    stateLock.lock()
-    isRecognizing = false
-    latestPixelBuffer = nil
-    let inFlight = recognitionTask
-    let releasedTextureId = textureId
-    textureId = nil
-    stateLock.unlock()
+    let (inFlight, releasedTextureId) = stateLock.withLock {
+      isRecognizing = false
+      latestPixelBuffer = nil
+      let claimed = (recognitionTask, textureId)
+      textureId = nil
 
-    // Cancel but leave the slot: only the owning task clears it, so a cancelled task that is still
-    // draining can never wipe a newer task's handle. Outside the lock, since the gate is shut above.
+      return claimed
+    }
+
+    // Cancel but leave the slot: only the owning task clears it, so a cancelled task still
+    // draining can never wipe a newer task's handle. Outside the lock, the gate is shut above.
     inFlight?.cancel()
 
     releasedTextureId.map { textureRegistry.unregisterTexture($0) }
@@ -301,15 +282,16 @@ final class TextSightCamera: NSObject {
   /// Stores the frame for the preview, then starts recognition when the slot is free. Internal (not
   /// `private`) so `RunnerTests` can drive a frame without an `AVCaptureConnection`.
   func handle(_ pixelBuffer: CVPixelBuffer) {
-    stateLock.lock()
-    latestPixelBuffer = pixelBuffer
-    let activeTextureId = textureId
-    // Claim the slot and build the task in one lock hold. Split across two, a teardown could land
-    // in between and leave a task nobody cancels.
-    if isRecognizing, recognitionTask == nil, eventSink != nil {
-      recognitionTask = makeRecognitionTask(for: pixelBuffer)
+    let activeTextureId = stateLock.withLock {
+      latestPixelBuffer = pixelBuffer
+      // Claim the slot and build the task in one lock hold. Split across two, a teardown could land
+      // in between and leave a task nobody cancels.
+      if isRecognizing, recognitionTask == nil, eventSink != nil {
+        recognitionTask = makeRecognitionTask(for: pixelBuffer)
+      }
+
+      return textureId
     }
-    stateLock.unlock()
 
     // Keep the preview live every frame. Recognition is throttled by the single-in-flight slot.
     activeTextureId.map { textureRegistry.textureFrameAvailable($0) }
@@ -348,9 +330,7 @@ final class TextSightCamera: NSObject {
 
   /// Frees the slot for the next frame. Only the owning task calls this, from its `defer`.
   private func clearRecognitionSlot() {
-    stateLock.lock()
-    recognitionTask = nil
-    stateLock.unlock()
+    stateLock.withLock { recognitionTask = nil }
   }
 
   /// Runs `work` on `sessionQueue`, bridged to `async`. The queue is the session's synchronisation
@@ -443,9 +423,7 @@ final class TextSightCamera: NSObject {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
 
-      self.stateLock.lock()
-      let sink = self.eventSink
-      self.stateLock.unlock()
+      let sink = self.stateLock.withLock { self.eventSink }
 
       sink?(frame)
     }
@@ -502,11 +480,7 @@ final class TextSightCamera: NSObject {
 
 extension TextSightCamera: FlutterTexture {
   func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
-    stateLock.lock()
-    defer { stateLock.unlock() }
-    guard let pixelBuffer = latestPixelBuffer else { return nil }
-
-    return Unmanaged.passRetained(pixelBuffer)
+    stateLock.withLock { latestPixelBuffer.map(Unmanaged.passRetained) }
   }
 }
 
@@ -515,17 +489,13 @@ extension TextSightCamera: FlutterTexture {
 extension TextSightCamera: FlutterStreamHandler {
   func onListen(withArguments arguments: Any?,
                 eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-    stateLock.lock()
-    eventSink = events
-    stateLock.unlock()
+    stateLock.withLock { eventSink = events }
 
     return nil
   }
 
   func onCancel(withArguments arguments: Any?) -> FlutterError? {
-    stateLock.lock()
-    eventSink = nil
-    stateLock.unlock()
+    stateLock.withLock { eventSink = nil }
 
     return nil
   }

@@ -6,9 +6,10 @@ import PackageDescription
 let package = Package(
     name: "text_sight",
     platforms: [
-        // iOS 13.0 — the hybrid recognizer availability-gates Vision's Swift `RecognizeTextRequest`
-        // (iOS 18+) against the legacy `VNRecognizeTextRequest` (iOS 13–17).
-        .iOS("13.0")
+        // iOS 15.0: Flutter's own floor since 3.47, so nothing lower can load this plugin. The
+        // hybrid recognizer gates Vision's Swift `RecognizeTextRequest` (iOS 18+) against the
+        // legacy `VNRecognizeTextRequest` (iOS 15-17).
+        .iOS("15.0")
     ],
     products: [
         .library(name: "text-sight", targets: ["text_sight"])

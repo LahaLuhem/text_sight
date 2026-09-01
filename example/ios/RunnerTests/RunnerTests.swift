@@ -347,7 +347,7 @@ private final class StubTextureRegistry: NSObject, FlutterTextureRegistry {
   func unregisterTexture(_ textureId: Int64) {}
 }
 
-/// Never finishes on its own: it parks until its task is cancelled. Lets a test hold one recognition
+/// Never finishes on its own: it parks until its task is cancelled. Lets a test hold a recognition
 /// in flight and watch what teardown does to it.
 private final class ParkedRecognizer: TextRecognizer, @unchecked Sendable {
   let started = XCTestExpectation(description: "the first frame reached the recognizer")
@@ -385,14 +385,12 @@ private final class ParkedRecognizer: TextRecognizer, @unchecked Sendable {
     return []
   }
 
-  /// Counts this entry and says whether it was the first. Synchronous for the same reason
-  /// `TextSightCamera` keeps its locking out of async code.
+  /// Counts this entry and says whether it was the first.
   private func isFirstStart() -> Bool {
-    lock.lock()
-    starts += 1
-    let isFirst = starts == 1
-    lock.unlock()
+    lock.withLock {
+      starts += 1
 
-    return isFirst
+      return starts == 1
+    }
   }
 }
