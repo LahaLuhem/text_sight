@@ -60,6 +60,10 @@ final class TextSightCamera: NSObject {
 
   private var isRecognizing = false
 
+  /// Set when the engine detaches, so a control call that was already in flight cannot rebuild the
+  /// session behind teardown's back.
+  private var isDetached = false
+
   /// The one in-flight recognition, nil when idle: both the backpressure gate and the handle that
   /// teardown cancels. Only the owning task clears it, see `releaseSession`.
   private var recognitionTask: Task<Void, Never>?
@@ -97,6 +101,9 @@ final class TextSightCamera: NSObject {
 
     do {
       return try await onSessionQueue { try self.configureSession() }
+    } catch let error as PigeonError {
+      // Already shaped for Dart (the detach guard), so pass it through instead of re-wrapping.
+      throw error
     } catch {
       throw PigeonError(code: "initialization-failed",
                         message: error.localizedDescription, details: nil)
@@ -115,6 +122,16 @@ final class TextSightCamera: NSObject {
 
   func dispose() async throws {
     try await onSessionQueue { self.releaseSession() }
+  }
+
+  /// Engine teardown: shuts the gate for good, then releases the session off the calling thread.
+  /// Internal (not `private`) so `RunnerTests` can drive it without a `FlutterPluginRegistrar`.
+  func detach() {
+    stateLock.withLock { isDetached = true }
+
+    // Strong `self` on purpose: teardown has to outlive the plugin's last external reference. Every
+    // other `sessionQueue.async` here captures weakly, this one must not.
+    sessionQueue.async { self.releaseSession() }
   }
 
   func setRegionOfInterest(roi: RegionOfInterestMessage?) {
@@ -143,6 +160,14 @@ final class TextSightCamera: NSObject {
   /// Builds the capture graph (back camera → BGRA video output), registers the preview texture,
   /// and starts the session. Runs on `sessionQueue`, since `startRunning()` must never block main.
   private func configureSession() throws -> Int64 {
+    // A control call still in flight when detach landed must not rebuild the session. The other
+    // ordering is already safe: a release queued behind us on `sessionQueue` tears this back down.
+    let detached = stateLock.withLock { isDetached }
+    guard !detached else {
+      throw PigeonError(code: "detached",
+                        message: "The plugin is not attached to a Flutter engine.", details: nil)
+    }
+
     session.beginConfiguration()
     session.sessionPreset = .high
 

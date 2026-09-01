@@ -168,7 +168,7 @@ final class TextSightCameraTests: XCTestCase {
 
 /// End-to-end recognition for the legacy Vision backend. Unlike `TextSightCameraTests` (pure
 /// mapping logic), this actually runs `VNRecognizeTextRequest`: instantiating `LegacyTextRecognizer`
-/// directly exercises the iOS 13-17 path on *any* runtime, so the legacy perform / continuation /
+/// directly exercises the iOS 15-17 path on *any* runtime, so the legacy perform / continuation /
 /// Y-flip stays covered in CI without a sub-18 simulator.
 final class LegacyTextRecognizerTests: XCTestCase {
   func testReadsRenderedText() async throws {
@@ -301,7 +301,7 @@ final class LiveFramePathTests: XCTestCase {
     _ = camera.onListen(withArguments: nil) { _ in XCTFail("a cancelled frame must not emit") }
     camera.start()
 
-    camera.handle(try Self.makePixelBuffer())
+    camera.handle(try makeTestPixelBuffer())
     await fulfillment(of: [recognizer.started], timeout: 5)
 
     try await camera.dispose()
@@ -314,7 +314,7 @@ final class LiveFramePathTests: XCTestCase {
     let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), recognizer: recognizer)
     _ = camera.onListen(withArguments: nil) { _ in }
     camera.start()
-    let pixelBuffer = try Self.makePixelBuffer()
+    let pixelBuffer = try makeTestPixelBuffer()
 
     camera.handle(pixelBuffer)
     await fulfillment(of: [recognizer.started], timeout: 5)
@@ -327,14 +327,46 @@ final class LiveFramePathTests: XCTestCase {
     await fulfillment(of: [recognizer.cancelled], timeout: 5)
   }
 
-  private static func makePixelBuffer() throws -> CVPixelBuffer {
-    var pixelBuffer: CVPixelBuffer?
-    let code = CVPixelBufferCreate(kCFAllocatorDefault, 64, 48, kCVPixelFormatType_32BGRA, nil,
-                                   &pixelBuffer)
-    XCTAssertEqual(code, kCVReturnSuccess)
+}
 
-    return try XCTUnwrap(pixelBuffer)
+/// Engine detach, the iOS counterpart to Android's `EngineScopeTest`. Driven through the internal
+/// `detach()` seam, so no `FlutterPluginRegistrar` fake is needed. Like the dispose case, the
+/// cancellation test times out if the hook never reaches work that is already running.
+final class EngineDetachTests: XCTestCase {
+  func testDetachCancelsTheRecognitionInFlight() async throws {
+    let recognizer = ParkedRecognizer()
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), recognizer: recognizer)
+    _ = camera.onListen(withArguments: nil) { _ in XCTFail("a cancelled frame must not emit") }
+    camera.start()
+
+    camera.handle(try makeTestPixelBuffer())
+    await fulfillment(of: [recognizer.started], timeout: 5)
+
+    camera.detach()
+
+    await fulfillment(of: [recognizer.cancelled], timeout: 5)
   }
+
+  func testDetachIsSafeOnASessionThatNeverOpened() async throws {
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry())
+
+    camera.detach()
+    camera.detach()
+
+    // `dispose` rides the same session queue, so awaiting it drains both teardowns. Resolving at
+    // all is the assertion: release is idempotent and must not trap on an unopened session.
+    try await camera.dispose()
+  }
+}
+
+/// A blank BGRA buffer, all `handle` needs to stand in for a captured frame.
+private func makeTestPixelBuffer() throws -> CVPixelBuffer {
+  var pixelBuffer: CVPixelBuffer?
+  let code = CVPixelBufferCreate(kCFAllocatorDefault, 64, 48, kCVPixelFormatType_32BGRA, nil,
+                                 &pixelBuffer)
+  XCTAssertEqual(code, kCVReturnSuccess)
+
+  return try XCTUnwrap(pixelBuffer)
 }
 
 /// Satisfies `TextSightCamera`'s texture dependency for the one-shot and dispose paths, which never

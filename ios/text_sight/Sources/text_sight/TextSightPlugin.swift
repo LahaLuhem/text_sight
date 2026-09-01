@@ -35,8 +35,16 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     readinessChannel.setStreamHandler(modelReadiness)
 
     // Anchor the plugin's lifetime to the registrar. The texture registry retains the camera, and
-    // the plugin retains the readiness handler.
+    // the plugin retains the readiness handler. Publishing is also what earns us
+    // `detachFromEngine(for:)` below.
     registrar.publish(plugin)
+  }
+
+  /// Engine teardown: releases the capture session and cancels in-flight recognition, which would
+  /// otherwise keep running until ARC happened to reclaim us. No `setUp(api: nil)` here on purpose,
+  /// since this fires from `FlutterEngine.dealloc` where the messenger is already gone.
+  public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
+    camera.detach()
   }
 
   func initialize(options: TextSightOptionsMessage) async throws -> Int64 {

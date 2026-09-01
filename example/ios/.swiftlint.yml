@@ -6,6 +6,7 @@ included:
 
 disabled_rules:
   - trailing_comma    # trailing commas are kept, consistent with the project's Dart style
+  - file_length       # tests grow with coverage, and splitting means project.pbxproj surgery
 
 identifier_name:
   min_length:
