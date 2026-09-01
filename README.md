@@ -105,6 +105,14 @@ Simulator has no camera. The one-shot runs anywhere.
 > population we don't expect in practice; if it affects you, please
 > [open an issue](https://github.com/LahaLuhem/text_sight/issues) and a proper rotation fallback will follow.
 
+> **⚠️ iOS add-to-app: dispose the scanner before the engine goes away.** Plain Flutter apps need
+> nothing here. If you host Flutter in a native iOS app, call `controller.dispose()` a step ahead
+> of releasing the `FlutterEngine` or dismissing its `FlutterViewController`, not in the same
+> breath. `dispose()` hands the native side a teardown request and returns before it finishes, so
+> it isn't a barrier. The plugin releases the camera on engine detach too, which covers the usual
+> routes, but a host that keeps the engine alive forever gets neither, and a live session that
+> outlives its `FlutterViewController` can crash the app.
+
 ## Install
 
 ```sh
