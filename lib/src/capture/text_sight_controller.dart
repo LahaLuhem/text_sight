@@ -132,7 +132,9 @@ final class TextSightController extends ChangeNotifier {
 
   @override
   void dispose() {
-    if (_textureId != null) unawaited(TextSightPlatform.instance.dispose());
+    // Unconditional: native can be holding a session this controller never learned about, which is
+    // what a hot restart leaves behind. Its dispose is idempotent, so an extra call costs nothing.
+    unawaited(TextSightPlatform.instance.dispose());
 
     super.dispose();
   }
