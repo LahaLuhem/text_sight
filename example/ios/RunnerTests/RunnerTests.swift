@@ -319,6 +319,21 @@ final class AsyncControlSurfaceTests: XCTestCase {
     XCTAssertEqual(state["state"] as? String, "ready")
   }
 
+  func testAFailedGraphBuildLeavesNoConfigurationOpen() throws {
+    try XCTSkipUnless(
+      AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) == nil,
+      "needs a host without a camera, which is what the simulator is"
+    )
+    let session = CountingCaptureSession()
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), session: session)
+
+    XCTAssertThrowsError(try camera.buildCaptureGraph())
+
+    // An open configuration reads as clean (inputs and outputs still look right) until
+    // start/stopRunning raises and takes the app down, so count the pairs instead.
+    XCTAssertEqual(session.openConfigurations, 0, "a failed build left the session wedged")
+  }
+
   func testDisposeResolvesOnAnUnopenedSession() async throws {
     // Exercises the sessionQueue bridge on its own: release is idempotent, so this must resolve
     // rather than hang waiting for a session that never opened.
@@ -427,6 +442,22 @@ private func makeTestPixelBuffer() throws -> CVPixelBuffer {
 
 /// Satisfies `TextSightCamera`'s texture dependency for the one-shot and dispose paths, which never
 /// register a texture.
+/// Counts open capture configurations. AVFoundation reference-counts begin/commit and exposes no
+/// way to read the depth, so mirror it here.
+private final class CountingCaptureSession: AVCaptureSession {
+  private(set) var openConfigurations = 0
+
+  override func beginConfiguration() {
+    openConfigurations += 1
+    super.beginConfiguration()
+  }
+
+  override func commitConfiguration() {
+    openConfigurations -= 1
+    super.commitConfiguration()
+  }
+}
+
 private final class StubTextureRegistry: NSObject, FlutterTextureRegistry {
   func register(_ texture: FlutterTexture) -> Int64 { 1 }
 

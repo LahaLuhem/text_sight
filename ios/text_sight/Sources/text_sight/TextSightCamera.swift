@@ -18,7 +18,7 @@ import UIKit
 /// contract holds structurally on the Apple side.
 final class TextSightCamera: NSObject {
   private let textureRegistry: FlutterTextureRegistry
-  private let session = AVCaptureSession()
+  private let session: AVCaptureSession
   private let sessionQueue = DispatchQueue(label: "com.lahaluhem.text_sight.session")
   private let captureQueue = DispatchQueue(label: "com.lahaluhem.text_sight.capture")
 
@@ -67,12 +67,14 @@ final class TextSightCamera: NSObject {
   /// session behind teardown's back.
   private var isDetached = false
 
-  /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 15-17). Tests
-  /// pass a stub instead.
+  /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 15-17), and
+  /// `session` to a plain one. Tests pass a stub and a counting session instead.
   init(textureRegistry: FlutterTextureRegistry,
-       recognizer: any TextRecognizer = TextRecognizerFactory.make()) {
+       recognizer: any TextRecognizer = TextRecognizerFactory.make(),
+       session: AVCaptureSession = AVCaptureSession()) {
     self.textureRegistry = textureRegistry
     self.recognizer = recognizer
+    self.session = session
     super.init()
     observeAppLifecycle()
     gate.onFrame = { [weak self] pixelBuffer in await self?.recognize(pixelBuffer) }
@@ -157,8 +159,8 @@ final class TextSightCamera: NSObject {
 
   // MARK: Session lifecycle
 
-  /// Builds the capture graph (back camera → video output), registers the preview texture, and
-  /// starts the session. Runs on `sessionQueue`, since `startRunning()` must never block main.
+  /// Registers the preview texture and starts the session over a freshly built graph. Runs on
+  /// `sessionQueue`, since `startRunning()` must never block main.
   private func configureSession() throws -> Int64 {
     // A control call still in flight when detach landed must not rebuild the session. The other
     // ordering is already safe: a release queued behind us on `sessionQueue` tears this back down.
@@ -168,12 +170,34 @@ final class TextSightCamera: NSObject {
                         message: "The plugin is not attached to a Flutter engine.", details: nil)
     }
 
+    let device = try buildCaptureGraph()
+    // Claimed only once the graph is up, so a failed build leaves nothing behind for
+    // `resumeSession` to restart.
+    captureDevice = device
+
+    // iOS 15-16 has no `RotationCoordinator`, so rotation stays untracked there (documented).
+    if #available(iOS 17, *) { startTrackingRotation(for: device) }
+
+    let id = textureRegistry.register(self)
+    stateLock.withLock { textureId = id }
+
+    session.startRunning()
+
+    return id
+  }
+
+  /// Wires the back camera into a video output and returns the device it opened. Runs on
+  /// `sessionQueue`. Internal (not `private`) so `RunnerTests` can drive a failed build.
+  func buildCaptureGraph() throws -> AVCaptureDevice {
     session.beginConfiguration()
+    // Commit on every exit, throws included. A configuration left open wedges the session for the
+    // whole process: start/stopRunning then raise an ObjC exception, which Swift cannot catch.
+    defer { session.commitConfiguration() }
+
     session.sessionPreset = .high
 
     guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
     else { throw CameraError.noCaptureDevice }
-    captureDevice = device
 
     let input = try AVCaptureDeviceInput(device: device)
     guard session.canAddInput(input) else { throw CameraError.cannotAddInput }
@@ -191,17 +215,7 @@ final class TextSightCamera: NSObject {
         Self.pixelFormat(from: output.availableVideoPixelFormatTypes),
     ]
 
-    session.commitConfiguration()
-
-    // iOS 15-16 has no `RotationCoordinator`, so rotation stays untracked there (documented).
-    if #available(iOS 17, *) { startTrackingRotation(for: device) }
-
-    let id = textureRegistry.register(self)
-    stateLock.withLock { textureId = id }
-
-    session.startRunning()
-
-    return id
+    return device
   }
 
   /// Picks the capture pixel format: the camera's own biplanar YUV where offered, else BGRA.
