@@ -7,7 +7,6 @@ import json
 import subprocess
 import sys
 import threading
-import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,6 +22,13 @@ from text_sight_bench.config import (
     PERF_DRIVER,
     RESULT_FILENAME,
 )
+
+# Tight while waiting on the install, slack afterwards: an adb round trip twice a second would
+# land inside the measurement window and be counted as load.
+_GRANT_POLL_SECONDS = 0.5
+_REGRANT_POLL_SECONDS = 5.0
+# A wedged `adb shell` must not outlive the run it was granting for.
+_GRANT_STOP_SECONDS = 5.0
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -116,10 +122,13 @@ def cmd_run_device(args: argparse.Namespace) -> int:
             print(f"  note: {device.name} is virtual, running {mode} (timings are not comparable)")
 
         print(f"\ndrive  {scenario}  {device.name}  ({args.iterations} iterations, {mode[2:]})")
-        # No grant survives the uninstall, so grant from the side once the package appears.
-        granter = None
+        # No grant survives the uninstall, so grant from the side for as long as the drive runs.
+        stop_granting = threading.Event()
+        granter: threading.Thread | None = None
         if scenario in CAMERA_SCENARIOS and device.platform == "android":
-            granter = threading.Thread(target=_grant_android_camera, args=(device.id,), daemon=True)
+            granter = threading.Thread(
+                target=_grant_android_camera, args=(device.id, stop_granting), daemon=True
+            )
             granter.start()
 
         result = subprocess.run(
@@ -139,6 +148,10 @@ def cmd_run_device(args: argparse.Namespace) -> int:
             cwd=APP_DIR,
             check=False,
         )
+        stop_granting.set()
+        if granter is not None:
+            granter.join(timeout=_GRANT_STOP_SECONDS)
+
         if result.returncode != 0:
             print(f"  FAILED (exit {result.returncode})", file=sys.stderr)
             failures += 1
@@ -191,20 +204,28 @@ def _discover_devices(*, include_virtual: bool) -> list[Device]:
     return devices
 
 
-def _grant_android_camera(serial: str, *, timeout_seconds: float = 90.0) -> None:
-    """Grants CAMERA once the package appears on `serial`.
+def _grant_android_camera(serial: str, stop: threading.Event) -> None:
+    """Grants CAMERA until `stop` is set, re-granting so a reinstall cannot drop it.
 
     `flutter drive` installs at run start and removes the app at the end, so that window is the
-    only time the grant can exist. The scenario polls for it.
+    only time the grant can exist. `stop` is what bounds this loop, not a clock: a cold Gradle
+    build outlasts any deadline worth hardcoding.
     """
-    deadline = time.monotonic() + timeout_seconds
-    while time.monotonic() < deadline:
-        listed = subprocess.run(
-            ["adb", "-s", serial, "shell", "pm", "list", "packages", BENCH_APP_ANDROID_ID],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
+    granted = False
+    problem = ""
+    while not stop.is_set():
+        try:
+            listed = subprocess.run(
+                ["adb", "-s", serial, "shell", "pm", "list", "packages", BENCH_APP_ANDROID_ID],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except FileNotFoundError:
+            print("  could not grant CAMERA: no `adb` on PATH", file=sys.stderr, flush=True)
+            return
+
+        problem = listed.stderr.strip()
         if BENCH_APP_ANDROID_ID in listed.stdout:
             subprocess.run(
                 [
@@ -220,7 +241,17 @@ def _grant_android_camera(serial: str, *, timeout_seconds: float = 90.0) -> None
                 capture_output=True,
                 check=False,
             )
-            print("  granted android.permission.CAMERA over adb")
-            return
-        time.sleep(0.5)
-    print("  could not grant CAMERA: package never appeared", file=sys.stderr)
+            if not granted:
+                print("  granted android.permission.CAMERA over adb", flush=True)
+                granted = True
+        stop.wait(_REGRANT_POLL_SECONDS if granted else _GRANT_POLL_SECONDS)
+
+    if not granted:
+        # The drive has already exited here, so "still building" is not on the table.
+        blame = f"adb said: {problem}" if problem else "the build or the install failed"
+        print(
+            f"  could not grant CAMERA: {BENCH_APP_ANDROID_ID} never appeared on {serial} before"
+            f" `flutter drive` exited, so {blame}",
+            file=sys.stderr,
+            flush=True,
+        )
