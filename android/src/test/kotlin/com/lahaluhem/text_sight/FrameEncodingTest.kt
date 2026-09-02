@@ -2,12 +2,9 @@ package com.lahaluhem.text_sight
 
 import android.graphics.Rect
 import com.google.mlkit.vision.text.Text
-import com.lahaluhem.text_sight.recognition.centerWithin
 import com.lahaluhem.text_sight.recognition.encodeFrame
 import com.lahaluhem.text_sight.recognition.encodeLine
-import com.lahaluhem.text_sight.recognition.toPixelRect
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -18,101 +15,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Host-side unit tests for the pure box-geometry and per-frame encoding helpers behind the captures
- * wire contract. Robolectric supplies a real [android.graphics.Rect]. ML Kit's [Text] graph is
- * mocked, since its value types expose no public constructors. No camera, recognizer, or texture is
- * involved, only the platform-independent arithmetic.
+ * `encodeLine` and `encodeFrame`: recognized text onto the per-frame wire map, which has to come out
+ * byte-identical to the one iOS emits. ML Kit's [Text] graph is mocked, since its value types expose
+ * no public constructors. The box geometry those two lean on lives in [ToPixelRectTest] and
+ * [CenterWithinTest].
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
-class TextSightCameraTest {
-    // region toPixelRect: normalized [0, 1] top-left -> clamped pixel Rect, never empty.
-
-    @Test
-    fun `toPixelRect maps a centered roi to the matching pixel rect`() {
-        val roi = RegionOfInterestMessage(left = 0.25, top = 0.25, width = 0.5, height = 0.5)
-
-        val rect = roi.toPixelRect(imageWidth = 1000, imageHeight = 500)
-
-        assertEquals(Rect(250, 125, 750, 375), rect)
-    }
-
-    @Test
-    fun `toPixelRect spanning the whole frame covers every pixel`() {
-        val roi = RegionOfInterestMessage(left = 0.0, top = 0.0, width = 1.0, height = 1.0)
-
-        val rect = roi.toPixelRect(imageWidth = 1920, imageHeight = 1080)
-
-        assertEquals(Rect(0, 0, 1920, 1080), rect)
-    }
-
-    @Test
-    fun `toPixelRect clamps a roi that overflows the image`() {
-        val roi = RegionOfInterestMessage(left = 0.8, top = 0.8, width = 0.5, height = 0.5)
-
-        val rect = roi.toPixelRect(imageWidth = 1000, imageHeight = 1000)
-
-        // right/bottom clamp to the image edge. left/top stay inside so the rect is non-empty.
-        assertEquals(Rect(800, 800, 1000, 1000), rect)
-        assertTrue(rect.width() > 0)
-        assertTrue(rect.height() > 0)
-    }
-
-    @Test
-    fun `toPixelRect never yields an empty rect for a degenerate roi`() {
-        val roi = RegionOfInterestMessage(left = 1.0, top = 1.0, width = 0.0, height = 0.0)
-
-        val rect = roi.toPixelRect(imageWidth = 640, imageHeight = 480)
-
-        // left/top coerced one pixel inside the far edge, right/bottom at least one past them.
-        assertEquals(639, rect.left)
-        assertEquals(479, rect.top)
-        assertEquals(640, rect.right)
-        assertEquals(480, rect.bottom)
-        assertTrue(rect.width() >= 1)
-        assertTrue(rect.height() >= 1)
-    }
-
-    // endregion
-
-    // region centerWithin: does the box center fall inside the (normalized) roi?
-
-    @Test
-    fun `centerWithin is always true when the roi is null`() {
-        val box = Rect(0, 0, 10, 10)
-
-        assertTrue(box.centerWithin(roi = null, imageWidth = 100.0, imageHeight = 100.0))
-    }
-
-    @Test
-    fun `centerWithin accepts a box centered inside the roi`() {
-        val roi = RegionOfInterestMessage(left = 0.25, top = 0.25, width = 0.5, height = 0.5)
-        // Center (0.5, 0.5) sits inside the [0.25, 0.75] box.
-        val box = Rect(400, 400, 600, 600)
-
-        assertTrue(box.centerWithin(roi, imageWidth = 1000.0, imageHeight = 1000.0))
-    }
-
-    @Test
-    fun `centerWithin rejects a box centered outside the roi`() {
-        val roi = RegionOfInterestMessage(left = 0.25, top = 0.25, width = 0.5, height = 0.5)
-        // Center (0.9, 0.9) sits outside the [0.25, 0.75] box.
-        val box = Rect(880, 880, 920, 920)
-
-        assertFalse(box.centerWithin(roi, imageWidth = 1000.0, imageHeight = 1000.0))
-    }
-
-    @Test
-    fun `centerWithin includes a box centered exactly on the roi edge`() {
-        val roi = RegionOfInterestMessage(left = 0.0, top = 0.0, width = 0.5, height = 0.5)
-        // Center exactly (0.5, 0.5) == the roi's right/bottom edge, and the bounds are inclusive.
-        val box = Rect(400, 400, 600, 600)
-
-        assertTrue(box.centerWithin(roi, imageWidth = 1000.0, imageHeight = 1000.0))
-    }
-
-    // endregion
-
+class FrameEncodingTest {
     // region encodeLine: one recognized line -> its per-frame wire map.
 
     @Test
