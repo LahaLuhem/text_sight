@@ -381,7 +381,12 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
  * Generated interface from Pigeon that represents a handler of messages from Flutter.
  */
 interface TextSightHostApi {
-  /** Opens the camera with [options]. Returns the preview texture id. */
+  /**
+   * Opens the camera with [options]. Returns the preview texture id.
+   *
+   * Reopening an already-open session is fine: the old one is released first, so the id this
+   * returns replaces the previous one. Recognition comes back off until [start].
+   */
   suspend fun initialize(options: TextSightOptionsMessage): Long
   /**
    * Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
@@ -390,7 +395,7 @@ interface TextSightHostApi {
   fun start()
   /** Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start]. */
   fun stop()
-  /** Releases the camera and texture. */
+  /** Releases the camera and texture. Idempotent, so calling it with nothing open is fine. */
   suspend fun dispose()
   /** Reports the current camera-permission status without prompting. */
   fun checkCameraPermission(): CameraPermissionStatusMessage

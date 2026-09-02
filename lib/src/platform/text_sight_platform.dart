@@ -41,6 +41,9 @@ abstract class TextSightPlatform extends PlatformInterface {
 
   /// Opens the camera with [options] and returns the texture id the preview renders into.
   /// Recognition does not begin until [start] is called.
+  ///
+  /// Reopening an already-open session is fine: the old one is released first, so the id this
+  /// returns replaces the previous one.
   Future<int> initialize(TextSightOptions options) =>
       throw UnimplementedError('initialize() has not been implemented.');
 
@@ -50,7 +53,8 @@ abstract class TextSightPlatform extends PlatformInterface {
   /// Stops recognition but keeps the session open for a later [start].
   Future<void> stop() => throw UnimplementedError('stop() has not been implemented.');
 
-  /// Tears the session down and releases the camera and texture.
+  /// Tears the session down and releases the camera and texture. Idempotent, so calling it with
+  /// nothing open is fine.
   Future<void> dispose() => throw UnimplementedError('dispose() has not been implemented.');
 
   /// Reports the current camera-permission status without prompting.

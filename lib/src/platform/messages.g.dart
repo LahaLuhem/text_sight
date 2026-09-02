@@ -273,6 +273,9 @@ class TextSightHostApi {
   final String pigeonVar_messageChannelSuffix;
 
   /// Opens the camera with [options]. Returns the preview texture id.
+  ///
+  /// Reopening an already-open session is fine: the old one is released first, so the id this
+  /// returns replaces the previous one. Recognition comes back off until [start].
   Future<int> initialize(TextSightOptionsMessage options) async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.initialize$pigeonVar_messageChannelSuffix';
@@ -323,7 +326,7 @@ class TextSightHostApi {
     _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
   }
 
-  /// Releases the camera and texture.
+  /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
   Future<void> dispose() async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.dispose$pigeonVar_messageChannelSuffix';
