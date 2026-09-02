@@ -236,13 +236,14 @@ final class AsyncControlSurfaceTests: XCTestCase {
 
     await assertThrowsPigeonError(code: "decode-failed",
                                   message: "The image could not be decoded.") {
-      try await self.makeCamera().recognizeImage(bytes: garbage, options: self.options)
+      _ = try await self.makeCamera().recognizeImage(bytes: garbage, options: self.options)
     }
   }
 
   func testRecognizePathThrowsWhenTheFileIsMissing() async {
     await assertThrowsPigeonError(code: "file-not-found") {
-      try await self.makeCamera().recognizePath(path: "/no/such/file.png", options: self.options)
+      _ = try await self.makeCamera().recognizePath(path: "/no/such/file.png",
+                                                        options: self.options)
     }
   }
 

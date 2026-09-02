@@ -190,7 +190,7 @@ jobs:
             -workspace Runner.xcworkspace \
             -scheme Runner \
             -only-testing:RunnerTests \
-            -destination "id=$DEVICE_ID" \
+            -destination "platform=iOS Simulator,id=$DEVICE_ID,arch=$(uname -m)" \
             CODE_SIGNING_ALLOWED=NO
       # SwiftLint over the plugin's Swift (ios/.swiftlint.yml) and the example's RunnerTests
       # (example/ios/.swiftlint.yml) — two configs because SwiftLint resolves included/excluded
