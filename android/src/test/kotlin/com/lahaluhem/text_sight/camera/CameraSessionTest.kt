@@ -1,5 +1,6 @@
 package com.lahaluhem.text_sight.camera
 
+import android.Manifest
 import androidx.camera.core.ImageAnalysis
 import com.lahaluhem.text_sight.FlutterError
 import io.flutter.view.TextureRegistry
@@ -14,14 +15,17 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 /**
- * The main-thread contract on [CameraSession]. CameraX's `LiveData` observers and the lifecycle
- * registry reject other threads, and the injected dispatcher is the single place that guarantees it,
- * so a regression is someone dropping the `withContext`.
+ * The main-thread and producer-lifetime contracts on [CameraSession]. CameraX's `LiveData`
+ * observers and the lifecycle registry reject other threads, and the injected dispatcher is the
+ * single place that guarantees it, so a regression is someone dropping the `withContext`.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
@@ -47,9 +51,49 @@ class CameraSessionTest {
         assertEquals("permission-denied", error.code)
     }
 
-    private fun newSession(dispatcher: CoroutineDispatcher) = CameraSession(
+    @Test
+    fun `a failed open releases the producer it claimed`() = runTest {
+        grantCamera()
+        val producer = mock<TextureRegistry.SurfaceProducer>()
+        val registry = mock<TextureRegistry> { on { createSurfaceProducer() }.thenReturn(producer) }
+
+        // CameraX cannot start under Robolectric, so open() always fails once past the producer.
+        assertFailsWith<FlutterError> {
+            newSession(StandardTestDispatcher(testScheduler), registry).open()
+        }
+
+        verify(producer).release()
+    }
+
+    // A stranded producer never goes away: the engine keeps every one it hands out in a list until
+    // release(), so its texture and buffers sit there for the life of the engine.
+    @Test
+    fun `repeated opens strand no producer`() = runTest {
+        grantCamera()
+        val first = mock<TextureRegistry.SurfaceProducer>()
+        val second = mock<TextureRegistry.SurfaceProducer>()
+        val registry = mock<TextureRegistry> {
+            on { createSurfaceProducer() }.thenReturn(first, second)
+        }
+        val session = newSession(StandardTestDispatcher(testScheduler), registry)
+
+        assertFailsWith<FlutterError> { session.open() }
+        assertFailsWith<FlutterError> { session.open() }
+
+        verify(registry, times(2)).createSurfaceProducer()
+        verify(first).release()
+        verify(second).release()
+    }
+
+    private fun grantCamera() = Shadows.shadowOf(RuntimeEnvironment.getApplication())
+        .grantPermissions(Manifest.permission.CAMERA)
+
+    private fun newSession(
+        dispatcher: CoroutineDispatcher,
+        registry: TextureRegistry = mock(),
+    ) = CameraSession(
         RuntimeEnvironment.getApplication(),
-        mock<TextureRegistry>(),
+        registry,
         direct,
         ImageAnalysis.Analyzer { _ -> },
         mainExecutor = direct,
