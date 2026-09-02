@@ -1,1 +1,10 @@
 #include "Generated.xcconfig"
+
+// App identity for the benchmark host. The committed values are a bundle id and no team, which is
+// all a simulator needs (it does no code signing). To drive a scenario on a *physical* device,
+// override them in an untracked LocalSigning.xcconfig, same as the example app does. That keeps
+// per-developer signing out of the tracked Xcode project.
+PRODUCT_BUNDLE_IDENTIFIER = com.lahaluhem.benchmark.textSightBenchHost
+DEVELOPMENT_TEAM =
+
+#include? "LocalSigning.xcconfig"

@@ -8,6 +8,19 @@ Scenarios run in profile mode via `flutter drive`, which keeps the VM service th
 [`test_driver/perf_driver.dart`](test_driver/perf_driver.dart) writes them to the
 `--dart-define=OUTPUT` path as JSON matching `harness/result_writer.dart`'s schema.
 
+## Signing, for physical devices
+
+The committed xcconfigs carry a bundle id and no team, which is all a simulator needs. For a real
+device, drop your own `ios/Flutter/LocalSigning.xcconfig` (gitignored, same mechanism as the example
+app):
+
+```
+DEVELOPMENT_TEAM = YOURTEAMID
+PRODUCT_BUNDLE_IDENTIFIER = com.yourteam.textsight.bench
+```
+
+Debug, Profile and Release all pick it up, and Profile is the one `flutter drive` builds.
+
 ## Running
 
 From this directory, with a device attached:
