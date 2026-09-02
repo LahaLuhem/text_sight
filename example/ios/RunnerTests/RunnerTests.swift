@@ -427,3 +427,94 @@ private final class ParkedRecognizer: TextRecognizer, @unchecked Sendable {
     }
   }
 }
+
+/// The gate must not wait for a camera frame to start the next recognition. Driven through `handle`
+/// at a fixed frame interval with a recognizer of known latency, so no camera is involved.
+final class FrameGatePeriodTests: XCTestCase {
+  private static let frameIntervalMs = 30.0
+  /// One and a half frame intervals: slow enough that the old gate had to skip a whole frame.
+  private static let latencyMs = 45.0
+
+  func testRecognitionPeriodTracksLatencyNotTheFrameInterval() async throws {
+    let recognizer = TimedRecognizer(latencyMs: Self.latencyMs)
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), recognizer: recognizer)
+    _ = camera.onListen(withArguments: nil) { _ in }
+    camera.start()
+    let pixelBuffer = try makeTestPixelBuffer()
+
+    // Recognition runs on the gate's own consumer, so the test body itself can be the camera:
+    // deliver frames on a fixed cadence, computed off one start instant so it cannot drift.
+    let start = DispatchTime.now()
+    for index in 0..<50 {
+      let deadline = start + .milliseconds(Int(Self.frameIntervalMs) * index)
+      let now = DispatchTime.now()
+      if deadline > now {
+        try await Task.sleep(nanoseconds: deadline.uptimeNanoseconds - now.uptimeNanoseconds)
+      }
+      camera.handle(pixelBuffer)
+    }
+    // Let the recognition in flight finish before reading the timestamps.
+    try await Task.sleep(nanoseconds: UInt64(Self.latencyMs * 2 * 1e6))
+    try await camera.dispose()
+
+    let (starts, period) = recognizer.stats()
+    XCTAssertGreaterThan(starts, 10, "too few recognitions to judge a period")
+    // Re-arming on the next frame instead of on completion would make this 2 x 30 = 60 ms.
+    XCTAssertLessThan(period, Self.frameIntervalMs * 1.9,
+                      "period \(period) ms is quantized to the frame interval")
+    // And it cannot beat the recognizer itself.
+    XCTAssertGreaterThan(period, Self.latencyMs * 0.9, "period \(period) ms is impossibly short")
+  }
+
+  /// The gate starts its consumer on the first frame, so a frame arriving after teardown must not
+  /// bring recognition back to life.
+  func testAFrameAfterDisposeDoesNotRecognize() async throws {
+    let recognizer = TimedRecognizer(latencyMs: 1)
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), recognizer: recognizer)
+    _ = camera.onListen(withArguments: nil) { _ in XCTFail("a disposed session must not emit") }
+    camera.start()
+
+    try await camera.dispose()
+    camera.handle(try makeTestPixelBuffer())
+    try await Task.sleep(nanoseconds: 200 * NSEC_PER_MSEC)
+
+    XCTAssertEqual(recognizer.stats().0, 0, "a frame after dispose reached the recognizer")
+  }
+}
+
+/// A recognizer that takes a fixed time and timestamps every entry, so a test can read back the
+/// gap between consecutive recognitions.
+private final class TimedRecognizer: TextRecognizer, @unchecked Sendable {
+  private let latencyNanos: UInt64
+  private let lock = NSLock()
+  private var startNanos: [UInt64] = []
+
+  init(latencyMs: Double) {
+    latencyNanos = UInt64(latencyMs * 1_000_000)
+  }
+
+  func recognize(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    lock.withLock { startNanos.append(DispatchTime.now().uptimeNanoseconds) }
+    try await Task.sleep(nanoseconds: latencyNanos)
+
+    return []
+  }
+
+  func recognize(cgImage: CGImage, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    XCTFail("the live path must not take the still-image entry point")
+
+    return []
+  }
+
+  /// (recognitions started, mean milliseconds between consecutive starts).
+  func stats() -> (Int, Double) {
+    lock.withLock {
+      guard startNanos.count > 1 else { return (startNanos.count, 0) }
+      let span = Double(startNanos[startNanos.count - 1] - startNanos[0]) / 1_000_000
+
+      return (startNanos.count, span / Double(startNanos.count - 1))
+    }
+  }
+}
