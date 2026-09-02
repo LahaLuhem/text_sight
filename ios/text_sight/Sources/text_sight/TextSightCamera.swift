@@ -17,8 +17,16 @@ import UIKit
 /// CoreMedia / CoreVideo / Flutter, with Vision behind the `TextRecognizer`), so the no-bundling
 /// contract holds structurally on the Apple side.
 final class TextSightCamera: NSObject {
+  /// One open capture session: the graph, the camera behind it, and the texture the preview
+  /// renders. Built as a unit, dropped as a unit.
+  private struct ActiveSession {
+    let session: AVCaptureSession
+    let device: AVCaptureDevice
+    let textureId: Int64
+  }
+
   private let textureRegistry: FlutterTextureRegistry
-  private let session: AVCaptureSession
+  private let makeSession: () -> AVCaptureSession
   private let sessionQueue = DispatchQueue(label: "com.lahaluhem.text_sight.session")
   private let captureQueue = DispatchQueue(label: "com.lahaluhem.text_sight.capture")
 
@@ -27,17 +35,18 @@ final class TextSightCamera: NSObject {
   private let recognizer: any TextRecognizer
 
   /// Guards every field touched from more than one thread: the latest pixel buffer (capture
-  /// queue writes, raster thread reads via `copyPixelBuffer`), the sink, and the recognizer config
-  /// (control channel writes, capture queue reads). The gate does its own locking.
+  /// queue writes, raster thread reads via `copyPixelBuffer`), the sink, the open session, and the
+  /// recognizer config (control channel writes, capture queue reads). The gate does its own locking.
   private let stateLock = NSLock()
 
   /// Paces recognition: newest frame only, one at a time, next one starts on completion.
   private let gate = FrameGate()
 
   private var eventSink: FlutterEventSink?
-  private var textureId: Int64?
   private var latestPixelBuffer: CVPixelBuffer?
-  private var captureDevice: AVCaptureDevice?
+
+  /// The open session, or `nil` when idle. Only `sessionQueue` ever writes it.
+  private var activeSession: ActiveSession?
 
   /// Torch intent, re-asserted on foreground return: the hardware drops the torch with the
   /// camera. Touched only on `sessionQueue`.
@@ -68,13 +77,13 @@ final class TextSightCamera: NSObject {
   private var isDetached = false
 
   /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 15-17), and
-  /// `session` to a plain one. Tests pass a stub and a counting session instead.
+  /// `makeSession` to a plain session per open. Tests pass a stub and a counting session instead.
   init(textureRegistry: FlutterTextureRegistry,
        recognizer: any TextRecognizer = TextRecognizerFactory.make(),
-       session: AVCaptureSession = AVCaptureSession()) {
+       makeSession: @escaping () -> AVCaptureSession = { AVCaptureSession() }) {
     self.textureRegistry = textureRegistry
     self.recognizer = recognizer
-    self.session = session
+    self.makeSession = makeSession
     super.init()
     observeAppLifecycle()
     gate.onFrame = { [weak self] pixelBuffer in await self?.recognize(pixelBuffer) }
@@ -170,25 +179,27 @@ final class TextSightCamera: NSObject {
                         message: "The plugin is not attached to a Flutter engine.", details: nil)
     }
 
-    let device = try buildCaptureGraph()
-    // Claimed only once the graph is up, so a failed build leaves nothing behind for
-    // `resumeSession` to restart.
-    captureDevice = device
+    let built = try buildCaptureGraph()
 
     // iOS 15-16 has no `RotationCoordinator`, so rotation stays untracked there (documented).
-    if #available(iOS 17, *) { startTrackingRotation(for: device) }
+    if #available(iOS 17, *) { startTrackingRotation(for: built.device) }
 
     let id = textureRegistry.register(self)
-    stateLock.withLock { textureId = id }
+    // Published only now, so a failed build leaves the camera idle rather than half-open.
+    stateLock.withLock {
+      activeSession = ActiveSession(session: built.session, device: built.device, textureId: id)
+    }
 
-    session.startRunning()
+    built.session.startRunning()
 
     return id
   }
 
-  /// Wires the back camera into a video output and returns the device it opened. Runs on
-  /// `sessionQueue`. Internal (not `private`) so `RunnerTests` can drive a failed build.
-  func buildCaptureGraph() throws -> AVCaptureDevice {
+  /// Wires a fresh session to the back camera and hands back both. Runs on `sessionQueue`.
+  /// Internal (not `private`) so `RunnerTests` can drive a failed build.
+  func buildCaptureGraph() throws -> (session: AVCaptureSession, device: AVCaptureDevice) {
+    // Fresh every time, so a throw below drops a half-built session instead of leaving one behind.
+    let session = makeSession()
     session.beginConfiguration()
     // Commit on every exit, throws included. A configuration left open wedges the session for the
     // whole process: start/stopRunning then raise an ObjC exception, which Swift cannot catch.
@@ -215,7 +226,7 @@ final class TextSightCamera: NSObject {
         Self.pixelFormat(from: output.availableVideoPixelFormatTypes),
     ]
 
-    return device
+    return (session, device)
   }
 
   /// Picks the capture pixel format: the camera's own biplanar YUV where offered, else BGRA.
@@ -282,20 +293,25 @@ final class TextSightCamera: NSObject {
 
   /// Runs on `sessionQueue`.
   private func suspendSession() {
-    if session.isRunning { session.stopRunning() }
+    guard let active = stateLock.withLock({ activeSession }), active.session.isRunning
+    else { return }
+
+    active.session.stopRunning()
   }
 
   /// Runs on `sessionQueue`. Restarts only a configured session, then re-asserts the dropped torch.
   private func resumeSession() {
-    guard captureDevice != nil, !session.isRunning else { return }
+    guard let active = stateLock.withLock({ activeSession }), !active.session.isRunning
+    else { return }
 
-    session.startRunning()
+    active.session.startRunning()
     applyTorch(torchEnabled)
   }
 
   /// Runs on `sessionQueue`.
   private func applyTorch(_ enabled: Bool) {
-    guard let device = captureDevice, device.hasTorch, device.isTorchAvailable else { return }
+    guard let device = stateLock.withLock({ activeSession })?.device,
+          device.hasTorch, device.isTorchAvailable else { return }
 
     do {
       try device.lockForConfiguration()
@@ -312,30 +328,22 @@ final class TextSightCamera: NSObject {
     rotationObservation = nil
     rotationCoordinator = nil
 
-    if session.isRunning { session.stopRunning() }
-
-    // Only reconfigure if there is something to remove: a begin/commit pair on an empty session is
-    // a no-op that still costs seconds on a CI simulator, and dispose-before-initialize hits it.
-    if !session.inputs.isEmpty || !session.outputs.isEmpty {
-      session.beginConfiguration()
-      session.inputs.forEach { session.removeInput($0) }
-      session.outputs.forEach { session.removeOutput($0) }
-      session.commitConfiguration()
-    }
-
-    let releasedTextureId = stateLock.withLock {
+    let released = stateLock.withLock {
       isRecognizing = false
       latestPixelBuffer = nil
-      let claimed = textureId
-      textureId = nil
+      let claimed = activeSession
+      activeSession = nil
 
       return claimed
     }
 
     gate.stop()
 
-    releasedTextureId.map { textureRegistry.unregisterTexture($0) }
-    captureDevice = nil
+    guard let released else { return }
+
+    // Dropping the session takes its inputs and outputs with it, so stopping is the whole teardown.
+    if released.session.isRunning { released.session.stopRunning() }
+    textureRegistry.unregisterTexture(released.textureId)
   }
 
   // MARK: Recognition
@@ -349,7 +357,7 @@ final class TextSightCamera: NSObject {
       // stops the gate, so a frame racing dispose cannot restart the consumer behind it.
       if isRecognizing, eventSink != nil { gate.offer(pixelBuffer) }
 
-      return textureId
+      return activeSession?.textureId
     }
 
     // Keep the preview live every frame. Recognition is paced by the gate.
