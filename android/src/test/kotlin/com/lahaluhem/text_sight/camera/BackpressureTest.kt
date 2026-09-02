@@ -12,9 +12,8 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * The frame release must not wait on the main looper. CameraX withholds the next analysis frame
- * until the close lands, so a main-thread hop ties the recognition rate to whatever the UI is
- * doing. Parking the looper is how that regression shows up here.
+ * The frame release must not wait on the main looper: CameraX withholds the next frame until the
+ * close lands. Parking the looper is what makes a main-thread hop show up as a failure.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])

@@ -157,8 +157,8 @@ final class TextSightCamera: NSObject {
 
   // MARK: Session lifecycle
 
-  /// Builds the capture graph (back camera → BGRA video output), registers the preview texture,
-  /// and starts the session. Runs on `sessionQueue`, since `startRunning()` must never block main.
+  /// Builds the capture graph (back camera → video output), registers the preview texture, and
+  /// starts the session. Runs on `sessionQueue`, since `startRunning()` must never block main.
   private func configureSession() throws -> Int64 {
     // A control call still in flight when detach landed must not rebuild the session. The other
     // ordering is already safe: a release queued behind us on `sessionQueue` tears this back down.
@@ -180,11 +180,16 @@ final class TextSightCamera: NSObject {
     session.addInput(input)
 
     let output = AVCaptureVideoDataOutput()
-    output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA]
     output.alwaysDiscardsLateVideoFrames = true
     output.setSampleBufferDelegate(self, queue: captureQueue)
     guard session.canAddOutput(output) else { throw CameraError.cannotAddOutput }
     session.addOutput(output)
+
+    // Set after adding: the list depends on the connected device's active format.
+    output.videoSettings = [
+      kCVPixelBufferPixelFormatTypeKey as String:
+        Self.pixelFormat(from: output.availableVideoPixelFormatTypes),
+    ]
 
     session.commitConfiguration()
 
@@ -197,6 +202,21 @@ final class TextSightCamera: NSObject {
     session.startRunning()
 
     return id
+  }
+
+  /// Picks the capture pixel format: the camera's own biplanar YUV where offered, else BGRA.
+  ///
+  /// YUV drops AVFoundation's per-frame conversion and costs 1.5 bytes a pixel instead of 4. Vision
+  /// reads it and Flutter wraps both planes without copying. Video range first, since that is what
+  /// the sensor hands out. Internal (not `private`) so `RunnerTests` can reach it.
+  static func pixelFormat(from available: [OSType]) -> OSType {
+    let offered = Set(available)
+    let preferred: [OSType] = [
+      kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+      kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+    ]
+
+    return preferred.first(where: offered.contains) ?? kCVPixelFormatType_32BGRA
   }
 
   /// Tracks the device→upright rotation via an `AVCaptureDevice.RotationCoordinator` (iOS 17+).

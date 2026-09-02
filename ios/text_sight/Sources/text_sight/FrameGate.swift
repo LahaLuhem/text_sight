@@ -1,12 +1,11 @@
 import CoreVideo
 
-/// Paces live recognition: keeps only the newest frame and runs one recognition at a time, starting
-/// the next as soon as the previous returns.
+/// Paces live recognition: newest frame only, one at a time, and the next starts as soon as the
+/// previous returns.
 ///
-/// The mailbox is what enforces that, rather than a hand-managed slot. `bufferingNewest(1)` holds
-/// the latest frame and throws the older one away, and a single consumer loop means recognition
-/// never overlaps itself and never sits idle waiting for a camera callback to let it go again.
-/// Waiting for that callback is what capped the rate at `ceil(latency / frameInterval)` frames.
+/// `bufferingNewest(1)` plus one consumer loop enforces that, rather than a hand-managed slot.
+/// Waiting on a camera callback to reopen the gate is what capped the rate at
+/// `ceil(latency / frameInterval)` frames.
 final class FrameGate {
   /// What runs for each frame. Set once, when the camera is built.
   var onFrame: (CVPixelBuffer) async -> Void = { _ in }
@@ -15,8 +14,8 @@ final class FrameGate {
   private var mailbox: AsyncStream<CVPixelBuffer>.Continuation?
   private var consumer: Task<Void, Never>?
 
-  /// Hands over the newest frame, starting the consumer if there is not one yet. Never blocks, so
-  /// the capture queue is free the moment it returns.
+  /// Hands over the newest frame, starting the consumer if there is not one. Never blocks, so the
+  /// capture queue stays free.
   func offer(_ pixelBuffer: CVPixelBuffer) {
     lock.withLock { mailbox ?? startConsumer() }.yield(pixelBuffer)
   }
