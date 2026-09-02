@@ -20,6 +20,8 @@ dev_dependencies:
     sdk: flutter
   flutter_driver:
     sdk: flutter
+  # The codec scenario imports benchmark/harness/capture_codec.dart directly, which needs this.
+  standard_message_codec: ^0.0.1+5
 
 flutter:
   uses-material-design: true

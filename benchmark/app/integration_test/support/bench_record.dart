@@ -38,3 +38,35 @@ int percentile(List<int> values, int rank) {
 
   return sorted[index];
 }
+
+/// Builds a record in `micro/codec_roundtrip.dart`'s exact shape, so device codec results feed the
+/// same report path as the host ones. `platform` is the only addition.
+Map<String, Object?> buildCodecRecord({
+  required String candidate,
+  required String payload,
+  required int lineCount,
+  required int iteration,
+  required double encodeMicros,
+  required double decodeMicros,
+  required int wireBytes,
+}) => {
+  'benchmark': 'codec_roundtrip',
+  'candidate': candidate,
+  'payload': payload,
+  'line_count': lineCount,
+  'iteration': iteration,
+  'platform': Platform.operatingSystem,
+  'sdk_version': Platform.version.split(' ').first,
+  'package_version': const String.fromEnvironment('PKG_VERSION', defaultValue: 'unknown'),
+  'git_sha': const String.fromEnvironment('GIT_SHA', defaultValue: 'unknown'),
+  'started_at': DateTime.now().toUtc().toIso8601String(),
+  'samples': {
+    'decode_microseconds': [decodeMicros],
+    'encode_microseconds': [encodeMicros],
+  },
+  'summary': {
+    'decode_microseconds': decodeMicros,
+    'encode_microseconds': encodeMicros,
+    'wire_bytes': wireBytes,
+  },
+};

@@ -37,7 +37,10 @@ BASELINE_CANDIDATE = "map_std"
 
 APP_DIR = BENCHMARK_ROOT / "app"
 PERF_DRIVER = "test_driver/perf_driver.dart"
-DEVICE_SCENARIOS = {"one_shot_latency": "integration_test/one_shot_latency_test.dart"}
+DEVICE_SCENARIOS = {
+    "one_shot_latency": "integration_test/one_shot_latency_test.dart",
+    "codec_on_device": "integration_test/codec_on_device_test.dart",
+}
 DEVICE_SUMMARY_FILENAME = "DEVICE_SUMMARY.md"
 
 # Cheapest first, so a chart reads left to right as "more work".

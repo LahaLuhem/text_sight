@@ -108,6 +108,19 @@ are for checking the plumbing, not for reporting.
 Every row carries the lines the recognizer actually read, because a level that recognizes nothing
 returns fast and would otherwise look like a win.
 
+The other scenario is `--scenario codec_on_device`: the codec micro-benchmark, run on phone silicon
+instead of a laptop. It imports `harness/` directly, so its payloads are byte-identical to the
+micro's, and it emits the micro's record schema, which means plain `report` renders it:
+
+```bash
+uv run python run.py run-device --scenario codec_on_device
+uv run python run.py report ../results-local/current/codec_on_device_ios.json --out ../results-local/device-codec/
+```
+
+Pass `--out`, or it overwrites the committed host charts. It exists to check one published claim:
+the README quotes decode as a fraction of a 60 fps frame budget, but the committed numbers are
+host-measured and a phone CPU is slower.
+
 The Dart binary also runs standalone (a median table prints to stdout):
 
 ```bash

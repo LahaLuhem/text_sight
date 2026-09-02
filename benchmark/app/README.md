@@ -44,6 +44,7 @@ and compared.
 | Scenario | Measures | Needs a camera |
 |---|---|:--:|
 | `one_shot_latency_test.dart` | `TextSight.recognizeImage` round-trip latency by page profile and recognition level | no |
+| `codec_on_device_test.dart` | the codec micro-benchmark on phone silicon, same payloads and candidates as `micro/` | no |
 
 `one_shot_latency` is honestly *one-shot API latency as an app sees it*: image decode, inference,
 native encode and transport, all inside one number. It is not pure inference time. Splitting those
