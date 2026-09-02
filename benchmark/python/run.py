@@ -4,6 +4,8 @@ Subcommands:
   build           AOT-compile the codec_roundtrip micro-benchmark.
   run             Execute it, capturing one result JSON file.
   report <json>   Render committed README charts + SUMMARY.md from result JSON.
+  run-device      Drive a device scenario (benchmark/app) on attached phones.
+  report-device   Render the device chart + DEVICE_SUMMARY.md.
 
 There is no `compare` — there is no before/after transport to diff yet.
 """
@@ -28,10 +30,28 @@ def main() -> int:
     run_parser.add_argument("--out", default=None, help="output dir")
     run_parser.set_defaults(func=runner.cmd_run)
 
+    device_parser = sub.add_parser("run-device", help="drive a scenario on attached devices")
+    device_parser.add_argument("--scenario", default="one_shot_latency")
+    device_parser.add_argument("--iterations", type=int, default=3)
+    device_parser.add_argument("--device", default=None, help="pin one device id")
+    device_parser.add_argument("--platform", choices=("ios", "android"), default=None)
+    device_parser.add_argument(
+        "--include-virtual", action="store_true", help="allow simulators and emulators"
+    )
+    device_parser.add_argument("--out", default=None, help="output dir")
+    device_parser.set_defaults(func=runner.cmd_run_device)
+
     report_parser = sub.add_parser("report", help="render charts + SUMMARY.md")
     report_parser.add_argument("results", help="path to a codec_roundtrip.json")
     report_parser.add_argument("--out", default=None, help="output dir")
     report_parser.set_defaults(func=report.cmd_report)
+
+    device_report_parser = sub.add_parser(
+        "report-device", help="render the device chart + DEVICE_SUMMARY.md"
+    )
+    device_report_parser.add_argument("results", nargs="+", help="one JSON per platform")
+    device_report_parser.add_argument("--out", default=None, help="output dir")
+    device_report_parser.set_defaults(func=report.cmd_report_device)
 
     args = parser.parse_args()
     return int(args.func(args))

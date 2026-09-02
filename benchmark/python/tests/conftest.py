@@ -36,3 +36,38 @@ def sample_records() -> list[dict[str, Any]]:
         _record("map_std", "document", 63, 30.0, 9384),
         _record("packed_f32", "document", 63, 4.4, 4149),
     ]
+
+
+def _device_record(
+    platform: str, level: str, profile: str, lines: int, latency: int, read: int
+) -> dict[str, Any]:
+    return {
+        "benchmark": "one_shot_latency",
+        "candidate": level,
+        "payload": profile,
+        "line_count": lines,
+        "iteration": 0,
+        "platform": platform,
+        "sdk_version": "3.13.2",
+        "package_version": "0.2.0",
+        "git_sha": "abc1234",
+        "started_at": "2026-09-01T00:00:00.000Z",
+        "samples": {"latency_microseconds": [latency]},
+        "summary": {
+            "latency_microseconds": latency,
+            "p95_latency_microseconds": latency + 1000,
+            "max_latency_microseconds": latency + 2000,
+            "lines_recognized": read,
+        },
+    }
+
+
+@pytest.fixture
+def sample_device_records() -> list[dict[str, Any]]:
+    """Both levels on one profile, per platform, with one level reading nothing."""
+    return [
+        _device_record("ios", "fast", "document", 63, 35_000, 0),
+        _device_record("ios", "accurate", "document", 63, 1_745_000, 63),
+        _device_record("android", "fast", "document", 63, 120_000, 60),
+        _device_record("android", "accurate", "document", 63, 121_000, 60),
+    ]

@@ -3,10 +3,20 @@
 Reproducible benchmarks used to decide perf questions with data, not vibes —
 specifically: **is changing the per-frame result wire representation worth it?**
 
-> **Layers built:** the Dart codec micro-benchmark (emits JSON) and the Python
-> `report` layer (charts + `SUMMARY.md`, under `python/`). There is **no
-> `compare` layer** — no before/after transport exists to diff yet; it lands if
-> a transport change is ever pursued.
+> **Layers built:** the Dart codec micro-benchmark (emits JSON), the on-device
+> scenario layer (`app/`, driven by `flutter drive`), and the Python `report`
+> layer (charts + summaries, under `python/`). There is **no `compare` layer**:
+> no before/after transport exists to diff yet.
+
+## Two layers, two questions
+
+| Layer | Question | Runner | Fidelity |
+|---|---|---|---|
+| **Micro** (`micro/`) | is the wire representation worth changing? | `dart compile exe` + `benchmark_harness` | trustworthy absolute µs, host CPU |
+| **Device** (`app/integration_test/`) | what does a call cost on a real phone? | `flutter drive --profile` + `integration_test` | real hardware, one number per call |
+
+The micro layer bounds the upside of a transport change. The device layer answers
+what a user actually waits for. Neither substitutes for the other.
 
 ## What this measures — and what it does not
 
@@ -50,6 +60,9 @@ benchmark/
 ├── README.md                  this file
 ├── harness/                   bench_capture · payloads · capture_codec · result_writer · scenario_args
 ├── micro/codec_roundtrip.dart benchmark_harness entrypoint; emits result JSON + a stdout summary
+├── app/                       minimal Flutter host for the on-device scenarios
+│   ├── integration_test/      the scenarios (+ support/: page rendering, record shape)
+│   └── test_driver/           perf_driver.dart, writes reportData to JSON
 ├── python/                    uv-managed orchestrator: build · run · report (+ tests)
 ├── reports/                   committed charts (PNG) + SUMMARY.md
 ├── build/                     AOT exes (gitignored)
@@ -75,6 +88,25 @@ uv run python run.py report ../results-local/current/codec_roundtrip.json   # ch
 
 uv run ruff check . && uv run pytest      # lint + test the orchestrator
 ```
+
+### On a device
+
+Plug in a phone (both, if you want the comparison) and:
+
+```bash
+uv run python run.py run-device --iterations 3
+uv run python run.py report-device ../results-local/current/one_shot_latency_*.json
+```
+
+`run-device` finds every attached iOS and Android device, runs the scenario on each in profile mode,
+and writes one JSON per platform. Useful flags: `--platform ios|android`, `--device <id>` to pin one,
+`--scenario <name>`, and `--include-virtual` to allow a simulator or emulator. A virtual iOS target
+falls back to `--debug`, since simulators cannot run profile mode, and the run says so: those timings
+are for checking the plumbing, not for reporting.
+
+`report-device` takes one or both JSONs and writes `one_shot_latency.png` plus `DEVICE_SUMMARY.md`.
+Every row carries the lines the recognizer actually read, because a level that recognizes nothing
+returns fast and would otherwise look like a win.
 
 The Dart binary also runs standalone (a median table prints to stdout):
 

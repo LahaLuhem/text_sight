@@ -1,17 +1,22 @@
-"""`run` — execute the compiled benchmark, capturing one result JSON file."""
+"""`run` and `run-device` — execute the benchmarks, capturing result JSON files."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from text_sight_bench.config import (
+    APP_DIR,
     BENCHMARK_ROOT,
     DEFAULT_RESULTS_DIR,
+    DEVICE_SCENARIOS,
     EXE_PATH,
     PACKAGE_PUBSPEC,
+    PERF_DRIVER,
     RESULT_FILENAME,
 )
 
@@ -67,3 +72,111 @@ def _package_version() -> str:
     except OSError:
         pass
     return "unknown"
+
+
+@dataclass(frozen=True)
+class Device:
+    """One attachable target, as `flutter devices --machine` reports it."""
+
+    id: str
+    name: str
+    platform: str
+    virtual: bool
+
+
+def cmd_run_device(args: argparse.Namespace) -> int:
+    """Drives a device scenario once per selected device, one JSON per platform."""
+    scenario = args.scenario
+    target = DEVICE_SCENARIOS.get(scenario)
+    if target is None:
+        known = ", ".join(sorted(DEVICE_SCENARIOS))
+        print(f"unknown scenario {scenario!r}; known: {known}", file=sys.stderr)
+        return 1
+
+    devices = _select_devices(args)
+    if not devices:
+        where = "attached" if not args.include_virtual else "available"
+        print(f"no {where} iOS or Android devices found", file=sys.stderr)
+        print("  plug a phone in, or pass --include-virtual for a simulator", file=sys.stderr)
+        return 1
+
+    out_dir = Path(args.out) if args.out else DEFAULT_RESULTS_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    failures = 0
+
+    for device in devices:
+        out_file = out_dir / f"{scenario}_{device.platform}.json"
+        # An iOS simulator cannot run profile mode, so fall back to debug there. Debug timings are
+        # not comparable with device numbers; it exists to prove the plumbing.
+        mode = "--debug" if device.virtual and device.platform == "ios" else "--profile"
+        if mode == "--debug":
+            print(f"  note: {device.name} is virtual, running {mode} (timings are not comparable)")
+
+        print(f"\ndrive  {scenario}  {device.name}  ({args.iterations} iterations, {mode[2:]})")
+        result = subprocess.run(
+            [
+                "flutter",
+                "drive",
+                f"--driver={PERF_DRIVER}",
+                f"--target={target}",
+                mode,
+                "-d",
+                device.id,
+                f"--dart-define=ITERATIONS={args.iterations}",
+                f"--dart-define=OUTPUT={out_file}",
+                f"--dart-define=GIT_SHA={_git_sha()}",
+                f"--dart-define=PKG_VERSION={_package_version()}",
+            ],
+            cwd=APP_DIR,
+            check=False,
+        )
+        if result.returncode != 0:
+            print(f"  FAILED (exit {result.returncode})", file=sys.stderr)
+            failures += 1
+            continue
+        print(f"  wrote: {out_file}")
+
+    return 1 if failures else 0
+
+
+def _select_devices(args: argparse.Namespace) -> list[Device]:
+    """Discovered devices, narrowed by `--device` / `--platform`."""
+    devices = _discover_devices(include_virtual=args.include_virtual)
+    if args.device:
+        devices = [d for d in devices if d.id == args.device]
+    if args.platform:
+        devices = [d for d in devices if d.platform == args.platform]
+    return devices
+
+
+def _discover_devices(*, include_virtual: bool) -> list[Device]:
+    """Parses `flutter devices --machine`, keeping iOS and Android targets."""
+    try:
+        out = subprocess.run(
+            ["flutter", "devices", "--machine"], capture_output=True, text=True, check=True
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError) as error:
+        print(f"could not list devices: {error}", file=sys.stderr)
+        return []
+
+    try:
+        entries = json.loads(out.stdout)
+    except json.JSONDecodeError:
+        print("could not parse `flutter devices --machine` output", file=sys.stderr)
+        return []
+
+    devices: list[Device] = []
+    for entry in entries:
+        target = str(entry.get("targetPlatform", ""))
+        platform = (
+            "ios" if target.startswith("ios") else "android" if target.startswith("android") else ""
+        )
+        if not platform:
+            continue
+        virtual = bool(entry.get("emulator"))
+        if virtual and not include_virtual:
+            continue
+        devices.append(
+            Device(id=str(entry["id"]), name=str(entry["name"]), platform=platform, virtual=virtual)
+        )
+    return devices

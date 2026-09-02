@@ -1,4 +1,4 @@
-"""`report` — render committed README charts + SUMMARY.md from result JSON."""
+"""`report` and `report-device` — render committed charts + summaries from result JSON."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-from text_sight_bench.config import COMMITTED_REPORTS_DIR
+from text_sight_bench.config import COMMITTED_REPORTS_DIR, DEVICE_SUMMARY_FILENAME
 
 
 def cmd_report(args: argparse.Namespace) -> int:
@@ -46,6 +46,43 @@ def cmd_report(args: argparse.Namespace) -> int:
     summary_path.write_text(markdown.render_summary_markdown(df, chart_paths, records))
 
     print(f"wrote charts + summary to: {out_dir}")
+    for path in [*chart_paths, summary_path]:
+        print(f"  {path.name}")
+    return 0
+
+
+def cmd_report_device(args: argparse.Namespace) -> int:
+    """Renders the device chart + DEVICE_SUMMARY.md from one or more scenario JSONs."""
+    missing = [
+        name
+        for name in ("polars", "matplotlib", "seaborn", "pandas")
+        if importlib.util.find_spec(name) is None
+    ]
+    if missing:
+        print(f"missing analysis deps: {', '.join(missing)}", file=sys.stderr)
+        print("  run `uv sync` from benchmark/python/", file=sys.stderr)
+        return 1
+
+    from text_sight_bench import charts, markdown
+    from text_sight_bench.records import flatten_device, load_records
+
+    # One file per platform, merged so the report can compare them side by side.
+    records = [record for path in args.results for record in load_records(path)]
+    if not records:
+        print("no records found in input", file=sys.stderr)
+        return 1
+
+    out_dir = Path(args.out) if args.out else COMMITTED_REPORTS_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    df = flatten_device(records)
+    charts.set_default_theme()
+    chart_paths = [charts.plot_one_shot_latency(df, out_dir / "one_shot_latency.png")]
+
+    summary_path = out_dir / DEVICE_SUMMARY_FILENAME
+    summary_path.write_text(markdown.render_device_summary_markdown(df, chart_paths, records))
+
+    print(f"wrote device charts + summary to: {out_dir}")
     for path in [*chart_paths, summary_path]:
         print(f"  {path.name}")
     return 0

@@ -32,3 +32,16 @@ PROFILE_ORDER = ["sign", "receipt", "document", "dense"]
 
 # The baseline candidate every delta is measured against.
 BASELINE_CANDIDATE = "map_std"
+
+# --- Device scenarios (benchmark/app, driven by `flutter drive`) ---
+
+APP_DIR = BENCHMARK_ROOT / "app"
+PERF_DRIVER = "test_driver/perf_driver.dart"
+DEVICE_SCENARIOS = {"one_shot_latency": "integration_test/one_shot_latency_test.dart"}
+DEVICE_SUMMARY_FILENAME = "DEVICE_SUMMARY.md"
+
+# Cheapest first, so a chart reads left to right as "more work".
+LEVEL_ORDER = ["fast", "accurate"]
+LEVEL_COLORS = {"fast": "#4c72b0", "accurate": "#c44e52"}
+PLATFORM_ORDER = ["ios", "android"]
+PLATFORM_LABELS = {"ios": "iOS (Apple Vision)", "android": "Android (ML Kit)"}

@@ -19,6 +19,10 @@ from text_sight_bench.config import (
     CANDIDATE_COLORS,
     CANDIDATE_ORDER,
     CHART_DPI,
+    LEVEL_COLORS,
+    LEVEL_ORDER,
+    PLATFORM_LABELS,
+    PLATFORM_ORDER,
     PROFILE_ORDER,
 )
 from text_sight_bench.stats import grouped_median
@@ -121,4 +125,62 @@ def plot_profile_decode_bars(df: pl.DataFrame, out_path: Path) -> Path:
     fig.tight_layout()
     fig.savefig(out_path, dpi=CHART_DPI)
     plt.close(fig)
+    return out_path
+
+
+def plot_one_shot_latency(df: pl.DataFrame, out_path: Path) -> Path:
+    """Median one-shot latency (ms) per page profile, one panel per platform.
+
+    Each bar is labelled with the lines the recognizer actually read, so a fast-but-empty result
+    cannot be mistaken for a fast one.
+    """
+    platforms = [p for p in PLATFORM_ORDER if p in set(df["platform"].to_list())]
+    figure, axes = plt.subplots(
+        1, len(platforms), figsize=(6.4 * len(platforms), 4.2), squeeze=False, sharey=True
+    )
+
+    for column, platform in enumerate(platforms):
+        axis = axes[0][column]
+        panel = df.filter(pl.col("platform") == platform)
+        agg = grouped_median(panel, ["candidate", "payload"], "latency_microseconds")
+        lines_read = grouped_median(panel, ["candidate", "payload"], "lines_recognized")
+
+        profiles = [p for p in PROFILE_ORDER if p in set(agg["payload"].to_list())]
+        levels = [name for name in LEVEL_ORDER if name in set(agg["candidate"].to_list())]
+        width = 0.8 / max(len(levels), 1)
+
+        for index, level in enumerate(levels):
+            xs, ys, labels = [], [], []
+            for slot, profile in enumerate(profiles):
+                row = agg.filter((pl.col("candidate") == level) & (pl.col("payload") == profile))
+                if row.height == 0:
+                    continue
+                xs.append(slot + index * width - 0.4 + width / 2)
+                ys.append(row["latency_microseconds"][0] / 1000.0)
+                read = lines_read.filter(
+                    (pl.col("candidate") == level) & (pl.col("payload") == profile)
+                )
+                labels.append(int(read["lines_recognized"][0]) if read.height else 0)
+            bars = axis.bar(xs, ys, width=width, label=level, color=LEVEL_COLORS.get(level))
+            for bar, read in zip(bars, labels, strict=True):
+                axis.annotate(
+                    f"{read} lines",
+                    (bar.get_x() + bar.get_width() / 2, bar.get_height()),
+                    ha="center",
+                    va="bottom",
+                    fontsize=7,
+                )
+
+        axis.set_xticks(range(len(profiles)))
+        axis.set_xticklabels(profiles)
+        axis.set_title(PLATFORM_LABELS.get(platform, platform))
+        axis.set_xlabel("")
+        if column == 0:
+            axis.set_ylabel("Median one-shot latency (ms)")
+        axis.legend(title="level")
+
+    figure.suptitle("One-shot recognition latency, by page profile")
+    figure.tight_layout()
+    figure.savefig(out_path, dpi=CHART_DPI)
+    plt.close(figure)
     return out_path

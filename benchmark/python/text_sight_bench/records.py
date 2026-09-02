@@ -37,3 +37,26 @@ def flatten(records: list[dict[str, Any]]) -> pl.DataFrame:
         for record in records
     ]
     return pl.DataFrame(rows)
+
+
+def flatten_device(records: list[dict[str, Any]]) -> pl.DataFrame:
+    """Flattens device scenario records to one row each.
+
+    `candidate` is the recognition level and `payload` the page profile, matching the micro
+    schema. `lines_recognized` rides along because a level that reads nothing returns fast, so
+    latency on its own would flatter it.
+    """
+    rows = [
+        {
+            "platform": record["platform"],
+            "candidate": record["candidate"],
+            "payload": record["payload"],
+            "line_count": record["line_count"],
+            "iteration": record["iteration"],
+            "latency_microseconds": record["summary"]["latency_microseconds"],
+            "p95_latency_microseconds": record["summary"]["p95_latency_microseconds"],
+            "lines_recognized": record["summary"]["lines_recognized"],
+        }
+        for record in records
+    ]
+    return pl.DataFrame(rows)
