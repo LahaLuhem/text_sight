@@ -9,13 +9,13 @@ import UIKit
 /// Owns the `AVCaptureSession`, the Vision recognizer, and the preview texture for one live
 /// recognition session, the iOS twin of the Android `TextSightCamera`.
 ///
-/// Recognition runs off the platform main thread (Vision's own async executor, kicked off the
+/// Recognition runs off the platform main thread (Vision's own async executor, fed from the
 /// capture-delegate queue). Boxes are normalized to top-left `[0, 1]` here (Vision yields
 /// lower-left normalized rects) and marshalled back to main before reaching the captures
-/// `EventChannel` sink. Backpressure is a single in-flight recognition plus
-/// `alwaysDiscardsLateVideoFrames`: a late frame is dropped, never queued. Only system
-/// frameworks are imported (here: AVFoundation / CoreMedia / CoreVideo / Flutter, with Vision
-/// behind the `TextRecognizer`), so the no-bundling contract holds structurally on the Apple side.
+/// `EventChannel` sink. Backpressure is the `FrameGate` plus `alwaysDiscardsLateVideoFrames`: a
+/// late frame is dropped, never queued. Only system frameworks are imported (here: AVFoundation /
+/// CoreMedia / CoreVideo / Flutter, with Vision behind the `TextRecognizer`), so the no-bundling
+/// contract holds structurally on the Apple side.
 final class TextSightCamera: NSObject {
   private let textureRegistry: FlutterTextureRegistry
   private let session = AVCaptureSession()
@@ -27,9 +27,12 @@ final class TextSightCamera: NSObject {
   private let recognizer: any TextRecognizer
 
   /// Guards every field touched from more than one thread: the latest pixel buffer (capture
-  /// queue writes, raster thread reads via `copyPixelBuffer`), the sink, the recognizer config
-  /// (control channel writes, capture queue reads), and the recognition gate plus its task.
+  /// queue writes, raster thread reads via `copyPixelBuffer`), the sink, and the recognizer config
+  /// (control channel writes, capture queue reads). The gate does its own locking.
   private let stateLock = NSLock()
+
+  /// Paces recognition: newest frame only, one at a time, next one starts on completion.
+  private let gate = FrameGate()
 
   private var eventSink: FlutterEventSink?
   private var textureId: Int64?
@@ -64,10 +67,6 @@ final class TextSightCamera: NSObject {
   /// session behind teardown's back.
   private var isDetached = false
 
-  /// The one in-flight recognition, nil when idle: both the backpressure gate and the handle that
-  /// teardown cancels. Only the owning task clears it, see `releaseSession`.
-  private var recognitionTask: Task<Void, Never>?
-
   /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 15-17). Tests
   /// pass a stub instead.
   init(textureRegistry: FlutterTextureRegistry,
@@ -76,11 +75,12 @@ final class TextSightCamera: NSObject {
     self.recognizer = recognizer
     super.init()
     observeAppLifecycle()
+    gate.onFrame = { [weak self] pixelBuffer in await self?.recognize(pixelBuffer) }
   }
 
   deinit {
     // Insurance for the path where neither dispose nor detach ran and ARC just reclaimed us.
-    recognitionTask?.cancel()
+    gate.stop()
     appLifecycleObservers.forEach { NotificationCenter.default.removeObserver($0) }
   }
 
@@ -289,18 +289,16 @@ final class TextSightCamera: NSObject {
       session.commitConfiguration()
     }
 
-    let (inFlight, releasedTextureId) = stateLock.withLock {
+    let releasedTextureId = stateLock.withLock {
       isRecognizing = false
       latestPixelBuffer = nil
-      let claimed = (recognitionTask, textureId)
+      let claimed = textureId
       textureId = nil
 
       return claimed
     }
 
-    // Cancel but leave the slot: only the owning task clears it, so a cancelled task still
-    // draining can never wipe a newer task's handle. Outside the lock, the gate is shut above.
-    inFlight?.cancel()
+    gate.stop()
 
     releasedTextureId.map { textureRegistry.unregisterTexture($0) }
     captureDevice = nil
@@ -308,30 +306,30 @@ final class TextSightCamera: NSObject {
 
   // MARK: Recognition
 
-  /// Stores the frame for the preview, then starts recognition when the slot is free. Internal (not
-  /// `private`) so `RunnerTests` can drive a frame without an `AVCaptureConnection`.
+  /// Publishes the frame for the preview and offers it to the gate. Internal (not `private`) so
+  /// `RunnerTests` can drive a frame without an `AVCaptureConnection`.
   func handle(_ pixelBuffer: CVPixelBuffer) {
     let activeTextureId = stateLock.withLock {
       latestPixelBuffer = pixelBuffer
-      // Claim the slot and build the task in one lock hold. Split across two, a teardown could land
-      // in between and leave a task nobody cancels.
-      if isRecognizing, recognitionTask == nil, eventSink != nil {
-        recognitionTask = makeRecognitionTask(for: pixelBuffer)
-      }
+      // Offer under the same lock hold that reads the flag. Teardown clears the flag before it
+      // stops the gate, so a frame racing dispose cannot restart the consumer behind it.
+      if isRecognizing, eventSink != nil { gate.offer(pixelBuffer) }
 
       return textureId
     }
 
-    // Keep the preview live every frame. Recognition is throttled by the single-in-flight slot.
+    // Keep the preview live every frame. Recognition is paced by the gate.
     activeTextureId.map { textureRegistry.textureFrameAvailable($0) }
   }
 
-  /// Builds one frame's task, reading the config and rotation straight off the guarded fields.
-  /// The caller holds `stateLock`.
-  private func makeRecognitionTask(for pixelBuffer: CVPixelBuffer) -> Task<Void, Never> {
-    let config = RecognitionConfig(level: recognitionLevel, languages: recognitionLanguages,
-                                   roi: regionOfInterest)
-    let rotation = Self.displayRotation(forCaptureAngle: currentRotationAngle)
+  /// Recognizes one frame and emits it. Runs on the gate's consumer, so never concurrently with
+  /// itself, and cancelling the gate cancels the Vision call in flight.
+  private func recognize(_ pixelBuffer: CVPixelBuffer) async {
+    let (config, rotation) = stateLock.withLock {
+      (RecognitionConfig(level: recognitionLevel, languages: recognitionLanguages,
+                         roi: regionOfInterest),
+       Self.displayRotation(forCaptureAngle: currentRotationAngle))
+    }
 
     // The buffer is sensor-oriented, so report its display-oriented size (axes swap on a quarter
     // turn) to match the boxes Vision returns in the oriented space.
@@ -340,26 +338,16 @@ final class TextSightCamera: NSObject {
     let imageWidth = rotation.isQuarterTurned ? bufferHeight : bufferWidth
     let imageHeight = rotation.isQuarterTurned ? bufferWidth : bufferHeight
 
-    return Task { [weak self] in
-      defer { self?.clearRecognitionSlot() }
+    // Drop a single failed frame rather than tearing down the session (CODESTYLE: `try?`).
+    guard
+      let lines = try? await recognizer.recognize(pixelBuffer: pixelBuffer,
+                                                  orientation: rotation.orientation,
+                                                  config: config),
+      !Task.isCancelled
+    else { return }
 
-      // Drop a single failed frame rather than tearing down the session (CODESTYLE: `try?`).
-      guard
-        let lines = try? await self?.recognizer.recognize(pixelBuffer: pixelBuffer,
-                                                           orientation: rotation.orientation,
-                                                           config: config),
-        !Task.isCancelled
-      else { return }
-
-      let frame = Self.encodeFrame(lines, imageWidth: imageWidth, imageHeight: imageHeight,
-                                   quarterTurns: rotation.quarterTurns)
-      self?.emit(frame)
-    }
-  }
-
-  /// Frees the slot for the next frame. Only the owning task calls this, from its `defer`.
-  private func clearRecognitionSlot() {
-    stateLock.withLock { recognitionTask = nil }
+    emit(Self.encodeFrame(lines, imageWidth: imageWidth, imageHeight: imageHeight,
+                          quarterTurns: rotation.quarterTurns))
   }
 
   /// Runs `work` on `sessionQueue`, bridged to `async`. The queue is the session's synchronisation
