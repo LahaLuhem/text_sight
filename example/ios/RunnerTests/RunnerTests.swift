@@ -325,7 +325,7 @@ final class AsyncControlSurfaceTests: XCTestCase {
       "needs a host without a camera, which is what the simulator is"
     )
     let session = CountingCaptureSession()
-    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), session: session)
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), makeSession: { session })
 
     XCTAssertThrowsError(try camera.buildCaptureGraph())
 
