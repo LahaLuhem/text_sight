@@ -566,6 +566,25 @@ final class FrameGatePeriodTests: XCTestCase {
 
     XCTAssertEqual(recognizer.stats().0, 0, "a frame after dispose reached the recognizer")
   }
+
+  /// Reopening releases first, so recognition stops even when the rebuild then fails.
+  func testAFailedReopenStopsTheRunningRecognition() async throws {
+    try XCTSkipUnless(
+      AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) == nil,
+      "needs a host without a camera, which is what the simulator is"
+    )
+    let recognizer = TimedRecognizer(latencyMs: 1)
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), recognizer: recognizer)
+    _ = camera.onListen(withArguments: nil) { _ in XCTFail("a released session must not emit") }
+    camera.start()
+
+    // No camera here, so the rebuild fails, but only after the release has already happened.
+    XCTAssertThrowsError(try camera.configureSession())
+    camera.handle(try makeTestPixelBuffer())
+    try await Task.sleep(nanoseconds: 200 * NSEC_PER_MSEC)
+
+    XCTAssertEqual(recognizer.stats().0, 0, "a frame after reopening reached the recognizer")
+  }
 }
 
 /// Takes a fixed time and timestamps every entry, so a test can read the gap between them.

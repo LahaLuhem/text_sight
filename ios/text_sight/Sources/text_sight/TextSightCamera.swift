@@ -169,8 +169,9 @@ final class TextSightCamera: NSObject {
   // MARK: Session lifecycle
 
   /// Registers the preview texture and starts the session over a freshly built graph. Runs on
-  /// `sessionQueue`, since `startRunning()` must never block main.
-  private func configureSession() throws -> Int64 {
+  /// `sessionQueue`, since `startRunning()` must never block main. Internal (not `private`) so
+  /// `RunnerTests` can drive a reconfigure.
+  func configureSession() throws -> Int64 {
     // A control call still in flight when detach landed must not rebuild the session. The other
     // ordering is already safe: a release queued behind us on `sessionQueue` tears this back down.
     let detached = stateLock.withLock { isDetached }
@@ -178,6 +179,10 @@ final class TextSightCamera: NSObject {
       throw PigeonError(code: "detached",
                         message: "The plugin is not attached to a Flutter engine.", details: nil)
     }
+
+    // Reopening an open session is fine: whatever is there goes first. A hot restart lands here
+    // with the camera still up, because Dart lost the texture id and we didn't.
+    releaseSession()
 
     let built = try buildCaptureGraph()
 
