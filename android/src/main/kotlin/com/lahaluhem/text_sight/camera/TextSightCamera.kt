@@ -34,8 +34,9 @@ import kotlinx.coroutines.withContext
  * still path. The CameraX side is [CameraSession].
  *
  * Recognition runs off the platform main thread on [analysisExecutor], and results marshal back to
- * main before reaching the [EventChannel] sink. The [ImageProxy.close] in the completion listener
- * is mandatory backpressure release. Without it the stream stalls.
+ * main before reaching the [EventChannel] sink. Closing each [ImageProxy] is what releases
+ * backpressure, and without it the stream stalls. It stays off main via [closeWhenSettled], so the
+ * frame rate does not track how busy the UI is.
  */
 internal class TextSightCamera(
     context: Context,
@@ -195,6 +196,6 @@ internal class TextSightCamera(
                     encodeFrame(visionText, imageWidth, imageHeight, rotationDegrees / 90, regionOfInterest)
                 mainHandler.post { eventSink?.success(frame) }
             }
-            .addOnCompleteListener { imageProxy.close() }
+            .closeWhenSettled(imageProxy)
     }
 }
