@@ -217,8 +217,12 @@ jobs:
         run: |
           bundle="$RUNNER_TEMP/RunnerTests.xcresult"
           [ -d "$bundle" ] || exit 0
-          xcrun xcresulttool get test-results summary --path "$bundle" \
-            | jq -r '"result=\(.result) total=\(.totalTestCount) passed=\(.passedTests) failed=\(.failedTests)"'
+          summary="$RUNNER_TEMP/summary.json"
+          xcrun xcresulttool get test-results summary --path "$bundle" > "$summary"
+          jq -r '"result=\(.result) total=\(.totalTestCount) passed=\(.passedTests) failed=\(.failedTests)"' "$summary"
+          # -quiet drops swift-testing output entirely, so for those the bundle is the only place a
+          # failure's name and message survive. xcodebuild's exit code is still what fails the job.
+          jq -r '.testFailures[]? | "FAILED \(.testName): \(.failureText)"' "$summary"
       # SwiftLint over the plugin's Swift (ios/.swiftlint.yml) and the example's RunnerTests
       # (example/ios/.swiftlint.yml) — two configs because SwiftLint resolves included/excluded
       # relative to each config's own dir, and the trees need different deviations. Folded into this
