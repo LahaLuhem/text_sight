@@ -130,6 +130,8 @@ final class TextSightController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Releases the native session along with the controller. Safe even when [start] never
+  /// succeeded, since a hot restart can leave a session running that this controller never saw.
   @override
   void dispose() {
     // Unconditional: native can be holding a session this controller never learned about, which is

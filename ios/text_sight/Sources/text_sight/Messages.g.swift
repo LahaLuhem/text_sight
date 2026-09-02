@@ -362,13 +362,16 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol TextSightHostApi {
   /// Opens the camera with [options]. Returns the preview texture id.
+  ///
+  /// Reopening an already-open session is fine: the old one is released first, so the id this
+  /// returns replaces the previous one. Recognition comes back off until [start].
   func initialize(options: TextSightOptionsMessage) async throws -> Int64
   /// Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
   /// Dart signature is `Future<void>` either way.
   func start() throws
   /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
   func stop() throws
-  /// Releases the camera and texture.
+  /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
   func dispose() async throws
   /// Reports the current camera-permission status without prompting.
   func checkCameraPermission() throws -> CameraPermissionStatusMessage
@@ -398,6 +401,9 @@ class TextSightHostApiSetup {
   static func setUp(binaryMessenger: FlutterBinaryMessenger, api: TextSightHostApi?, messageChannelSuffix: String = "") {
     let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
     /// Opens the camera with [options]. Returns the preview texture id.
+    ///
+    /// Reopening an already-open session is fine: the old one is released first, so the id this
+    /// returns replaces the previous one. Recognition comes back off until [start].
     let initializeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.initialize\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       initializeChannel.setMessageHandler { message, reply in
@@ -444,7 +450,7 @@ class TextSightHostApiSetup {
     } else {
       stopChannel.setMessageHandler(nil)
     }
-    /// Releases the camera and texture.
+    /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
     let disposeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.dispose\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       disposeChannel.setMessageHandler { _, reply in

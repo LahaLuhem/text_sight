@@ -52,6 +52,9 @@ enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
 @HostApi()
 abstract class TextSightHostApi {
   /// Opens the camera with [options]. Returns the preview texture id.
+  ///
+  /// Reopening an already-open session is fine: the old one is released first, so the id this
+  /// returns replaces the previous one. Recognition comes back off until [start].
   @async
   int initialize(TextSightOptionsMessage options);
 
@@ -62,7 +65,7 @@ abstract class TextSightHostApi {
   /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
   void stop();
 
-  /// Releases the camera and texture.
+  /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
   @async
   void dispose();
 
