@@ -280,10 +280,14 @@ final class TextSightCamera: NSObject {
 
     if session.isRunning { session.stopRunning() }
 
-    session.beginConfiguration()
-    session.inputs.forEach { session.removeInput($0) }
-    session.outputs.forEach { session.removeOutput($0) }
-    session.commitConfiguration()
+    // Only reconfigure if there is something to remove: a begin/commit pair on an empty session is
+    // a no-op that still costs seconds on a CI simulator, and dispose-before-initialize hits it.
+    if !session.inputs.isEmpty || !session.outputs.isEmpty {
+      session.beginConfiguration()
+      session.inputs.forEach { session.removeInput($0) }
+      session.outputs.forEach { session.removeOutput($0) }
+      session.commitConfiguration()
+    }
 
     let (inFlight, releasedTextureId) = stateLock.withLock {
       isRecognizing = false

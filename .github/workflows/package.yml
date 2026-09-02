@@ -146,10 +146,10 @@ jobs:
       - run: ./gradlew :text_sight:testDebugUnitTest
         working-directory: example/android
 
-  ios-example:
-    name: iOS build + unit tests + no-bundling
-    # Runs on PRs and direct pushes to main; the gate skips post-merge pushes — which is what keeps
-    # redundant re-runs off the ~10x-cost macOS runner (the reason this used to be PR-only).
+  ios-build:
+    name: iOS release build + no-bundling
+    # Split from the tests job so the two macOS legs run in parallel instead of one after the other.
+    # This leg is the only release-mode device compile in CI, so it stays a full build.
     needs: gate
     if: needs.gate.outputs.run == 'true'
     runs-on: macos-latest
@@ -158,7 +158,6 @@ jobs:
       - uses: ./.github/actions/setup-flutter
         with:
           working-directory: example
-      # Full build (no signing) so the Swift compiles and the SPM graph is generated.
       - run: flutter --no-version-check build ios --release --no-codesign
         working-directory: example
       # No-bundling: no ML Kit anywhere under example/ios — sources AND the generated
@@ -170,8 +169,25 @@ jobs:
             echo "::error::ML Kit found under example/ios — no-bundling invariant (APPENDIX.md#no-bundling) broken."
             exit 1
           fi
+
+  ios-tests:
+    name: iOS unit tests + SwiftLint
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-flutter
+        with:
+          working-directory: example
+      # `--config-only` writes Generated.xcconfig and the SPM manifest without compiling, so the one
+      # compile this leg needs is the simulator build xcodebuild does below. A full `flutter build`
+      # here would compile everything twice, and its CONFIGURATION_BUILD_DIR would send Runner.app to
+      # the device path where the test host cannot find it.
+      - run: flutter --no-version-check build ios --config-only --debug --simulator
+        working-directory: example
       # Native XCTest cases (example/ios/RunnerTests, reaching TextSightCamera via @testable import)
-      # run through the Runner scheme's test action. The build above already wrote Generated.xcconfig.
+      # run through the Runner scheme's test action.
       # Pick the first available iPhone simulator so no device name is hardcoded across runner images
       # (the iOS 18 floor is met by the bundled sims).
       - name: RunnerTests (iOS simulator)
@@ -184,14 +200,25 @@ jobs:
             exit 1
           fi
           # -quiet trims the log to warnings + errors; a full xcodebuild test transcript is several
-          # thousand lines (unlike `flutter build ios` above, which Flutter already prints tersely).
-          # A failing build/test still prints its error; drop -quiet to see the full transcript.
+          # thousand lines. A failing test still prints, and the result bundle carries the details.
+          # -parallel-testing-enabled NO skips cloning the simulator, which cost more than the 29s
+          # of tests it was parallelising.
           xcodebuild test -quiet \
+            -parallel-testing-enabled NO \
+            -resultBundlePath "$RUNNER_TEMP/RunnerTests.xcresult" \
             -workspace Runner.xcworkspace \
             -scheme Runner \
             -only-testing:RunnerTests \
             -destination "platform=iOS Simulator,id=$DEVICE_ID,arch=$(uname -m)" \
             CODE_SIGNING_ALLOWED=NO
+      # Non-parallel runs print no per-test lines under -quiet, so report the tally from the bundle.
+      - name: Test summary
+        if: always()
+        run: |
+          bundle="$RUNNER_TEMP/RunnerTests.xcresult"
+          [ -d "$bundle" ] || exit 0
+          xcrun xcresulttool get test-results summary --path "$bundle" \
+            | jq -r '"result=\(.result) total=\(.totalTestCount) passed=\(.passedTests) failed=\(.failedTests)"'
       # SwiftLint over the plugin's Swift (ios/.swiftlint.yml) and the example's RunnerTests
       # (example/ios/.swiftlint.yml) — two configs because SwiftLint resolves included/excluded
       # relative to each config's own dir, and the trees need different deviations. Folded into this
@@ -233,7 +260,7 @@ jobs:
 
   # Single required-check contract for the ruleset. APPENDIX.md#dependabot-automerge
   package-ok:
-    needs: [gate, analyze, format, detekt, deps, test, android-example, ios-example, pigeon-freshness]
+    needs: [gate, analyze, format, detekt, deps, test, android-example, ios-build, ios-tests, pigeon-freshness]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
@@ -249,7 +276,8 @@ jobs:
             deps=${{ needs.deps.result }}
             test=${{ needs.test.result }}
             android-example=${{ needs.android-example.result }}
-            ios-example=${{ needs.ios-example.result }}
+            ios-build=${{ needs.ios-build.result }}
+            ios-tests=${{ needs.ios-tests.result }}
             pigeon-freshness=${{ needs.pigeon-freshness.result }}
         run: |
           echo "$RESULTS"
