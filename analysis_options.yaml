@@ -403,7 +403,7 @@ dart_code_metrics:
     - always-remove-listener
     - avoid-border-all
     - avoid-expanded-as-spacer
-    - avoid-incomplete-copy-with: false
+    - avoid-incomplete-copy-with
     - avoid-incorrect-image-opacity
     - avoid-returning-widgets
     - avoid-shrink-wrap-in-lists

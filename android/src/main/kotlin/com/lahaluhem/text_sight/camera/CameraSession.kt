@@ -86,13 +86,17 @@ internal class CameraSession(
         displayManager.registerDisplayListener(displayListener, mainHandler)
     }
 
-    /** Opens the camera and returns the preview texture id. */
+    /** Opens the camera and returns the preview texture id. Reopening an open session is fine. */
     suspend fun open(): Long = withContext(mainDispatcher) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) !=
             PackageManager.PERMISSION_GRANTED
         ) {
             throw FlutterError("permission-denied", "Camera permission has not been granted.")
         }
+
+        // Hot restart gets here with the camera still up: Dart lost the texture id, we didn't.
+        // Nothing else ever releases a producer, so skipping this strands the old one for good.
+        releaseNow()
 
         val producer = textureRegistry.createSurfaceProducer()
         producer.setCallback(surfaceCallback)
@@ -105,6 +109,8 @@ internal class CameraSession(
 
             producer.id()
         } catch (error: Exception) {
+            // We already claimed a producer above, so hand it back rather than strand it.
+            releaseNow()
             throw FlutterError("initialization-failed", error.message)
         }
     }
