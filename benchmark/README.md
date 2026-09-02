@@ -130,9 +130,10 @@ uv run python run.py report-live ../results-local/current/live_throughput_*.json
 ```
 
 It needs camera permission, which cannot be pre-granted because `flutter drive` uninstalls the app
-afterwards. On Android the runner grants it over adb mid-run; on iOS tap Allow while the scenario
-waits. `report-live` writes a table and no chart on purpose: with an uncontrolled scene, a chart
-would imply precision these numbers do not have.
+afterwards. On Android the runner grants it over adb mid-run; on a real iPhone tap Allow while the
+scenario waits. iOS simulators are skipped outright, since they have no camera to open.
+`report-live` writes a table and no chart on purpose: with an uncontrolled scene, a chart would
+imply precision these numbers do not have.
 
 The Dart binary also runs standalone (a median table prints to stdout):
 

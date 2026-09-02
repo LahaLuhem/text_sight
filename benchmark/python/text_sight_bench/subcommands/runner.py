@@ -93,6 +93,11 @@ class Device:
     platform: str
     virtual: bool
 
+    @property
+    def is_ios_simulator(self) -> bool:
+        """No capture device on it, and it cannot run profile mode."""
+        return self.virtual and self.platform == "ios"
+
 
 def cmd_run_device(args: argparse.Namespace) -> int:
     """Drives a device scenario once per selected device, one JSON per platform."""
@@ -113,11 +118,17 @@ def cmd_run_device(args: argparse.Namespace) -> int:
     out_dir = Path(args.out) if args.out else DEFAULT_RESULTS_DIR
     out_dir.mkdir(parents=True, exist_ok=True)
     failures = 0
+    measured = 0
 
     for device in devices:
+        if scenario in CAMERA_SCENARIOS and device.is_ios_simulator:
+            # Cheaper to say so here than after an Xcode build and the scenario's permission wait.
+            print(f"  skip  {scenario}  {device.name}: the iOS Simulator has no camera")
+            continue
+
         out_file = out_dir / f"{scenario}_{device.platform}.json"
         # Simulators cannot run profile mode. Debug timings only prove the plumbing.
-        mode = "--debug" if device.virtual and device.platform == "ios" else "--profile"
+        mode = "--debug" if device.is_ios_simulator else "--profile"
         if mode == "--debug":
             print(f"  note: {device.name} is virtual, running {mode} (timings are not comparable)")
 
@@ -157,8 +168,12 @@ def cmd_run_device(args: argparse.Namespace) -> int:
             failures += 1
             continue
         print(f"  wrote: {out_file}")
+        measured += 1
 
-    return 1 if failures else 0
+    if not failures and not measured:
+        print(f"no selected device can run {scenario}", file=sys.stderr)
+
+    return 1 if failures or not measured else 0
 
 
 def _select_devices(args: argparse.Namespace) -> list[Device]:

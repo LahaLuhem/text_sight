@@ -57,8 +57,12 @@ apart needs native timestamps, which is a separate job.
 
 `flutter drive` uninstalls the app when it finishes, so a permission grant cannot be set up in
 advance. The scenario surfaces the prompt and then waits up to 45 seconds. On Android the runner
-grants it over adb as soon as the package appears, so it is hands-off. On iOS somebody has to tap
-Allow on the device while it waits.
+grants it over adb as soon as the package appears, so it is hands-off. On a real iPhone somebody has
+to tap Allow on the device while it waits.
+
+An iOS simulator has no capture device at all, so `AVCaptureDevice.default` returns nil and the
+session cannot open. The runner skips camera scenarios on simulators rather than spending an Xcode
+build to find that out. The other scenarios render their own pages and still run there.
 
 The numbers also depend entirely on what the camera sees, so point it at the same thing every time
 if you intend to compare runs. Every row carries the median lines per capture: a zero there means
