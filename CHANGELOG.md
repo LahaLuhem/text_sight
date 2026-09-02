@@ -1,3 +1,7 @@
+## [Unreleased]
+### Fixed
+- \[#47\] Release the iOS session on engine detach + scaffold device benchmarks
+
 ## [0.2.0] - 2026-08-31
 ### Changed
 - Bumped Dart to ^3.13
@@ -33,6 +37,7 @@
 - Recognizer configuration on the controller: region of interest (a normalized `Rect`), recognition level, language preferences, and torch.
 - A unified result model — per-line confidence and normalized `[0,1]` top-left bounding boxes, identical across platforms, with a rotation-aware preview.
 
+[Unreleased]: https://github.com/LahaLuhem/text_sight/compare/0.2.0...HEAD
 [0.2.0]: https://github.com/LahaLuhem/text_sight/compare/0.1.1...0.2.0
 [0.1.1]: https://github.com/LahaLuhem/text_sight/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/LahaLuhem/text_sight/compare/0.0.1...0.1.0
