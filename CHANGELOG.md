@@ -2,6 +2,7 @@
 ### Fixed
 - \[#47\] Release the iOS session on engine detach + scaffold device benchmarks
 - \[#2\] Start the next recognition when the recognizer goes free
+- \[#51\] Define the re-initialize contract
 
 ## [0.2.0] - 2026-08-31
 ### Changed
