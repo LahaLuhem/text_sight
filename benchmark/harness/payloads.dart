@@ -1,13 +1,11 @@
-// The profile enum is intentionally defined before the file's main type, for
-// enum-first readability.
+// Enum first, before the file's main type, for readability.
 // ignore_for_file: prefer-match-file-name
 
 import 'dart:math';
 
 import 'bench_capture.dart';
 
-/// Realistic OCR-frame profiles, parameterised by rough line count and text.
-/// Each value is a representative use case the suite reports on.
+/// Realistic OCR-frame profiles, by rough line count and text length.
 enum PayloadProfile {
   /// A street sign or label: a few short lines.
   sign(minLines: 1, maxLines: 3, minTextLen: 3, maxTextLen: 14),
@@ -28,31 +26,23 @@ enum PayloadProfile {
     required this.maxTextLen,
   });
 
-  /// Inclusive lower bound on the generated line count.
   final int minLines;
 
-  /// Inclusive upper bound on the generated line count.
   final int maxLines;
 
-  /// Inclusive lower bound on per-line text length, in characters.
   final int minTextLen;
 
-  /// Inclusive upper bound on per-line text length, in characters.
   final int maxTextLen;
 }
 
-/// Deterministic, seeded generators for benchmark capture payloads.
-///
-/// Seeds are fixed functions of the parameters, so every run on every machine
-/// produces byte-identical payloads — a prerequisite for comparable numbers.
+/// Seeded payload generators. Seeds derive from the parameters, so every run on every machine
+/// builds byte-identical payloads, which is what makes the numbers comparable.
 abstract final class Payloads {
   /// Line counts swept to chart how each candidate scales with frame size.
   static const sweepLineCounts = [1, 5, 10, 25, 50, 100];
 
-  // --- Synthetic-payload distribution: tunable generation hyperparameters. ---
-  // Box values are normalized fractions; a min plus a span gives the uniform
-  // draw range. Changing any of these reshapes the payloads — re-capture
-  // baselines afterwards.
+  // Uniform draw ranges (min + span) for the normalized box values. Changing any of these
+  // reshapes the payloads, so re-capture baselines afterwards.
   static const _confidenceChance = 0.9;
   static const _minConfidence = 0.5;
   static const _confidenceSpan = 0.5;

@@ -19,10 +19,9 @@ def load_records(path: str | Path) -> list[dict[str, Any]]:
 
 
 def flatten(records: list[dict[str, Any]]) -> pl.DataFrame:
-    """Flattens records to one row each, hoisting the summary scalars to columns.
+    """One row per record, summary scalars hoisted to columns.
 
-    `wire_bytes` is deterministic per (candidate, payload, line_count); the
-    timing metrics vary per iteration, so callers take their median.
+    `wire_bytes` is deterministic per cell; timings vary per iteration, so callers take a median.
     """
     rows = [
         {
@@ -40,11 +39,10 @@ def flatten(records: list[dict[str, Any]]) -> pl.DataFrame:
 
 
 def flatten_device(records: list[dict[str, Any]]) -> pl.DataFrame:
-    """Flattens device scenario records to one row each.
+    """One row per device record. `candidate` is the level, `payload` the profile.
 
-    `candidate` is the recognition level and `payload` the page profile, matching the micro
-    schema. `lines_recognized` rides along because a level that reads nothing returns fast, so
-    latency on its own would flatter it.
+    `lines_recognized` rides along: a level that reads nothing returns fast, and latency alone
+    would flatter it.
     """
     rows = [
         {
@@ -56,6 +54,25 @@ def flatten_device(records: list[dict[str, Any]]) -> pl.DataFrame:
             "latency_microseconds": record["summary"]["latency_microseconds"],
             "p95_latency_microseconds": record["summary"]["p95_latency_microseconds"],
             "lines_recognized": record["summary"]["lines_recognized"],
+        }
+        for record in records
+    ]
+    return pl.DataFrame(rows)
+
+
+def flatten_live(records: list[dict[str, Any]]) -> pl.DataFrame:
+    """Flattens live-throughput records to one row each."""
+    rows = [
+        {
+            "platform": record["platform"],
+            "candidate": record["candidate"],
+            "iteration": record["iteration"],
+            "capture_count": record["summary"]["capture_count"],
+            "captures_per_second": record["summary"]["captures_per_second"],
+            "inter_arrival_microseconds": record["summary"]["inter_arrival_microseconds"],
+            "p95_inter_arrival_microseconds": record["summary"]["p95_inter_arrival_microseconds"],
+            "lines_median": record["summary"]["lines_median"],
+            "window_milliseconds": record["summary"]["window_milliseconds"],
         }
         for record in records
     ]

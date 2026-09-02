@@ -45,7 +45,21 @@ and compared.
 |---|---|:--:|
 | `one_shot_latency_test.dart` | `TextSight.recognizeImage` round-trip latency by page profile and recognition level | no |
 | `codec_on_device_test.dart` | the codec micro-benchmark on phone silicon, same payloads and candidates as `micro/` | no |
+| `live_throughput_test.dart` | recognized frames per second and the gap between them, per level | **yes** |
 
 `one_shot_latency` is honestly *one-shot API latency as an app sees it*: image decode, inference,
 native encode and transport, all inside one number. It is not pure inference time. Splitting those
 apart needs native timestamps, which is a separate job.
+
+## The live scenario needs a camera
+
+`live_throughput` is the only scenario that opens the camera, which brings two wrinkles.
+
+`flutter drive` uninstalls the app when it finishes, so a permission grant cannot be set up in
+advance. The scenario surfaces the prompt and then waits up to 45 seconds. On Android the runner
+grants it over adb as soon as the package appears, so it is hands-off. On iOS somebody has to tap
+Allow on the device while it waits.
+
+The numbers also depend entirely on what the camera sees, so point it at the same thing every time
+if you intend to compare runs. Every row carries the median lines per capture: a zero there means
+nothing readable was in frame, and the throughput number says nothing about recognition.

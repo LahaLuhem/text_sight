@@ -1,9 +1,7 @@
-"""Chart renderers for the committed README report (3 PNGs).
+"""Chart renderers. Each returns the `Path` it wrote, for threading into the markdown.
 
-Module-level matplotlib / seaborn imports are intentional — this module only
-makes sense with the analysis stack installed; `cmd_report` gates the call
-site with a `find_spec` check pointing users at `uv sync`. Each plot fn returns
-the `Path` it wrote, so the caller can thread it into the markdown image list.
+Module-level matplotlib imports are deliberate: `cmd_report` gates the call site with a
+`find_spec` check that points at `uv sync`.
 """
 
 from __future__ import annotations
@@ -29,10 +27,8 @@ from text_sight_bench.stats import grouped_median
 
 
 def set_default_theme() -> None:
-    """Pins a headless backend + the shared seaborn theme. Idempotent."""
-    # Force Agg so rendering never touches a display (CI, or a dev machine
-    # mid-task). `force=True` switches even though pyplot is already imported;
-    # safe here because no figure exists yet.
+    """Pins a headless backend and the shared theme. Idempotent."""
+    # Agg so rendering never touches a display. `force=True` is safe: no figure exists yet.
     matplotlib.use("Agg", force=True)
     sns.set_theme(style="whitegrid", context="paper")
 
@@ -129,10 +125,9 @@ def plot_profile_decode_bars(df: pl.DataFrame, out_path: Path) -> Path:
 
 
 def plot_one_shot_latency(df: pl.DataFrame, out_path: Path) -> Path:
-    """Median one-shot latency (ms) per page profile, one panel per platform.
+    """Median one-shot latency (ms) per profile, one panel per platform.
 
-    Each bar is labelled with the lines the recognizer actually read, so a fast-but-empty result
-    cannot be mistaken for a fast one.
+    Bars are labelled with lines read, so a fast-but-empty result cannot pass for a fast one.
     """
     platforms = [p for p in PLATFORM_ORDER if p in set(df["platform"].to_list())]
     figure, axes = plt.subplots(

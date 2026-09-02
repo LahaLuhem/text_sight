@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-/// Writes codec-roundtrip results as a JSON array — one record per
-/// (candidate, payload, iteration) — to a per-run output file.
+/// Writes results as a JSON array, one record per (candidate, payload, iteration).
 ///
-/// Schema mirrors the sibling benchmark (header + `samples` + `summary`) with
-/// the `candidate` / `payload` / `line_count` pivots this suite sweeps. One
-/// writer per process: [open], one [writeRecord] per measurement, then [close].
+/// Schema mirrors the sibling suites: header, `samples`, `summary`. One writer per process:
+/// [open], a [writeRecord] per measurement, then [close].
 final class ResultWriter {
   new _(
     this._sink, {
@@ -16,16 +14,13 @@ final class ResultWriter {
     required this.gitSha,
   });
 
-  /// The benchmark name (e.g. `codec_roundtrip`).
   final String benchmark;
 
-  /// Dart SDK version the run was captured on; a change invalidates baselines.
+  /// A change invalidates captured baselines.
   final String sdkVersion;
 
-  /// The package version under test.
   final String packageVersion;
 
-  /// The git SHA of the working tree under test.
   final String gitSha;
 
   final IOSink _sink;
@@ -55,8 +50,7 @@ final class ResultWriter {
     );
   }
 
-  /// Appends one record. [samples] holds the raw per-metric measurement
-  /// arrays; [summary] holds pre-computed scalars (recomputable from samples).
+  /// [samples] holds the raw arrays, [summary] the scalars derived from them.
   void writeRecord({
     required int iteration,
     required String candidate,
@@ -92,11 +86,9 @@ final class ResultWriter {
   }
 }
 
-/// Forces a young-gen GC by allocating, then dropping, memory pressure.
-/// Imperfect (the VM may defer) but the canonical "clean slate before
-/// measuring" hook. Call immediately before opening a measurement window.
+/// Provokes a young-gen GC before a measurement window. Imperfect: the VM may defer.
 void forceGc() {
-  // ~8 MB of immediately-unreachable garbage to provoke a young-gen sweep.
+  // Allocated only to be dropped, so the variable is meant to be unused.
   // ignore: unused_local_variable
   final pressure = List.generate(64, (_) => List<int>.filled(16384, 0));
 }

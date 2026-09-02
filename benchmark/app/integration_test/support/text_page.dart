@@ -4,8 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
 
-/// Page shapes mirroring `harness/payloads.dart`, seeds included, so a `document` here has the same
-/// line count as one there. Duplicated because this host is its own package.
+/// Mirrors `harness/payloads.dart` including seeds, so a `document` here matches one there.
 // Benchmark
 //ignore: prefer-match-file-name
 enum PageProfile {
@@ -44,11 +43,8 @@ typedef RenderedPage = ({
   int inkPixels,
 });
 
-/// Renders [profile] as black text on a fixed-size white page.
-///
-/// The page size is constant across profiles, so decode cost is too and latency differences come
-/// from density alone. Type shrinks to fit the line count, capped so a 3-line sign stays sane.
-/// Real device fonts, hence a scenario: `flutter_test`'s font paints boxes nothing can read.
+/// Renders [profile] as black text on a fixed-size white page, so decode cost is constant and
+/// latency differences come from density alone. Type shrinks to fit, capped so a sign stays sane.
 Future<RenderedPage> renderPage(PageProfile profile) async {
   final random = Random(profile.index + _profileSeedBase);
   final lineCount = profile.minLines + random.nextInt(profile.maxLines - profile.minLines + 1);
@@ -90,7 +86,7 @@ Future<RenderedPage> renderPage(PageProfile profile) async {
   }
 }
 
-/// Non-white pixels, so a blank render is distinguishable from a recognizer that read nothing.
+/// Non-white pixels: separates a blank render from a recognizer that read nothing.
 int _countInk(ByteData raw) {
   var ink = 0;
   for (var offset = 0; offset + 3 < raw.lengthInBytes; offset += 4) {
@@ -100,8 +96,7 @@ int _countInk(ByteData raw) {
   return ink;
 }
 
-/// One line of real words, length drawn from [profile]'s range, so `accurate`'s language correction
-/// has something sensible to chew on.
+/// Real words, so `accurate`'s language correction has something sensible to chew on.
 String _line(Random random, PageProfile profile) {
   final target = profile.minTextLen + random.nextInt(profile.maxTextLen - profile.minTextLen + 1);
   final words = <String>[];
@@ -118,7 +113,7 @@ String _line(Random random, PageProfile profile) {
 /// Matches `payloads.dart`, so line counts line up across the two suites.
 const _profileSeedBase = 0x51760000;
 
-/// Roughly a document page at print resolution: big enough that `dense`'s type stays legible.
+/// Big enough that `dense`'s type stays legible.
 const _pageWidth = 2000.0;
 const _pageHeight = 2800.0;
 const _margin = 48.0;

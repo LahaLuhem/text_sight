@@ -6,6 +6,7 @@ Subcommands:
   report <json>   Render committed README charts + SUMMARY.md from result JSON.
   run-device      Drive a device scenario (benchmark/app) on attached phones.
   report-device   Render the device chart + DEVICE_SUMMARY.md.
+  report-live     Render LIVE_SUMMARY.md from live-throughput runs.
 
 There is no `compare` — there is no before/after transport to diff yet.
 """
@@ -52,6 +53,11 @@ def main() -> int:
     device_report_parser.add_argument("results", nargs="+", help="one JSON per platform")
     device_report_parser.add_argument("--out", default=None, help="output dir")
     device_report_parser.set_defaults(func=report.cmd_report_device)
+
+    live_report_parser = sub.add_parser("report-live", help="render LIVE_SUMMARY.md")
+    live_report_parser.add_argument("results", nargs="+", help="one JSON per platform")
+    live_report_parser.add_argument("--out", default=None, help="output dir")
+    live_report_parser.set_defaults(func=report.cmd_report_live)
 
     args = parser.parse_args()
     return int(args.func(args))

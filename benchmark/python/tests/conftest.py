@@ -71,3 +71,32 @@ def sample_device_records() -> list[dict[str, Any]]:
         _device_record("android", "fast", "document", 63, 120_000, 60),
         _device_record("android", "accurate", "document", 63, 121_000, 60),
     ]
+
+
+@pytest.fixture
+def sample_live_records() -> list[dict[str, Any]]:
+    """One window per level, with nothing readable in frame."""
+    return [
+        {
+            "benchmark": "live_throughput",
+            "candidate": level,
+            "payload": "live",
+            "line_count": 0,
+            "iteration": 0,
+            "platform": "android",
+            "sdk_version": "3.13.2",
+            "package_version": "0.2.0",
+            "git_sha": "abc1234",
+            "started_at": "2026-09-02T00:00:00.000Z",
+            "samples": {"inter_arrival_microseconds": [33_000, 34_000]},
+            "summary": {
+                "capture_count": 240,
+                "captures_per_second": 30.0,
+                "inter_arrival_microseconds": 33_100,
+                "p95_inter_arrival_microseconds": 38_800,
+                "lines_median": 0,
+                "window_milliseconds": 8001,
+            },
+        }
+        for level in ("fast", "accurate")
+    ]

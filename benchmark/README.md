@@ -121,6 +121,19 @@ Pass `--out`, or it overwrites the committed host charts. It exists to check one
 the README quotes decode as a fraction of a 60 fps frame budget, but the committed numbers are
 host-measured and a phone CPU is slower.
 
+Third scenario, `--scenario live_throughput`, is the live camera one: recognized frames per second
+and the gap between them, per recognition level.
+
+```bash
+uv run python run.py run-device --scenario live_throughput
+uv run python run.py report-live ../results-local/current/live_throughput_*.json --out ../results-local/live/
+```
+
+It needs camera permission, which cannot be pre-granted because `flutter drive` uninstalls the app
+afterwards. On Android the runner grants it over adb mid-run; on iOS tap Allow while the scenario
+waits. `report-live` writes a table and no chart on purpose: with an uncontrolled scene, a chart
+would imply precision these numbers do not have.
+
 The Dart binary also runs standalone (a median table prints to stdout):
 
 ```bash

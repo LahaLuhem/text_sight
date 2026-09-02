@@ -6,13 +6,9 @@ import 'package:text_sight/text_sight.dart';
 import 'support/bench_record.dart';
 import 'support/text_page.dart';
 
-/// Round-trip latency of `TextSight.recognizeImage`, swept over page profiles and recognition
-/// levels. One number covers PNG decode, inference, native encode and the channel hop, so read it
-/// as what a one-shot call costs an app, not as inference time.
-///
-/// `level` is a no-op on Android (ML Kit's Latin recognizer has no accuracy setting). Latency alone
-/// misleads, since a level that reads nothing returns fast, so every record carries
-/// `lines_recognized` and the report must show it beside the timing.
+/// Round-trip latency of `TextSight.recognizeImage`, by page profile and level. One number covers
+/// decode, inference, native encode and the channel hop, so it is what a call costs an app, not
+/// inference time. `level` is a no-op on Android.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 

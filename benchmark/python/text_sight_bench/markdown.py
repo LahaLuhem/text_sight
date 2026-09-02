@@ -186,3 +186,67 @@ def _device_capture_line(head: dict[str, Any], iterations: int) -> str:
         f"git `{head.get('git_sha', '?')}` · N={iterations} · "
         f"{head.get('started_at', '?')}. Per device, so your hardware will differ."
     )
+
+
+_LIVE_SCOPE_NOTE = (
+    "> **Scope.** Recognized frames per second over a fixed window, and the gap between them. "
+    "Under the single-in-flight backpressure that gap is roughly one recognition. Directional "
+    "only: the numbers depend entirely on what the camera was pointed at, so keep the scene fixed "
+    "when comparing runs."
+)
+
+_LIVE_CAVEATS = (
+    "- Only *recognized* frames are visible from Dart, so the drop ratio (camera frames delivered "
+    "versus recognized) is not here. That needs native counters.\n"
+    "- A gap at the camera's frame interval (about 33 ms at 30 fps) means recognition is keeping "
+    "up and the camera is the limit, not the recognizer.\n"
+    "- `level` is a no-op on Android, so its rows should match.\n"
+    "- **lines** is the median per capture. Zero means nothing readable was in frame, which makes "
+    "the throughput number meaningless as a recognition measure."
+)
+
+
+def render_live_summary_markdown(
+    df: pl.DataFrame,
+    records: list[dict[str, Any]],
+) -> str:
+    """Builds LIVE_SUMMARY.md. A table, not a chart: four numbers with an uncontrolled scene do not
+    deserve the precision a chart implies."""
+    head = records[0] if records else {}
+    iterations = max((record["iteration"] for record in records), default=-1) + 1
+
+    lines: list[str] = [
+        "# Live recognition throughput",
+        "",
+        "How many frames per second the live path actually recognizes, per recognition level.",
+        "",
+        _LIVE_SCOPE_NOTE,
+        "",
+        _device_capture_line(head, iterations),
+        "",
+        _LIVE_CAVEATS,
+        "",
+        "| Platform | Level | Captures/s | Gap p50 (ms) | Gap p95 (ms) | Lines | Window (s) |",
+        "|---|---|--:|--:|--:|--:|--:|",
+    ]
+
+    for platform in [p for p in PLATFORM_ORDER if p in set(df["platform"].to_list())]:
+        panel = df.filter(pl.col("platform") == platform)
+        levels = [name for name in LEVEL_ORDER if name in set(panel["candidate"].to_list())]
+        for level in levels:
+            rows = panel.filter(pl.col("candidate") == level)
+            if rows.height == 0:
+                continue
+            per_second = rows["captures_per_second"].median()
+            gap = rows["inter_arrival_microseconds"].median() / 1000.0
+            gap95 = rows["p95_inter_arrival_microseconds"].median() / 1000.0
+            read = int(rows["lines_median"].median())
+            window = rows["window_milliseconds"].median() / 1000.0
+            flag = "" if read else " *(nothing readable)*"
+            lines.append(
+                f"| {PLATFORM_LABELS.get(platform, platform)} | `{level}` | {per_second:.1f} | "
+                f"{gap:.1f} | {gap95:.1f} | {read}{flag} | {window:.0f} |"
+            )
+
+    lines.append("")
+    return "\n".join(lines)

@@ -1,6 +1,4 @@
-# Config for `dart pub global run dependency_validator`. Scoped to the root package only
-# `example/` is a separate Flutter sub-package with its own pubspec.yaml.
-# Its deps shouldn't get folded into the root package's check.
-
+# Root package only. Each entry is a sub-package with its own pubspec.yaml.
 exclude:
-  - "example/**"
+  - "example/**" # the example app
+  - "benchmark/app/**" # benchmark host. Not benchmark/**: harness/ + micro/ justify our dev deps

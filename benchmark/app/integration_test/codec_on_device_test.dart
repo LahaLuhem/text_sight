@@ -9,19 +9,13 @@ import '../../harness/capture_codec.dart';
 import '../../harness/payloads.dart';
 import 'support/bench_record.dart';
 
-/// The codec micro-benchmark, on the phone instead of a laptop.
-///
-/// Same payloads and same candidates as `micro/codec_roundtrip.dart`, reached by relative import,
-/// so a `receipt` here is byte-identical to a `receipt` there. It exists to check one published
-/// claim: decode is quoted as a fraction of a 60 fps frame budget, but the committed numbers come
-/// from a development machine, and a phone CPU is slower.
-///
-/// Records match the micro's schema exactly, so `run.py report` renders these unchanged. Point it
-/// at a separate `--out`, or it overwrites the host charts.
+/// The codec micro-benchmark on phone silicon, checking a claim the host numbers cannot: decode as a
+/// fraction of a frame budget. Same payloads and schema as `micro/codec_roundtrip.dart`.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('codec encode and decode on device', (tester) async {
+    // Imported from harness/, so a `receipt` here is byte-identical to the micro's.
     final cases = [for (final profile in PayloadProfile.values) _profileCase(profile)];
     final records = <Map<String, Object?>>[];
 
@@ -57,10 +51,8 @@ void main() {
   });
 }
 
-/// Median microseconds per call across [_batches] batches of [_repsPerBatch], after a warm-up.
-///
-/// Hand-rolled rather than `benchmark_harness`: its window is tuned for a host, and a batch median
-/// is what the micro reports too, so the two stay comparable.
+/// Median microseconds per call, batched. Hand-rolled because `benchmark_harness`'s window is tuned
+/// for a host.
 double _perOperationMicros(void Function() operation) {
   for (var warmUp = 0; warmUp < _repsPerBatch; warmUp++) {
     operation();

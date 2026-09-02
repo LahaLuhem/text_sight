@@ -1,7 +1,7 @@
 // Shared ergonomics
 // ignore_for_file: prefer-match-file-name, prefer-first
 
-// Multiple candidate codecs share this file by design — the comparison set is the unit, not one class per file.
+// The comparison set is the unit here, not one class per file.
 
 import 'dart:convert';
 import 'dart:typed_data';
@@ -10,15 +10,13 @@ import 'package:standard_message_codec/standard_message_codec.dart';
 
 import 'bench_capture.dart';
 
-/// A reversible wire encoding for a [BenchCapture] — one transport candidate.
+/// One transport candidate: a reversible wire encoding for a [BenchCapture].
 abstract interface class CaptureCodec {
-  /// Short, stable identifier, recorded as the result `candidate` field.
+  /// Recorded as the result `candidate` field.
   String get name;
 
-  /// Encodes [capture] to its wire bytes.
   Uint8List encode(BenchCapture capture);
 
-  /// Decodes bytes produced by [encode] back into a [BenchCapture].
   BenchCapture decode(Uint8List bytes);
 }
 
@@ -31,10 +29,9 @@ const allCodecs = <CaptureCodec>[
   PackedCodec(name: 'packed_f64', floatBytes: 8),
 ];
 
-/// Baseline: today's wire — a `Map` with a string key per field, through Flutter's `StandardMessageCodec`.
-/// Decode mirrors `_decodeCapture` / `_decodeLine` exactly (cast each value via `num`).
+/// Baseline, today's wire: a `Map` with a key per field through `StandardMessageCodec`. Decode
+/// mirrors `_decodeCapture` / `_decodeLine` exactly, casting each value via `num`.
 final class MapStdCodec implements CaptureCodec {
-  /// Creates the codec.
   const new();
 
   static const _codec = StandardMessageCodec();
@@ -92,7 +89,6 @@ final class MapStdCodec implements CaptureCodec {
 
 /// Positional `List` (no per-field keys) through `StandardMessageCodec`.
 final class ListStdCodec implements CaptureCodec {
-  /// Creates the codec.
   const new();
 
   static const _codec = StandardMessageCodec();
@@ -139,12 +135,9 @@ final class ListStdCodec implements CaptureCodec {
   );
 }
 
-/// Faithful replica of Pigeon's generated codec: a one-byte type tag per data
-/// class, then its fields as a positional list — what a Pigeon
-/// `@EventChannelApi` result twin would emit. Tag values are arbitrary; only
-/// the shape (tag + field list) mirrors Pigeon.
+/// Replica of Pigeon's generated codec: a one-byte type tag per data class, then its fields as a
+/// positional list. Tag values are arbitrary, only the shape mirrors Pigeon.
 final class PigeonReplicaCodec implements CaptureCodec {
-  /// Creates the codec.
   const new();
 
   static const _codec = _PigeonCodec();
@@ -230,19 +223,16 @@ final class _PigeonCodec extends StandardMessageCodec {
   }
 }
 
-/// Tight hand-packed binary: no keys, no per-field tags — fixed-width floats
-/// (`floatBytes`: 4 = float32, 8 = float64) and length-prefixed UTF-8 text,
-/// little-endian, no alignment padding. Nullable confidence rides a NaN
-/// sentinel — the complexity tax the keyed / positional forms sidestep.
+/// Hand-packed binary: no keys or tags, fixed-width floats, length-prefixed UTF-8, little-endian.
+/// Nullable confidence rides a NaN sentinel, which is the complexity the keyed forms avoid.
 final class PackedCodec implements CaptureCodec {
-  /// Creates a packed codec with the given [name] and float width.
   const new({required this.name, required this.floatBytes})
     : assert(floatBytes == 4 || floatBytes == 8, 'floatBytes must be 4 or 8');
 
   @override
   final String name;
 
-  /// Bytes per float field: 4 (float32) or 8 (float64).
+  /// 4 for float32, 8 for float64.
   final int floatBytes;
 
   @override
@@ -352,7 +342,7 @@ final class _PackedReader {
   }
 }
 
-/// Narrows the codec's `ByteData?` output to the exact `Uint8List` view.
+/// Narrows `ByteData?` to the exact `Uint8List` view.
 Uint8List _toBytes(ByteData? data) {
   final bytes = data!;
 

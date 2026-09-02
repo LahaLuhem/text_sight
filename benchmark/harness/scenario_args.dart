@@ -1,15 +1,9 @@
 import 'dart:io';
 
-/// Parsed CLI flags shared by benchmark entrypoints so the (future) Python
-/// orchestrator can drive them uniformly:
+/// CLI flags shared by the benchmark entrypoints, so the orchestrator drives them uniformly:
+/// `--iterations`, `--output`, `--git-sha`, `--package-version`, all required.
 ///
-/// * `--iterations N` — required; the entrypoint loops `0..N-1`, emitting one
-///   record set per iteration. Batching in one process amortises startup.
-/// * `--output PATH` — required; JSON result file to write.
-/// * `--git-sha SHA` — required; recorded in each record for traceability.
-/// * `--package-version V` — required; recorded in each record.
-///
-/// Hand-parsed — the surface is too small to justify a `package:args` dep.
+/// Hand-parsed: too small a surface to justify `package:args`.
 final class ScenarioArgs {
   const new _({
     required this.iterations,
@@ -18,8 +12,7 @@ final class ScenarioArgs {
     required this.packageVersion,
   });
 
-  /// Parses [argv]; exits with code 64 (`EX_USAGE`) on any parse failure —
-  /// benchmarks are non-interactive, so there is no one to catch a throw.
+  /// Exits 64 (`EX_USAGE`) on a bad flag: nothing interactive is around to catch a throw.
   factory parse(List<String> argv) {
     final flags = <String, String>{};
     for (var i = 0; i < argv.length; i++) {
@@ -40,20 +33,15 @@ final class ScenarioArgs {
     );
   }
 
-  /// Iterations to run in this process invocation.
   final int iterations;
 
-  /// Path to write the JSON result file to.
   final String outputPath;
 
-  /// Git SHA of the working tree under test.
   final String gitSha;
 
-  /// Package version under test.
   final String packageVersion;
 
-  /// The Dart SDK version (`Platform.version`), recorded in each record. A
-  /// change invalidates captured baselines.
+  /// Recorded per record: a change invalidates captured baselines.
   static String get sdkVersion => Platform.version.split(' ').first;
 
   static String _required(Map<String, String> flags, String name) {

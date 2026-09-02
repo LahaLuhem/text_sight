@@ -1,21 +1,11 @@
-/// Micro-benchmark: encode + decode CPU and wire size of one recognition frame
-/// across transport candidates (`capture_codec.dart`), swept over frame size
-/// and realistic OCR profiles (`payloads.dart`).
+/// Encode and decode CPU plus wire size for one recognition frame, across transport candidates.
 ///
-/// Scope — the only perf-relevant slice measurable in pure Dart. Native ML
-/// inference and real on-device frame latency are out of scope and dominate
-/// end-to-end; these numbers bound the *upside* of a transport change, no more.
-/// Decode is the headline: in production only the decode runs on the Dart UI
-/// isolate per frame (the encode happens natively).
-///
-/// Each bench's `exercise()` is one `run()`, and `_measure` runs a bounded
-/// window ([_measureMillis]) instead of `benchmark_harness`'s fixed 2 s
-/// `.measure()` — keeping the 100-cell × N matrix tractable — returning
-/// microseconds per one encode / decode.
+/// Pure Dart, so it bounds the upside of a transport change and nothing more: native inference and
+/// real frame latency dominate end-to-end. Decode is the headline, since in production only the
+/// decode runs on the Dart UI isolate.
 library;
 
-// This is an executable benchmark entrypoint with only private helper classes,
-// so no public class matches the file name.
+// An entrypoint with only private helpers, so no public class matches the file name.
 // ignore_for_file: prefer-match-file-name
 
 import 'dart:io';
@@ -29,10 +19,9 @@ import '../harness/payloads.dart';
 import '../harness/result_writer.dart';
 import '../harness/scenario_args.dart';
 
-/// One payload to measure every candidate against.
 typedef _Case = ({String payload, int lineCount, BenchCapture capture});
 
-/// One measurement row, accumulated for the end-of-run stdout summary.
+/// One row of the end-of-run stdout summary.
 typedef _Row = ({String payload, int lineCount, String candidate, double decodeUs, int bytes});
 
 Future<void> main(List<String> argv) async {
@@ -90,24 +79,19 @@ Future<void> main(List<String> argv) async {
   _printSummary(rows);
 }
 
-/// One profile case: generates the capture once, then derives its label fields.
+/// Generates the capture once, then derives its label fields.
 _Case _profileCase(PayloadProfile profile) {
   final capture = Payloads.profile(profile);
 
   return (payload: profile.name, lineCount: capture.lines.length, capture: capture);
 }
 
-/// Per-measurement window, in milliseconds. `benchmark_harness`'s `.measure()`
-/// hardcodes 2 s; for these sub-microsecond ops that over-samples and makes the
-/// 100-cell × N matrix cost ~2 s per cell. A shorter window still averages many
-/// runs per point; the N outer iterations supply the distribution. Lower for
-/// speed, raise for steadier per-point estimates.
+/// Shorter than `benchmark_harness`'s fixed 2 s, which would cost ~2 s per cell across a
+/// 100-cell matrix. The outer iterations supply the distribution.
 const _warmupMillis = 100;
 const _measureMillis = 500;
 
-/// Runs [bench] over one bounded window, returning microseconds per `run()`.
-/// Mirrors `BenchmarkBase.measure()` but with the shorter [_measureMillis]
-/// window, warming caches first (result discarded).
+/// Microseconds per `run()` over one window, warming caches first.
 double _measure(BenchmarkBase bench) {
   bench.setup();
   BenchmarkBase.measureFor(bench.exercise, _warmupMillis);
@@ -117,8 +101,7 @@ double _measure(BenchmarkBase bench) {
   return score;
 }
 
-/// Decodes a fixed encoded buffer per `run()`. The result feeds a checksum so
-/// the optimiser cannot eliminate the decode as dead code.
+/// Checksums the result so the optimiser cannot drop the decode as dead code.
 final class _DecodeBench extends BenchmarkBase {
   new(this._codec, this._bytes) : super('decode');
 
@@ -138,8 +121,7 @@ final class _DecodeBench extends BenchmarkBase {
   }
 }
 
-/// Encodes a fixed capture per `run()`, checksumming the byte length for the
-/// same dead-code-elimination guard as [_DecodeBench].
+/// Checksums the byte length, same dead-code guard as [_DecodeBench].
 final class _EncodeBench extends BenchmarkBase {
   new(this._codec, this._capture) : super('encode');
 
@@ -159,8 +141,7 @@ final class _EncodeBench extends BenchmarkBase {
   }
 }
 
-/// Prints a compact median table to stdout — a Phase-0 standalone view until
-/// the Python `report` layer (charts + SUMMARY.md) lands.
+/// A compact median table for reading the run without the Python report layer.
 void _printSummary(List<_Row> rows) {
   final buffer = StringBuffer()
     ..writeln()

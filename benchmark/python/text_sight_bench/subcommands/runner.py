@@ -6,12 +6,16 @@ import argparse
 import json
 import subprocess
 import sys
+import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
 from text_sight_bench.config import (
     APP_DIR,
+    BENCH_APP_ANDROID_ID,
     BENCHMARK_ROOT,
+    CAMERA_SCENARIOS,
     DEFAULT_RESULTS_DIR,
     DEVICE_SCENARIOS,
     EXE_PATH,
@@ -106,13 +110,18 @@ def cmd_run_device(args: argparse.Namespace) -> int:
 
     for device in devices:
         out_file = out_dir / f"{scenario}_{device.platform}.json"
-        # An iOS simulator cannot run profile mode, so fall back to debug there. Debug timings are
-        # not comparable with device numbers; it exists to prove the plumbing.
+        # Simulators cannot run profile mode. Debug timings only prove the plumbing.
         mode = "--debug" if device.virtual and device.platform == "ios" else "--profile"
         if mode == "--debug":
             print(f"  note: {device.name} is virtual, running {mode} (timings are not comparable)")
 
         print(f"\ndrive  {scenario}  {device.name}  ({args.iterations} iterations, {mode[2:]})")
+        # No grant survives the uninstall, so grant from the side once the package appears.
+        granter = None
+        if scenario in CAMERA_SCENARIOS and device.platform == "android":
+            granter = threading.Thread(target=_grant_android_camera, args=(device.id,), daemon=True)
+            granter.start()
+
         result = subprocess.run(
             [
                 "flutter",
@@ -180,3 +189,38 @@ def _discover_devices(*, include_virtual: bool) -> list[Device]:
             Device(id=str(entry["id"]), name=str(entry["name"]), platform=platform, virtual=virtual)
         )
     return devices
+
+
+def _grant_android_camera(serial: str, *, timeout_seconds: float = 90.0) -> None:
+    """Grants CAMERA once the package appears on `serial`.
+
+    `flutter drive` installs at run start and removes the app at the end, so that window is the
+    only time the grant can exist. The scenario polls for it.
+    """
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        listed = subprocess.run(
+            ["adb", "-s", serial, "shell", "pm", "list", "packages", BENCH_APP_ANDROID_ID],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if BENCH_APP_ANDROID_ID in listed.stdout:
+            subprocess.run(
+                [
+                    "adb",
+                    "-s",
+                    serial,
+                    "shell",
+                    "pm",
+                    "grant",
+                    BENCH_APP_ANDROID_ID,
+                    "android.permission.CAMERA",
+                ],
+                capture_output=True,
+                check=False,
+            )
+            print("  granted android.permission.CAMERA over adb")
+            return
+        time.sleep(0.5)
+    print("  could not grant CAMERA: package never appeared", file=sys.stderr)
