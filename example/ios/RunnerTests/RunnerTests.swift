@@ -1,5 +1,6 @@
 import AVFoundation
 import CoreGraphics
+import CoreImage
 import CoreVideo
 import Flutter
 import Foundation
@@ -139,6 +140,33 @@ final class TextSightCameraTests: XCTestCase {
     XCTAssertEqual(region.height, 0.4, accuracy: 1e-9)
   }
 
+  // MARK: pixelFormat, offered capture formats -> the one we ask for
+
+  func testPixelFormatPrefersBiplanarYuvOverBgra() {
+    let format = TextSightCamera.pixelFormat(from: [
+      kCVPixelFormatType_32BGRA,
+      kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+    ])
+
+    XCTAssertEqual(format, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange)
+  }
+
+  func testPixelFormatTakesFullRangeWhenVideoRangeIsAbsent() {
+    let format = TextSightCamera.pixelFormat(from: [
+      kCVPixelFormatType_32BGRA,
+      kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+    ])
+
+    XCTAssertEqual(format, kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)
+  }
+
+  func testPixelFormatFallsBackToBgra() {
+    // Covers an empty list too, which is what a not-yet-connected output reports.
+    XCTAssertEqual(TextSightCamera.pixelFormat(from: []), kCVPixelFormatType_32BGRA)
+    XCTAssertEqual(TextSightCamera.pixelFormat(from: [kCVPixelFormatType_32BGRA]),
+                   kCVPixelFormatType_32BGRA)
+  }
+
   // MARK: encodeFrame, neutral lines -> the cross-platform per-frame wire map
 
   func testEncodeFrameMapsLinesToWireKeys() {
@@ -193,6 +221,33 @@ final class LegacyTextRecognizerTests: XCTestCase {
     XCTAssertLessThanOrEqual(line.box.maxX, 1)
     XCTAssertGreaterThanOrEqual(line.box.minY, 0)
     XCTAssertLessThanOrEqual(line.box.maxY, 1)
+  }
+
+  /// The format switch rests on Vision reading biplanar YUV, so pin that rather than claim it.
+  func testReadsTextFromABiplanarYuvBuffer() async throws {
+    let cgImage = try XCTUnwrap(Self.renderText("HELLO").cgImage)
+
+    let lines = try await LegacyTextRecognizer().recognize(
+      pixelBuffer: try Self.makeYuvBuffer(from: cgImage), orientation: .up,
+      config: RecognitionConfig(level: .accurate, languages: [], roi: nil)
+    )
+
+    let joined = lines.map(\.text).joined().uppercased()
+    XCTAssertTrue(joined.contains("HELLO"), "expected HELLO from a YUV buffer, got \"\(joined)\"")
+  }
+
+  /// Draws `cgImage` into a biplanar-YUV buffer, the format the live path now asks the camera for.
+  private static func makeYuvBuffer(from cgImage: CGImage) throws -> CVPixelBuffer {
+    var buffer: CVPixelBuffer?
+    let attributes = [kCVPixelBufferIOSurfacePropertiesKey as String: [:] as CFDictionary]
+    let code = CVPixelBufferCreate(kCFAllocatorDefault, cgImage.width, cgImage.height,
+                                   kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange,
+                                   attributes as CFDictionary, &buffer)
+    XCTAssertEqual(code, kCVReturnSuccess)
+    let pixelBuffer = try XCTUnwrap(buffer)
+    CIContext().render(CIImage(cgImage: cgImage), to: pixelBuffer)
+
+    return pixelBuffer
   }
 
   /// Renders `string` as large black text on a white field, clear enough for reliable recognition.
@@ -442,8 +497,8 @@ final class FrameGatePeriodTests: XCTestCase {
     camera.start()
     let pixelBuffer = try makeTestPixelBuffer()
 
-    // Recognition runs on the gate's own consumer, so the test body itself can be the camera:
-    // deliver frames on a fixed cadence, computed off one start instant so it cannot drift.
+    // Fixed cadence off one start instant, so delivery cannot drift. Recognition runs on the
+    // gate's consumer, so the test body can drive the frames itself.
     let start = DispatchTime.now()
     for index in 0..<50 {
       let deadline = start + .milliseconds(Int(Self.frameIntervalMs) * index)
@@ -482,8 +537,7 @@ final class FrameGatePeriodTests: XCTestCase {
   }
 }
 
-/// A recognizer that takes a fixed time and timestamps every entry, so a test can read back the
-/// gap between consecutive recognitions.
+/// Takes a fixed time and timestamps every entry, so a test can read the gap between them.
 private final class TimedRecognizer: TextRecognizer, @unchecked Sendable {
   private let latencyNanos: UInt64
   private let lock = NSLock()
