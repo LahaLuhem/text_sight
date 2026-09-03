@@ -256,16 +256,23 @@ below 1/32 of the image height, so it reads less, then nothing, as pages get den
 
 Recognized frames per second over a fixed window, both phones pointed at the same page.
 
-| Platform | Level      | Captures/s | Gap p50 | Paced by       |
-|----------|------------|-----------:|--------:|----------------|
-| iOS      | `fast`     |       30.0 |   33 ms | the camera     |
-| iOS      | `accurate` |        3.6 |  277 ms | the recognizer |
-| Android  | `fast`     |        5.0 |  205 ms | the recognizer |
-| Android  | `accurate` |        5.2 |  186 ms | the recognizer |
+| Platform | Level      | Frame     | Captures/s | Paced by       |
+|----------|------------|-----------|-----------:|----------------|
+| iOS      | `fast`     | 1080x1920 |       30.0 | the camera     |
+| iOS      | `accurate` | 1080x1920 |        4.0 | the recognizer |
+| Android  | `fast`     | 480x640   |        5.9 | the recognizer |
+| Android  | `accurate` | 480x640   |        6.6 | the recognizer |
 
-A gap at the camera's frame interval means recognition is keeping up and the camera is the limit.
-That is where iOS `fast` sits. Everything else is paced by the recognizer. These depend entirely on
-what the camera sees, so treat them as directional.
+Hitting the camera's own frame rate means recognition is keeping up and the camera is the limit.
+That is where iOS `fast` sits, at 30/s on a 30 fps camera. Everything else is paced by the
+recognizer.
+
+**Don't read this as iOS versus Android.** The two sides recognize at different resolutions, so they
+are not doing the same work per frame. iOS asks for `.high` and gets 1080p; Android's analysis falls
+through to CameraX's 640x480 default, 6.7x fewer pixels
+([#61](https://github.com/LahaLuhem/text_sight/issues/61)). On the same scene Android resolved 11
+lines per capture against iOS's 21. These also depend entirely on what the camera sees, so treat
+them as directional either way.
 
 ### The transport is not the bottleneck
 
