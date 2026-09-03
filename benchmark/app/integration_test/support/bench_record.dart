@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show Size;
 
 /// One record in `harness/result_writer.dart`'s shape, so device runs feed the same report layer.
 /// `candidate` is the level, `payload` the page profile. `platform` is additive.
@@ -76,6 +77,7 @@ Map<String, Object?> buildLiveRecord({
   required int windowMicros,
   required List<int> interArrivalMicros,
   required List<int> lineCounts,
+  required Size? frameSize,
 }) {
   final captures = lineCounts.length;
   final seconds = windowMicros / Duration.microsecondsPerSecond;
@@ -94,6 +96,9 @@ Map<String, Object?> buildLiveRecord({
     // `lines_median` rides along because throughput with nothing readable in frame means nothing.
     'samples': {'inter_arrival_microseconds': interArrivalMicros},
     'summary': {
+      // Display-oriented, as delivered: 1080x1920 is a portrait 1080p frame.
+      'frame_width': frameSize?.width.round() ?? 0,
+      'frame_height': frameSize?.height.round() ?? 0,
       'capture_count': captures,
       'captures_per_second': seconds > 0 ? captures / seconds : 0,
       'inter_arrival_microseconds': interArrivalMicros.isEmpty
