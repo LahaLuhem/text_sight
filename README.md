@@ -237,18 +237,49 @@ it:
 
 ## Performance
 
+Captured on a physical Galaxy S24 and iPhone 16 in profile mode. Your hardware will differ, and full
+method and numbers are in [`benchmark/`](benchmark/README.md).
+
+### One image
+
+What `TextSight.recognizeImage` costs, by page density. Read the line count beside each bar: a level
+that recognizes nothing returns fast, which would otherwise look like a win.
+
+![One-shot recognition latency on device](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/one_shot_latency.png)
+
+On Android the level is a no-op, since ML Kit's Latin recognizer has no accuracy dial, so its two
+bars land on top of each other. On iOS `fast` is roughly 4x quicker than `accurate` but skips text
+below 1/32 of the image height, so it reads less, then nothing, as pages get denser
+([#58](https://github.com/LahaLuhem/text_sight/issues/58)).
+
+### Live camera
+
+Recognized frames per second over a fixed window, both phones pointed at the same page.
+
+| Platform | Level      | Captures/s | Gap p50 | Paced by       |
+|----------|------------|-----------:|--------:|----------------|
+| iOS      | `fast`     |       30.0 |   33 ms | the camera     |
+| iOS      | `accurate` |        3.6 |  277 ms | the recognizer |
+| Android  | `fast`     |        5.0 |  205 ms | the recognizer |
+| Android  | `accurate` |        5.2 |  186 ms | the recognizer |
+
+A gap at the camera's frame interval means recognition is keeping up and the camera is the limit.
+That is where iOS `fast` sits. Everything else is paced by the recognizer. These depend entirely on
+what the camera sees, so treat them as directional.
+
+### The transport is not the bottleneck
+
 Results cross from native to Dart as a small per-frame map. Decoding one on the UI isolate costs
-**microseconds**, even for a dense 127-line frame, so the recognizer's own work sets the pace, not
-the transport.
+**microseconds**: worst case on the slower of the two phones, a dense 127-line frame, is 87 µs, or
+**0.5% of a 60 fps frame budget**. So the recognizer's own work sets the pace.
 
 ![Per-frame decode cost vs frame size](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/decode_vs_lines.png)
 ![Encoded payload size vs frame size](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/wire_bytes_vs_lines.png)
 ![Decode cost per realistic OCR profile](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/profile_decode_bars.png)
 
-Two things these don't cover: they measure the Dart codec only, not inference or end-to-end latency,
-and they're captured on a development machine rather than a phone. Leaner wire formats win big in
-*percent* but stay tiny in absolute microseconds, which is why the self-describing map stays. Full
-method and numbers in [`benchmark/`](benchmark/README.md).
+Those three are host-measured, for the finer sweep a phone run does not produce. Leaner wire formats
+win big in *percent* and stay tiny in absolute microseconds, which is why the self-describing map
+stays.
 
 ## Going deeper
 
