@@ -117,7 +117,9 @@ const _profileSeedBase = 0x51760000;
 const _pageWidth = 2000.0;
 const _pageHeight = 2800.0;
 const _margin = 48.0;
-const _maxFontSize = 56.0;
+// Clears Vision's 1/32-of-height floor on iOS 18+, under which `fast` reads nothing. `document`
+// and `dense` stay under it regardless: that many lines will not fit at that size.
+const _maxFontSize = 140.0;
 const _lineHeight = 1.35;
 
 const _lexicon = [
