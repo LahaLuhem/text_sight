@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Size;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -32,6 +33,8 @@ void main() {
       for (var iteration = 0; iteration < _iterations; iteration++) {
         final arrivals = <int>[];
         final lineCounts = <int>[];
+        // What `.high` actually hands over is device-dependent, so record it rather than assume.
+        Size? frameSize;
         final elapsed = Stopwatch();
         var previousMicros = 0;
 
@@ -43,6 +46,7 @@ void main() {
           if (previousMicros > 0) arrivals.add(now - previousMicros);
           previousMicros = now;
           lineCounts.add(capture.lines.length);
+          frameSize = capture.imageSize;
         });
 
         await controller.start();
@@ -61,6 +65,7 @@ void main() {
             windowMicros: elapsed.elapsedMicroseconds,
             interArrivalMicros: arrivals,
             lineCounts: lineCounts,
+            frameSize: frameSize,
           ),
         );
         debugPrint(

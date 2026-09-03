@@ -249,4 +249,25 @@ def render_live_summary_markdown(
             )
 
     lines.append("")
+    frames = _delivered_frames(df)
+    if frames:
+        lines += ["Frames delivered by the capture session, as the preview receives them:", ""]
+        lines += [f"- {label}: {size}" for label, size in frames]
+        lines.append("")
+
     return "\n".join(lines)
+
+
+def _delivered_frames(df: pl.DataFrame) -> list[tuple[str, str]]:
+    """One `WxH` per platform, skipping runs captured before the size was recorded."""
+    if "frame_width" not in df.columns:
+        return []
+
+    out: list[tuple[str, str]] = []
+    for platform in [p for p in PLATFORM_ORDER if p in set(df["platform"].to_list())]:
+        panel = df.filter(pl.col("platform") == platform)
+        width, height = int(panel["frame_width"].max()), int(panel["frame_height"].max())
+        if width and height:
+            out.append((PLATFORM_LABELS.get(platform, platform), f"{width}x{height}"))
+
+    return out

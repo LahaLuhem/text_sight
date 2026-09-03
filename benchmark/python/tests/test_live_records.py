@@ -21,3 +21,25 @@ def test_live_summary_flags_an_unreadable_scene(
     body = render_live_summary_markdown(flatten_live(sample_live_records), sample_live_records)
     assert "nothing readable" in body
     assert "30.0" in body
+
+
+def test_live_summary_reports_the_delivered_frame_size(
+    sample_live_records: list[dict[str, Any]],
+) -> None:
+    """`.high` is device-dependent, so the summary states what actually arrived."""
+    for record in sample_live_records:
+        record["summary"] |= {"frame_width": 1080, "frame_height": 1920}
+
+    body = render_live_summary_markdown(flatten_live(sample_live_records), sample_live_records)
+
+    assert "1080x1920" in body
+
+
+def test_live_summary_omits_the_frame_size_for_older_runs(
+    sample_live_records: list[dict[str, Any]],
+) -> None:
+    """Runs captured before the size was recorded still render, without an empty 0x0 line."""
+    body = render_live_summary_markdown(flatten_live(sample_live_records), sample_live_records)
+
+    assert "0x0" not in body
+    assert "Frames delivered" not in body

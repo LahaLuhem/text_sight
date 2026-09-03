@@ -67,6 +67,8 @@ def flatten_live(records: list[dict[str, Any]]) -> pl.DataFrame:
             "platform": record["platform"],
             "candidate": record["candidate"],
             "iteration": record["iteration"],
+            "frame_width": record["summary"].get("frame_width", 0),
+            "frame_height": record["summary"].get("frame_height", 0),
             "capture_count": record["summary"]["capture_count"],
             "captures_per_second": record["summary"]["captures_per_second"],
             "inter_arrival_microseconds": record["summary"]["inter_arrival_microseconds"],
