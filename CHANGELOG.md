@@ -1,4 +1,7 @@
 ## [Unreleased]
+### Added
+- \[#52\] Capture the on-device benchmark numbers
+
 ### Fixed
 - \[#47\] Release the iOS session on engine detach + scaffold device benchmarks
 - \[#2\] Start the next recognition when the recognizer goes free
