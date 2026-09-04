@@ -4,7 +4,7 @@ How many frames per second the live path actually recognizes, per recognition le
 
 > **Scope.** Recognized frames per second over a fixed window, and the gap between them. Under the single-in-flight backpressure that gap is roughly one recognition. Directional only: the numbers depend entirely on what the camera was pointed at, so keep the scene fixed when comparing runs.
 
-Captured: SDK `3.13.2` · package `0.2.0` · git `21c6760` · N=3 · 2026-09-03T11:03:47.306637Z. Per device, so your hardware will differ.
+Captured: SDK `3.13.2` · package `0.2.0` · git `21c6760` · N=3 · 2026-09-03T11:03:47.306637Z. Measured on iOS and Android, so your hardware will differ.
 
 - Only *recognized* frames are visible from Dart, so the drop ratio (camera frames delivered versus recognized) is not here. That needs native counters.
 - A gap at the camera's frame interval (about 33 ms at 30 fps) means recognition is keeping up and the camera is the limit, not the recognizer.

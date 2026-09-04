@@ -4,7 +4,7 @@ How long `TextSight.recognizeImage` takes on real hardware, by page profile and 
 
 > **Scope.** One-shot API latency as an app sees it: image decode, ML inference, the native encode and the channel hop, all inside one number. Inference dominates, but this does not isolate it. Live-camera throughput is a different measurement and not covered here.
 
-Captured: SDK `3.13.2` · package `0.2.0` · git `bef2acd` · N=3 · 2026-09-03T08:34:12.303439Z. Per device, so your hardware will differ.
+Captured: SDK `3.13.2` · package `0.2.0` · git `bef2acd` · N=3 · 2026-09-03T08:34:12.303439Z. Measured on iOS and Android, so your hardware will differ.
 
 - `level` is a no-op on Android, so its two rows should land on top of each other.
 - Read **lines** beside the latency. A level that recognizes nothing returns fast, which would otherwise look like a win.
