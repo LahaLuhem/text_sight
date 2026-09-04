@@ -1,10 +1,10 @@
-# Codec round-trip — state of performance
+# Codec round-trip: state of performance
 
-Per-frame **decode** CPU and **wire size** of the recognition-results transport, by candidate encoding. Decode is what runs on the Dart UI isolate per delivered frame; `map_std` is today's wire and the baseline.
+Per-frame **decode** CPU and **wire size** of the recognition-results transport, by candidate encoding. Decode is what runs on the Dart UI isolate per delivered frame. `map_std` is today's wire and the baseline.
 
-> **Scope.** Pure-Dart codec cost only — *not* native encode, real-device frame latency, or ML inference (which dominates end-to-end). These numbers bound the upside of a transport change; they are not an end-to-end speedup.
+> **Scope.** Pure-Dart codec cost only, *not* native encode, real-device frame latency, or ML inference (which dominates end-to-end). These numbers bound the upside of a transport change. They are not an end-to-end speedup.
 
-Captured: SDK `3.13.2` · package `0.2.0` · git `ef8b8a4` · N=30 · 2026-09-01T13:33:21.079683Z · per-machine — your numbers will differ.
+Captured: SDK `3.13.2` · package `0.2.0` · git `ef8b8a4` · N=30 · 2026-09-01T13:33:21.079683Z · per-machine, so your numbers will differ.
 
 ## Realistic profiles
 
