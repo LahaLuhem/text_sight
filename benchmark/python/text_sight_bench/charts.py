@@ -134,17 +134,33 @@ def render_profile_decode_bars(agg: pl.DataFrame, out_path: Path) -> Path:
 
 
 class ChartSpec(NamedTuple):
-    """A chart's filename plus its two halves."""
+    """A chart's filename, what its data has to contain, and its two halves."""
 
     filename: str
+    needs: str
     prepare: Callable[[pl.DataFrame], pl.DataFrame]
     render: Callable[[pl.DataFrame, Path], Path]
 
 
 CODEC_CHARTS = (
-    ChartSpec("decode_vs_lines.png", prepare_decode_vs_lines, render_decode_vs_lines),
-    ChartSpec("wire_bytes_vs_lines.png", prepare_wire_bytes_vs_lines, render_wire_bytes_vs_lines),
-    ChartSpec("profile_decode_bars.png", prepare_profile_decode_bars, render_profile_decode_bars),
+    ChartSpec(
+        "decode_vs_lines.png",
+        "the sweep payload",
+        prepare_decode_vs_lines,
+        render_decode_vs_lines,
+    ),
+    ChartSpec(
+        "wire_bytes_vs_lines.png",
+        "the sweep payload",
+        prepare_wire_bytes_vs_lines,
+        render_wire_bytes_vs_lines,
+    ),
+    ChartSpec(
+        "profile_decode_bars.png",
+        "one of the named profiles",
+        prepare_profile_decode_bars,
+        render_profile_decode_bars,
+    ),
 )
 
 

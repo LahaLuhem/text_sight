@@ -15,7 +15,7 @@ from text_sight_bench.config import (
 
 
 def cmd_report(args: argparse.Namespace) -> int:
-    """Renders 3 PNGs + SUMMARY.md from one codec_roundtrip.json."""
+    """Renders the codec charts + SUMMARY.md, skipping any chart with no data behind it."""
     missing = [
         name
         for name in ("polars", "matplotlib", "seaborn", "pandas")
@@ -40,16 +40,24 @@ def cmd_report(args: argparse.Namespace) -> int:
 
     df = flatten(records)
     charts.set_default_theme()
-    chart_paths = [
-        spec.render(spec.prepare(df), out_dir / spec.filename) for spec in charts.CODEC_CHARTS
-    ]
+    chart_paths: list[Path] = []
+    skipped: list[tuple[str, str]] = []
+    for spec in charts.CODEC_CHARTS:
+        agg = spec.prepare(df)
+        # seaborn draws an empty frame as blank axes and savefig writes it, so stop short of that.
+        if agg.is_empty():
+            skipped.append((spec.filename, spec.needs))
+            continue
+        chart_paths.append(spec.render(agg, out_dir / spec.filename))
 
     summary_path = out_dir / "SUMMARY.md"
-    summary_path.write_text(markdown.render_summary_markdown(df, chart_paths, records))
+    summary_path.write_text(markdown.render_summary_markdown(df, chart_paths, records, skipped))
 
     print(f"wrote charts + summary to: {out_dir}")
     for path in [*chart_paths, summary_path]:
         print(f"  {path.name}")
+    for filename, needs in skipped:
+        print(f"  skipped {filename}: needs {needs}, none in this data")
     return 0
 
 

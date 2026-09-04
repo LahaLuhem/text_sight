@@ -28,6 +28,7 @@ def render_summary_markdown(
     df: pl.DataFrame,
     chart_paths: list[Path],
     records: list[dict[str, Any]],
+    skipped: list[tuple[str, str]],
 ) -> str:
     """Builds the SUMMARY.md body: header, per-profile table, embedded charts."""
     head = records[0] if records else {}
@@ -53,6 +54,7 @@ def render_summary_markdown(
         "## Charts",
         "",
         *_chart_embeds(chart_paths),
+        *_skipped_note(skipped),
     ]
     return "\n".join(lines) + "\n"
 
@@ -99,6 +101,18 @@ def _chart_embeds(chart_paths: list[Path]) -> list[str]:
         embeds.append(f"![{path.stem}]({path.name})")
         embeds.append("")
     return embeds
+
+
+def _skipped_note(skipped: list[tuple[str, str]]) -> list[str]:
+    if not skipped:
+        return []
+
+    return [
+        "Not drawn, no data behind them:",
+        "",
+        *[f"- `{filename}` needs {needs}" for filename, needs in skipped],
+        "",
+    ]
 
 
 def _fmt_delta(delta: float | None) -> str:
