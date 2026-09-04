@@ -10,6 +10,7 @@ import polars as pl
 from text_sight_bench.config import (
     BASELINE_CANDIDATE,
     CANDIDATE_ORDER,
+    FRAME_BUDGET_FPS,
     LEVEL_ORDER,
     PLATFORM_LABELS,
     PLATFORM_NAMES,
@@ -49,6 +50,7 @@ def render_summary_markdown(
         "|---|---|--:|--:|--:|--:|",
         *_profile_rows(df),
         "",
+        *_frame_budget_line(df, records),
         "## Charts",
         "",
         *_chart_embeds(chart_paths),
@@ -57,12 +59,18 @@ def render_summary_markdown(
     return "\n".join(lines) + "\n"
 
 
+def _platforms(records: list[dict[str, Any]]) -> list[str]:
+    """The phones behind these records. Empty means it came off a host."""
+    seen = {record.get("platform") for record in records}
+
+    return [PLATFORM_NAMES[name] for name in PLATFORM_ORDER if name in seen]
+
+
 def _capture_line(records: list[dict[str, Any]]) -> str:
     """The provenance line. A record off a phone carries a `platform`, a host one doesn't."""
     head = records[0] if records else {}
     iterations = max((record["iteration"] for record in records), default=-1) + 1
-    seen = {record.get("platform") for record in records}
-    platforms = [PLATFORM_NAMES[name] for name in PLATFORM_ORDER if name in seen]
+    platforms = _platforms(records)
 
     if platforms:
         where = f". Measured on {' and '.join(platforms)}, so your hardware will differ."
@@ -75,6 +83,34 @@ def _capture_line(records: list[dict[str, Any]]) -> str:
         f"git `{head.get('git_sha', '?')}` · N={iterations} · "
         f"{head.get('started_at', '?')}{where}"
     )
+
+
+def _frame_budget_line(df: pl.DataFrame, records: list[dict[str, Any]]) -> list[str]:
+    """Phone runs only. A laptop's decode says nothing about what fits in a phone's frame."""
+    if not _platforms(records):
+        return []
+
+    shipped = df.filter(
+        (pl.col("candidate") == BASELINE_CANDIDATE) & pl.col("payload").is_in(PROFILE_ORDER)
+    )
+    if shipped.is_empty():
+        return []
+
+    # Whichever profile actually came out slowest, rather than assuming it is the densest.
+    worst = (
+        grouped_median(shipped, ["payload", "line_count"], "decode_microseconds")
+        .sort("decode_microseconds", descending=True)
+        .row(0, named=True)
+    )
+    decode = worst["decode_microseconds"]
+    share = decode / (1_000_000 / FRAME_BUDGET_FPS) * 100
+
+    return [
+        f"Worst case measured: a `{worst['payload']}` {worst['line_count']}-line frame on "
+        f"`{BASELINE_CANDIDATE}` decodes in {decode:.1f} µs, which is {share:.2f}% of a "
+        f"{FRAME_BUDGET_FPS} fps frame.",
+        "",
+    ]
 
 
 def _profile_rows(df: pl.DataFrame) -> list[str]:

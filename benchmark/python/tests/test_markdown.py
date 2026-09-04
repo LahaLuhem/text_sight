@@ -52,3 +52,36 @@ def test_capture_line_names_every_platform_in_the_run(
         flatten_device(sample_device_records), [], sample_device_records
     )
     assert "Measured on iOS and Android" in out
+
+
+def test_device_summary_reports_the_frame_budget_share(
+    sample_records: list[dict[str, Any]],
+) -> None:
+    """The slowest profile wins, so a second, quicker one must not displace it."""
+    on_phone = [{**record, "platform": "ios"} for record in sample_records]
+    slowest = next(
+        record
+        for record in on_phone
+        if record["candidate"] == "map_std" and record["payload"] == "document"
+    )
+    on_phone.append(
+        {
+            **slowest,
+            "payload": "sign",
+            "line_count": 3,
+            "summary": {**slowest["summary"], "decode_microseconds": 2.0},
+        }
+    )
+
+    out = render_summary_markdown(flatten(on_phone), [], on_phone, [])
+    # document at 30 µs, not sign at 2 µs, out of a 16667 µs frame.
+    assert "a `document` 63-line frame on `map_std` decodes in 30.0 µs" in out
+    assert "0.18% of a 60 fps frame" in out
+
+
+def test_host_summary_leaves_the_frame_budget_alone(
+    sample_records: list[dict[str, Any]],
+) -> None:
+    """A laptop number cannot back a claim about what fits in a phone's frame."""
+    out = render_summary_markdown(flatten(sample_records), [], sample_records, [])
+    assert "fps frame" not in out
