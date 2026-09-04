@@ -45,7 +45,7 @@ Most cross-platform OCR plugins run Google ML Kit on *both* platforms, which qui
 |-----------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **No ML framework in your iOS app**     | iOS recognition is Apple Vision, which is already part of the OS. No GoogleMLKit, nothing third-party to ship, so your iOS build stays smaller. CI fails the moment one sneaks in. |
 | **Android fetches its model on demand** | The ML Kit model stays unbundled by default, so your APK carries a ~260 KB stub instead of the whole thing. Want it baked in? One line of Gradle.                                  |
-| **`fast` or `accurate`, per call**      | Pick low latency or better reading, and switch mid-session. iOS only, since ML Kit's Latin recognizer has no such knob.                                                            |
+| **`fast` or `accurate`, per call**      | Pick low latency or better reading, and switch mid-session. iOS only, since ML Kit's Latin recognizer has no such knob. Neither shrinks the frame first, so small print survives.  |
 | **No permission package**               | `requestCameraPermission()` goes straight to AVFoundation and the Android permission flow. Already using `permission_handler`? That still works.                                   |
 | **The same boxes everywhere**           | Every box is normalized `[0, 1]` from the top-left on both platforms, so your overlay never branches on `Platform`.                                                                |
 | **Camera optional**                     | One-shot recognition reads bytes or a file path. No camera, no permission, runs anywhere.                                                                                          |
@@ -248,9 +248,11 @@ that recognizes nothing returns fast, which would otherwise look like a win.
 ![One-shot recognition latency on device](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/one_shot_latency.png)
 
 On Android the level is a no-op, since ML Kit's Latin recognizer has no accuracy dial, so its two
-bars land on top of each other. On iOS `fast` is roughly 4x quicker than `accurate` but skips text
-below 1/32 of the image height, so it reads less, then nothing, as pages get denser
-([#58](https://github.com/LahaLuhem/text_sight/issues/58)).
+bars land on top of each other. On iOS `fast` is roughly 4x quicker than `accurate`.
+
+**These bars predate a fix.** iOS was inheriting a Vision setting that quietly skipped small text,
+which is why `fast` here reads less and then nothing as the pages get denser. That setting is pinned
+off now, so the chart is due a recapture.
 
 ### Live camera
 
@@ -264,12 +266,13 @@ Recognized frames per second over a fixed window, both phones pointed at the sam
 | Android  | `accurate` | 480x640   |        6.6 | the recognizer |
 
 Hitting the camera's own frame rate means recognition is keeping up and the camera is the limit.
-That is where iOS `fast` sits, at 30/s on a 30 fps camera. Everything else is paced by the
-recognizer.
+That is where iOS `fast` sits, at 30/s on a 30 fps camera. The
+recognizer paces everything else. Same issue as above: iOS `fast` was skipping small text when this
+ran, so some of that headroom was work it never did.
 
-**Don't read this as iOS versus Android.** The two sides recognize at different resolutions, so they
-are not doing the same work per frame. iOS asks for `.high` and gets 1080p, while Android's analysis falls
-through to CameraX's 640x480 default, 6.7x fewer pixels
+**Don't read this as iOS versus Android.** The two sides recognize different resolutions, so they
+are not doing the same work per frame. iOS asks for `.high` and gets 1080p, while Android's analysis
+falls through to CameraX's 640x480 default, 6.7x fewer pixels
 ([#61](https://github.com/LahaLuhem/text_sight/issues/61)). On the same scene Android resolved 11
 lines per capture against iOS's 21. These also depend entirely on what the camera sees, so treat
 them as directional either way.
@@ -277,7 +280,7 @@ them as directional either way.
 ### The transport is not the bottleneck
 
 Results cross from native to Dart as a small per-frame map. Decoding one on the UI isolate costs
-**microseconds**: worst case on the slower of the two phones, a dense 127-line frame, is 87 µs, or
+**microseconds**: worst case on the slower of the two phones, a dense 127-line frame is 87 µs, or
 **0.5% of a 60 fps frame budget**. So the recognizer's own work sets the pace.
 
 ![Per-frame decode cost vs frame size](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/decode_vs_lines.png)

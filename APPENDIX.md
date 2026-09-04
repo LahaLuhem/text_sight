@@ -306,17 +306,19 @@ its EXIF orientation natively (iOS via `CGImageSource`, Android decodes the bitm
 `ExifInterface`, passing the rotation to `InputImage`), so it is already upright and the static
 one-shot reports `0`.
 
-**Region-of-interest uses the same contract.** The ROI is a `Rect` in the same normalized
-`[0,1]` top-left space as the output boxes (not pixels), with a debug `assert` at the consuming
-controller enforces the range, since the `const` `TextSightOptions` can't validate in its own
-constructor. Because ROI is part of the source-agnostic recognizer config it applies uniformly: the
-live driver sets it via the controller, and the static driver takes it as an optional parameter
-(full-frame when omitted). On Apple the value goes to `VNImageRequestHandler.regionOfInterest`
-after the same Y-flip (Vision's ROI is also bottom-left). On Android the static one-shot **crops** the
-upright bitmap to the ROI, so ML Kit reads only that region, a true crop (like iOS) that also
-isolates partial-line text. The **live** stream still runs full-frame and drops lines whose box
-center falls outside the ROI (cropping every frame would cost too much). A true YUV pre-crop there
-is a future optimization.
+**Region-of-interest uses the same contract.** The ROI is a `Rect` in the same normalized `[0,1]`
+top-left space as the output boxes (not pixels), with a debug `assert` at the consuming controller
+enforces the range, since the `const` `TextSightOptions` can't validate in its own constructor.
+Because ROI is part of the source-agnostic recognizer config it applies uniformly: the live driver
+sets it via the controller, and the static driver takes it as an optional parameter (full-frame when
+omitted). On Apple the value goes to `VNImageRequestHandler.regionOfInterest` after the same Y-flip
+(Vision's ROI is also bottom-left). **One Apple wrinkle:** Vision measures its text-height floor
+against the ROI rather than the frame, so a narrower box picks up smaller text than the whole frame
+does. Harmless while that floor stays 0, and it has to be divided out the day it isn't. On Android
+the static one-shot **crops** the upright bitmap to the ROI, so ML Kit reads only that region, a
+true crop (like iOS) that also isolates partial-line text. The **live** stream still runs full-frame
+and drops lines whose box center falls outside the ROI (cropping every frame would cost too much). A
+true YUV pre-crop there is a future optimization.
 
 **Orientation is an input, not an afterthought.** Recognition silently degrades if it is
 wrong: the Apple side must pass the correct `CGImagePropertyOrientation`, the Android side the
@@ -354,11 +356,14 @@ across platforms and shares a future macOS `darwin/` (Vision is identical there)
 **Why the Swift `RecognizeTextRequest`, not `VNRecognizeTextRequest`.** It is the API Apple steers
 new code toward (Swift concurrency / `async`-`await`, `Sendable`, value-typed
 `RecognizedTextObservation`s), and it keeps this package on the vendor-forward stack, the same
-posture that puts Android on CameraX + ML Kit v2 and that the whole no-bundling effort embodies
-(off GoogleMLKit-on-iOS). It runs the **same** Vision text engine as the legacy request, so this is
-a modernity / ergonomics choice, **not** an accuracy or capability gain. `topCandidates(1)`
-confidence and a normalized `regionOfInterest` both carry over. The modern API *was* an iOS 18 floor,
-the hybrid below recovers iOS 15-17 through the legacy request while iOS 18+ keeps the modern path.
+posture that puts Android on CameraX + ML Kit v2 and that the whole no-bundling effort embodies (off
+GoogleMLKit-on-iOS). It runs the **same** Vision text engine as the legacy request, so this is a
+modernity / ergonomics choice, **not** an accuracy or capability gain. Same engine turned out not to
+mean same defaults, though: the modern request ships with a text-height floor and the legacy one
+does not, so the same photo read on iOS 17 and came back empty on 18+. Both now set every knob
+rather than inheriting one. `topCandidates(1)` confidence and a normalized `regionOfInterest` both
+carry over. The modern API *was* an iOS 18 floor, the hybrid below recovers iOS 15-17 through the
+legacy request while iOS 18+ keeps the modern path.
 
 **Backwards-compatible hybrid (iOS 15-17), as built (issue #5).** The floor is **15.0**, raised
 from the original 13.0 once Flutter 3.47 made 15 its own minimum, leaving 13 and 14 unreachable. A
