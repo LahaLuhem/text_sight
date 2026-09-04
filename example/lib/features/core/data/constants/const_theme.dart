@@ -18,7 +18,7 @@ abstract final class ConstTheme {
   /// Confidence at or above which a line is treated as high (green).
   static const highConfidence = 0.8;
 
-  /// Confidence at or above which a line is treated as medium (orange); below is low (red).
+  /// Confidence at or above which a line is treated as medium (orange). Below is low (red).
   static const mediumConfidence = 0.5;
 
   /// The tier colour for a line [value] in `[0, 1]`: [green] high, [orange] medium,
@@ -30,19 +30,19 @@ abstract final class ConstTheme {
     _ => red(context),
   };
 
-  /// High confidence — [Colors.green] / [CupertinoColors.systemGreen].
+  /// High confidence: [Colors.green] / [CupertinoColors.systemGreen].
   static Color green(BuildContext context) =>
       _resolve(context, material: Colors.green, cupertino: CupertinoColors.systemGreen);
 
-  /// Medium confidence — [Colors.orange] / [CupertinoColors.systemOrange].
+  /// Medium confidence: [Colors.orange] / [CupertinoColors.systemOrange].
   static Color orange(BuildContext context) =>
       _resolve(context, material: Colors.orange, cupertino: CupertinoColors.systemOrange);
 
-  /// Low confidence — [Colors.red] / [CupertinoColors.systemRed].
+  /// Low confidence: [Colors.red] / [CupertinoColors.systemRed].
   static Color red(BuildContext context) =>
       _resolve(context, material: Colors.red, cupertino: CupertinoColors.systemRed);
 
-  /// Unknown confidence (the engine supplied none) — [Colors.blueGrey] /
+  /// Unknown confidence (the engine supplied none): [Colors.blueGrey] /
   /// [CupertinoColors.systemGrey].
   static Color blueGrey(BuildContext context) =>
       _resolve(context, material: Colors.blueGrey, cupertino: CupertinoColors.systemGrey);

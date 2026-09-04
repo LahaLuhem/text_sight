@@ -3,7 +3,7 @@ package com.lahaluhem.text_sight.recognition
 import android.graphics.Bitmap
 import android.graphics.Matrix
 
-/** This bitmap rotated clockwise [rotationDegrees]° to upright; the same instance when 0. */
+/** This bitmap rotated clockwise [rotationDegrees]° to upright, or the same instance when 0. */
 internal fun Bitmap.uprightBy(rotationDegrees: Int): Bitmap {
     if (rotationDegrees == 0) return this
 

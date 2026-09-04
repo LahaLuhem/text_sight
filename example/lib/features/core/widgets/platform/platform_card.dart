@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Card;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// A platform-adaptive card — Material [Card] on Android, and a rounded, filled
+/// A platform-adaptive card: Material [Card] on Android, and a rounded, filled
 /// surface in the iOS idiom on Cupertino (which ships no native card).
 ///
 /// Gap-plugging stand-in: `platform_adaptive_widgets` exposes no `PlatformCard`
@@ -11,8 +11,8 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 /// grows it. The child supplies its own padding, exactly as a Material [Card] expects.
 ///
 /// Both branches clip the child to the rounded corners (`clipBehavior: Clip.antiAlias`),
-/// so a tappable child's tap feedback — the Material ink ripple, the Cupertino press
-/// highlight — stays inside the curve instead of bleeding past it. `DecoratedBox` can't
+/// so a tappable child's tap feedback (the Material ink ripple, the Cupertino press
+/// highlight) stays inside the curve instead of bleeding past it. `DecoratedBox` can't
 /// clip its child, so the Cupertino branch uses a [Container].
 class PlatformCard extends StatelessWidget {
   /// Content of the card.
@@ -27,7 +27,7 @@ class PlatformCard extends StatelessWidget {
   /// Material branch lets [Card] apply its own when [margin] is null).
   static const _defaultMargin = EdgeInsets.all(4);
 
-  /// Corner radius of the Cupertino surface; shared by its fill and its clip.
+  /// Corner radius of the Cupertino surface, shared by its fill and its clip.
   static const _cupertinoRadius = BorderRadius.all(Radius.circular(12));
 
   @override

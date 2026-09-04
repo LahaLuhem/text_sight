@@ -7,7 +7,7 @@
 #     uv run python run.py report <json>   # render committed charts + SUMMARY.md
 #     uv run ruff check . && uv run pytest # lint + test
 #
-# `uv.lock` is checked in for reproducible analysis — perf claims are only
+# `uv.lock` is checked in for reproducible analysis, since perf claims are only
 # defensible if the stack is pinned.
 
 [project]
@@ -16,9 +16,9 @@ version = "0.1.0"
 description = "Benchmark orchestration + reporting for the text_sight captures-transport codec."
 requires-python = ">=3.10"
 
-# polars (Rust-backed) for analysis; seaborn/matplotlib for the committed
-# README charts; pyarrow bridges polars -> pandas at the seaborn boundary.
-# No scipy/jinja2 — there is no `compare` (Mann-Whitney) layer yet and the
+# polars (Rust-backed) for analysis, seaborn/matplotlib for the committed
+# README charts. pyarrow bridges polars -> pandas at the seaborn boundary.
+# No scipy/jinja2, since there is no `compare` (Mann-Whitney) layer yet and the
 # markdown is plain f-strings.
 dependencies = [
     "polars>=1.0,<2.0",

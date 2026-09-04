@@ -36,7 +36,7 @@ final class ResultWriter {
   }) async {
     final file = File(outputPath);
     await file.parent.create(recursive: true);
-    // Held for the writer's lifetime and closed by [close]; the lint can't
+    // Held for the writer's lifetime and closed by [close]. The lint can't
     // trace ownership across the factory boundary.
     // ignore: close_sinks
     final sink = file.openWrite()..write('[\n');

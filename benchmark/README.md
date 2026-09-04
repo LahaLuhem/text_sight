@@ -1,7 +1,6 @@
 # `text_sight` benchmarks
 
-Reproducible benchmarks used to decide perf questions with data, not vibes —
-specifically: **is changing the per-frame result wire representation worth it?**
+Reproducible benchmarks used to decide perf questions with data, not vibes. Specifically: **is changing the per-frame result wire representation worth it?**
 
 > **Layers built:** the Dart codec micro-benchmark (emits JSON), the on-device
 > scenario layer (`app/`, driven by `flutter drive`), and the Python `report`
@@ -18,7 +17,7 @@ specifically: **is changing the per-frame result wire representation worth it?**
 The micro layer bounds the upside of a transport change. The device layer answers
 what a user actually waits for. Neither substitutes for the other.
 
-## What this measures — and what it does not
+## What this measures, and what it does not
 
 The per-frame recognition results stream over a plain `EventChannel`, encoded
 with Flutter's `StandardMessageCodec`. The **only** perf-relevant slice that is
@@ -34,7 +33,7 @@ payload is.
 | | ML inference (dominates end-to-end) |
 
 So these numbers **bound the upside** of a transport change. They do **not**
-predict an end-to-end speedup — on a real device the recognizer's inference and
+predict an end-to-end speedup. On a real device the recognizer's inference and
 texture handling dwarf the transport. **Decode is the headline metric**: in
 production only the decode runs on the Dart UI isolate per frame (the encode
 happens natively).
@@ -43,11 +42,11 @@ happens natively).
 
 | `candidate` | What it is |
 |---|---|
-| `map_std`     | **Baseline** — today's wire: `Map` with a string key per field. |
+| `map_std`     | **Baseline**, today's wire: `Map` with a string key per field. |
 | `list_std`    | Positional `List`, no keys, same `StandardMessageCodec`. |
 | `pigeon`      | Faithful replica of Pigeon's codec (1-byte type tag + positional fields). |
 | `packed_f32`  | Tight hand-packed binary, `float32` coords (the BitArray-style packing). |
-| `packed_f64`  | Same, `float64` coords — isolates "keys removed" from "narrower floats". |
+| `packed_f64`  | Same, `float64` coords, isolating "keys removed" from "narrower floats". |
 
 Payloads (`harness/payloads.dart`) are deterministic and seeded: a line-count
 sweep (`1, 5, 10, 25, 50, 100`) plus realistic profiles (`sign`, `receipt`,
@@ -59,7 +58,7 @@ sweep (`1, 5, 10, 25, 50, 100`) plus realistic profiles (`sign`, `receipt`,
 benchmark/
 ├── README.md                  this file
 ├── harness/                   bench_capture · payloads · capture_codec · result_writer · scenario_args
-├── micro/codec_roundtrip.dart benchmark_harness entrypoint; emits result JSON + a stdout summary
+├── micro/codec_roundtrip.dart benchmark_harness entrypoint, emits result JSON + a stdout summary
 ├── app/                       minimal Flutter host for the on-device scenarios
 │   ├── integration_test/      the scenarios (+ support/: page rendering, record shape)
 │   └── test_driver/           perf_driver.dart, writes reportData to JSON
@@ -83,7 +82,7 @@ cd benchmark/python
 uv sync                                   # one-time: create .venv, install + lock deps
 
 uv run python run.py build                # AOT-compile (deterministic warmup, unlike `dart run`)
-uv run python run.py run --iterations 10  # execute; writes results-local/current/codec_roundtrip.json
+uv run python run.py run --iterations 10  # execute, writes results-local/current/codec_roundtrip.json
 uv run python run.py report ../results-local/current/codec_roundtrip.json   # charts + SUMMARY.md -> reports/
 
 uv run ruff check . && uv run pytest      # lint + test the orchestrator
@@ -134,7 +133,7 @@ uv run python run.py report-live ../results-local/current/live_throughput_*.json
 ```
 
 It needs camera permission, which cannot be pre-granted because `flutter drive` uninstalls the app
-afterwards. On Android the runner grants it over adb mid-run; on a real iPhone tap Allow while the
+afterwards. On Android the runner grants it over adb mid-run, and on a real iPhone tap Allow while the
 scenario waits. iOS simulators are skipped outright, since they have no camera to open.
 `report-live` writes a table and no chart on purpose: with an uncontrolled scene, a chart would
 imply precision these numbers do not have.
@@ -147,19 +146,19 @@ benchmark/build/codec_roundtrip --iterations 1 \
   --git-sha "$(git rev-parse --short HEAD)" --package-version 0.0.0
 ```
 
-`report` writes to the committed `reports/` by default; pass `--out` for an
+`report` writes to the committed `reports/` by default. Pass `--out` for an
 ad-hoc snapshot. **Capture N≥10 (ideally 30) on a quiet machine before
-committing the canonical charts** — `reports/` is a deliberate, maintainer-only
+committing the canonical charts**. `reports/` is a deliberate, maintainer-only
 refresh, like the sibling suite.
 
 ## Methodology
 
-- **AOT compile**, not JIT — reproducible warmup.
+- **AOT compile**, not JIT, for reproducible warmup.
 - `exercise()` is overridden to one `run()`, so `measure()` reports microseconds
   per single encode/decode.
-- `forceGc()` before each measurement window; `benchmark_harness` discards its
+- `forceGc()` before each measurement window, and `benchmark_harness` discards its
   own warmup pass.
-- Report **median**, never mean — a single-threaded VM's GC outliers skew means.
-- Baselines are **per-machine** (CPU/GC/scheduler differ); capture your own
+- Report **median**, never mean, since a single-threaded VM's GC outliers skew means.
+- Baselines are **per-machine** (CPU/GC/scheduler differ), so capture your own
   before/after on one quiet machine on AC power. Nothing under `results-local/`
   is committed.

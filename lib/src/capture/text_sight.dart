@@ -6,11 +6,11 @@ import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
 
-/// One-shot, still-image text recognition — the static counterpart to the live `TextSightController`.
+/// One-shot, still-image text recognition: the static counterpart to the live `TextSightController`.
 ///
 /// Shares the recognizer and result models with the live driver but needs no camera, session, texture,
 /// or permission: each call hands a still image to a transient native recognizer and returns a [TextSightCapture].
-/// Recognition defaults to [RecognitionLevel.accurate] — unlike the live driver's latency-bound `.fast`,
+/// Recognition defaults to [RecognitionLevel.accurate], unlike the live driver's latency-bound `.fast`,
 /// a still has no per-frame budget to protect. The returned capture's `quarterTurns` is always `0`,
 /// since a still is already upright.
 ///

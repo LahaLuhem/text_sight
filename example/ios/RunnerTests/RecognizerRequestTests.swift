@@ -5,7 +5,7 @@ import Vision
 @testable import text_sight
 
 /// `makeRequest` on both Vision backends: a config snapshot mapped to the request that runs it.
-/// The modern half is iOS 18+, so it is skipped on older runtimes; the legacy half runs everywhere.
+/// The modern half is iOS 18+, so it is skipped on older runtimes. The legacy half runs everywhere.
 @Suite("Vision request mapping")
 struct RecognizerRequestTests {
   /// One row per accuracy level: what Vision is asked for, and whether language correction rides

@@ -1,4 +1,4 @@
-"""`build` — AOT-compile the codec_roundtrip micro-benchmark."""
+"""`build`: AOT-compile the codec_roundtrip micro-benchmark."""
 
 from __future__ import annotations
 

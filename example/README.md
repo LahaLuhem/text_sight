@@ -18,10 +18,10 @@ samples, guidance on mobile development, and a full API reference.
 
 ## Running on a physical iOS device
 
-The iOS Simulator needs no code signing — `flutter run` works as-is (it has no camera, so the live
-scanner only shows the "no camera" state there; use a real device for live scanning). A **physical
+The iOS Simulator needs no code signing, and `flutter run` works as-is. It has no camera, so the live
+scanner only shows the "no camera" state there, and live scanning needs a real device. A **physical
 device** needs an Apple Development Team and a bundle identifier your team can register. That is
-per-developer state, so it must not land in the committed Xcode project — instead, create an
+per-developer state, so it must not land in the committed Xcode project. Instead, create an
 untracked override.
 
 Create `ios/Flutter/LocalSigning.xcconfig` (gitignored) with your own values:
@@ -35,9 +35,9 @@ PRODUCT_BUNDLE_IDENTIFIER = com.yourname.example.textSightExample
 committed defaults (lowercase id, empty team) without modifying anything tracked. Then `flutter run`
 onto the device.
 
-- Set the team **in that file**, not in Xcode's *Signing & Capabilities* tab — the Xcode UI writes
+- Set the team **in that file**, not in Xcode's *Signing & Capabilities* tab, because the Xcode UI writes
   `DEVELOPMENT_TEAM` straight back into the tracked `project.pbxproj`, which is what this avoids.
 - Apple App IDs are globally unique **and case-insensitive**: if your chosen id (or a case-variant of
-  it) is already registered to another team, you'll get "cannot be registered… not available" — just
+  it) is already registered to another team, you'll get "cannot be registered… not available". Just
   pick a different, unique string.
 

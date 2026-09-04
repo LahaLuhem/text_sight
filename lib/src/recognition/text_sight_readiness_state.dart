@@ -2,7 +2,7 @@
 ///
 /// Sealed so a consumer can `switch` over the three outcomes exhaustively and pull
 /// each state's own data in the same step. On iOS the engine is the Vision *system
-/// framework*, so the model is always present — readiness is only ever [ModelReady]
+/// framework*, so the model is always present and readiness is only ever [ModelReady]
 /// there. The other states arise on Android with the **unbundled** ML Kit model
 /// (the default), which is fetched from Google Play Services and so can be
 /// downloading, or unavailable when Play Services is missing or a fetch fails.
@@ -11,7 +11,7 @@ sealed class TextSightReadinessState {
   const new();
 }
 
-/// The recognition model is present; recognition will produce results.
+/// The recognition model is present, so recognition will produce results.
 ///
 /// The terminal success state. Reached immediately on iOS, with the bundled ML Kit
 /// model, or once the unbundled model has finished downloading.
@@ -28,7 +28,7 @@ final class ModelReady extends TextSightReadinessState {
 /// A non-terminal Android-only state: it never appears on iOS, nor with the bundled
 /// model. Recognition called now yields no results until [ModelReady] follows.
 final class ModelDownloading extends TextSightReadinessState {
-  /// Download progress in `[0, 1]`, or `null` while indeterminate — the fetch has
+  /// Download progress in `[0, 1]`, or `null` while indeterminate, since the fetch has
   /// begun but Play Services has not yet reported byte counts.
   final double? progress;
 
@@ -43,7 +43,7 @@ final class ModelDownloading extends TextSightReadinessState {
 ///
 /// A terminal failure state, Android-only in practice: the unbundled model needs
 /// Google Play Services (absent on some devices), and a fetch can fail. [reason]
-/// says which; [details] carries the native diagnostic when one is available. Never
+/// says which. [details] carries the native diagnostic when one is available. Never
 /// occurs on iOS. Bundling the model (the `useBundled` build flag) sidesteps it.
 final class ModelUnavailable extends TextSightReadinessState {
   /// Why the model could not be made ready.

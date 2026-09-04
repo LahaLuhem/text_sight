@@ -25,7 +25,7 @@ class OneShotView extends StatelessWidget {
             const DemoIntro(
               title: 'Still-image recognition',
               description:
-                  'Recognize a bundled sample two ways — from in-memory bytes and from a file '
+                  'Recognize a bundled sample two ways, from in-memory bytes and from a file '
                   'path. No camera, session, or permission.',
             ),
             const Gap(16),

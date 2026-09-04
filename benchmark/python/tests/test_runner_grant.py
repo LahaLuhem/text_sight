@@ -15,7 +15,7 @@ from text_sight_bench.subcommands import runner
 
 @pytest.fixture(autouse=True)
 def _no_poll_delay(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Polling cadence is timing, not logic — drop it so the loop runs at full speed."""
+    """Polling cadence is timing, not logic, so drop it and let the loop runs at full speed."""
     monkeypatch.setattr(runner, "_GRANT_POLL_SECONDS", 0)
     monkeypatch.setattr(runner, "_REGRANT_POLL_SECONDS", 0)
 
@@ -84,7 +84,7 @@ def test_regrants_after_a_reinstall(
     """`flutter drive` can reinstall, which drops the grant with the old package."""
     adb, _ = _run_granter([True, False, True], monkeypatch)
     assert adb.grants == 2
-    # Only the first grant is worth a line; the rest are upkeep.
+    # Only the first grant is worth a line. The rest are upkeep.
     assert capsys.readouterr().out.count("granted android.permission.CAMERA") == 1
 
 

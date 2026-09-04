@@ -10,16 +10,16 @@ import '../recognition/text_sight_options.dart';
 import '../recognition/text_sight_readiness_state.dart';
 import 'pigeon_text_sight_platform.dart';
 
-/// The platform-facing contract both drivers delegate to — the federation seam.
+/// The platform-facing contract both drivers delegate to: the federation seam.
 ///
 /// Drawn now even though v1 ships a single plugin package: the live controller
 /// (and, later, the static one-shot) talk only to [instance], never to the native channel directly,
 /// so splitting into per-platform packages later is mechanical. The contract is stated in the package's
-/// *public* types — Pigeon is an implementation detail of the concrete subclass and never appears here.
+/// *public* types. Pigeon is an implementation detail of the concrete subclass and never appears here.
 ///
 /// Methods default to throwing [UnimplementedError] rather than being abstract, so adding one later
 /// is non-breaking for any future federated implementation that has not overridden it yet.
-/// [instance] defaults to [PigeonTextSightPlatform]; a federated platform package could later
+/// [instance] defaults to [PigeonTextSightPlatform]. A federated platform package could later
 /// supply its own via the [instance] setter.
 abstract class TextSightPlatform extends PlatformInterface {
   /// Constructs the interface, passing the verification token to [PlatformInterface].
@@ -29,7 +29,7 @@ abstract class TextSightPlatform extends PlatformInterface {
 
   static TextSightPlatform _instance = PigeonTextSightPlatform();
 
-  /// The active implementation — [PigeonTextSightPlatform] by default.
+  /// The active implementation, [PigeonTextSightPlatform] by default.
   static TextSightPlatform get instance => _instance;
 
   /// Registers [value] as the platform implementation after verifying it `extends` this class
@@ -85,7 +85,7 @@ abstract class TextSightPlatform extends PlatformInterface {
   Stream<TextSightCapture> get captures =>
       throw UnimplementedError('captures has not been implemented.');
 
-  // Model readiness — mode-agnostic, shared by both drivers. Decoupled from the camera
+  // Model readiness, mode-agnostic and shared by both drivers. Decoupled from the camera
   // session: a still image and a live preview both need the model, neither needs the other.
 
   /// Ensures the recognition model is present and resolves to the terminal readiness state.
@@ -96,7 +96,7 @@ abstract class TextSightPlatform extends PlatformInterface {
   Stream<TextSightReadinessState> get modelReadiness =>
       throw UnimplementedError('modelReadiness has not been implemented.');
 
-  // Static one-shot driver — no camera session, texture, or permission. Both return a capture
+  // Static one-shot driver, no camera session, texture, or permission. Both return a capture
   // whose `quarterTurns` is 0 (a still is upright), built from the same recognizer and models
   // as the live path.
 

@@ -8,7 +8,7 @@ Subcommands:
   report-device   Render the device chart + DEVICE_SUMMARY.md.
   report-live     Render LIVE_SUMMARY.md from live-throughput runs.
 
-There is no `compare` — there is no before/after transport to diff yet.
+There is no `compare`, since there is no before/after transport to diff yet.
 """
 
 from __future__ import annotations

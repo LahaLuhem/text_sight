@@ -5,21 +5,21 @@
 # PR-convention and changelog workflows exempt `dependabot[bot]` from the
 # branch-name, sem-label and changelog jobs (see
 # .github/workflows/{pr-conventions,changelog}.yml), so these PRs land WITHOUT
-# an automatic CHANGELOG entry — add one by hand if a root-package bump is
+# an automatic CHANGELOG entry, so add one by hand if a root-package bump is
 # user-visible. The commit-length / no-merge-commit gate still applies to them.
 #
-# Minor + patch bumps are grouped into one PR per ecosystem to cut noise; major
+# Minor + patch bumps are grouped into one PR per ecosystem to cut noise. Major
 # bumps still arrive as individual PRs so they can be reviewed in isolation.
 #
 # `github-actions` (majors included), `gradle`, and `/example` `pub` bumps automerge once CI is
-# green (.github/workflows/dependabot-automerge.yml); root `pub` and gradle/pub majors stay
+# green (.github/workflows/dependabot-automerge.yml). Root `pub` and gradle/pub majors stay
 # manual. Rationale: APPENDIX.md#dependabot-automerge.
 version: 2
 
 updates:
   # --- Dart / Flutter: published library ---
   # Bumps the version constraints in the root pubspec.yaml. pub.dev packages
-  # only — git / path deps are not eligible.
+  # only. Git / path deps are not eligible.
   #
   # `versioning-strategy: increase` so bumps land as `^28.0.0`, not
   # `">=27.3.2 <29.0.0"`. On `auto` Dependabot sees `version:`, reads this as a
@@ -48,12 +48,12 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- Android / Gradle: plugin module ---
-  # The plugin's own Gradle build — and the only place recognition/camera deps
+  # The plugin's own Gradle build, and the only place recognition/camera deps
   # are allowed to live (no-bundling is the *iOS* contract). These ship to every
   # downstream Android consumer via the AAR's POM: ML Kit / Play Services,
   # CameraX, exifinterface. Also covers the AGP/plugin version in
   # settings.gradle.kts, the JVM test stack (mockito / robolectric / junit), and
-  # the wrapper. Bumps here are publish-relevant — weigh the transitive-closure
+  # the wrapper. Bumps here are publish-relevant, so weigh the transitive-closure
   # impact per PR.
   - package-ecosystem: "gradle"
     directory: "/android"
@@ -78,7 +78,7 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- GitHub Actions ---
-  # `directory: "/"` scans everything under .github/ — the workflows and the
+  # `directory: "/"` scans everything under .github/: the workflows and the
   # local composite action at .github/actions/setup-flutter.
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -90,10 +90,10 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- No `swift` (SPM) ecosystem (yet) ---
-  # Deliberately absent — and NOT because Apple-side deps are banned. The
+  # Deliberately absent, and NOT because Apple-side deps are banned. The
   # contract is *prefer-native*, not *zero-dependency* (AGENTS.md hard rule 2):
   # a legit SPM lib with no system-framework equivalent would be allowed. There
-  # is just nothing to track today — the plugin's Package.swift carries only a
+  # is just nothing to track today, since the plugin's Package.swift carries only a
   # local `path:` dep (FlutterFramework), and the example's SPM manifest is
   # Flutter-generated + gitignored, so no committed, version-resolved manifest
   # exists for Dependabot to act on. Add a `swift` block here the day a real SPM

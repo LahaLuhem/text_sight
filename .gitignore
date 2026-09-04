@@ -1,6 +1,6 @@
 # Custom
 .fvm/
-# AI symlinks point into adjacent .ai/ folders; targets are committed, symlinks are not.
+# AI symlinks point into adjacent .ai/ folders. Targets are committed, symlinks are not.
 /AGENTS.md
 /CLAUDE.md
 

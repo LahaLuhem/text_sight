@@ -7,7 +7,7 @@ import 'platform/platform_card.dart';
 import 'recognized_line_row.dart';
 
 /// Renders a [RecognitionResult]: an [idleHint] before the first run, the recognized lines (with
-/// a one-line summary) on success — or [emptyHint] when the capture has no lines — and the error
+/// a one-line summary) on success (or [emptyHint] when the capture has no lines), and the error
 /// message on failure. Shared by the one-shot and playground demos.
 class RecognitionResultView extends StatelessWidget {
   final RecognitionResult? result;

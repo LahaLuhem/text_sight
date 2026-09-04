@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Chip;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// A platform-adaptive chip — Material [Chip] on Android, and a rounded
+/// A platform-adaptive chip: Material [Chip] on Android, and a rounded
 /// icon-and-label pill on Cupertino.
 ///
 /// Gap-plugging stand-in: `platform_adaptive_widgets` exposes no `PlatformChip`, and a

@@ -13,8 +13,8 @@ import 'camera_permission_status.dart';
 /// Configures and drives a live camera recognition session.
 ///
 /// The Dart face of the live-camera driver. A [ChangeNotifier] exposing the current configuration
-/// and session state through individual getters — no bundled state object — that a `TextSightView`
-/// (or any listener) rebuilds from. Per-frame results arrive on [captures]; the preview renders the
+/// and session state through individual getters (no bundled state object) that a `TextSightView`
+/// (or any listener) rebuilds from. Per-frame results arrive on [captures]. The preview renders the
 /// [textureId]. Every call delegates to [TextSightPlatform.instance], so the controller carries
 /// no platform knowledge of its own.
 final class TextSightController extends ChangeNotifier {
@@ -81,7 +81,7 @@ final class TextSightController extends ChangeNotifier {
 
   /// Reports the current camera-permission status without prompting the user.
   ///
-  /// A cheap status read — use it to decide whether to show a priming or
+  /// A cheap status read. Use it to decide whether to show a priming or
   /// rationale screen before [requestCameraPermission]. Does not open the camera.
   Future<CameraPermissionStatus> checkCameraPermission() =>
       TextSightPlatform.instance.checkCameraPermission();
@@ -90,10 +90,10 @@ final class TextSightController extends ChangeNotifier {
   /// still undecided, and resolves to the resulting [CameraPermissionStatus].
   ///
   /// Call this before [start] to drive the permission flow without a third-party
-  /// package. You must still declare the platform usage string —
+  /// package. You must still declare the platform usage string,
   /// `NSCameraUsageDescription` on iOS, which is **required** (iOS terminates the
-  /// app if the camera is requested without it); the Android manifest entry ships
-  /// with the plugin. [start] itself never requests — its behaviour is unchanged.
+  /// app if the camera is requested without it). The Android manifest entry ships
+  /// with the plugin. [start] itself never requests, so its behaviour is unchanged.
   Future<CameraPermissionStatus> requestCameraPermission() =>
       TextSightPlatform.instance.requestCameraPermission();
 

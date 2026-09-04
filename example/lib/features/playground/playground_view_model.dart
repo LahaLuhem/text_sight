@@ -63,7 +63,7 @@ final class PlaygroundViewModel extends ViewModel {
   }
 
   /// Clamps [rect] to the unit square with a [_minRoiSize] floor, preserving its dimensions where
-  /// it can — so dragging the box into an edge slides it back in rather than shrinking it.
+  /// it can, so dragging the box into an edge slides it back in rather than shrinking it.
   static Rect _clampRoi(Rect rect) {
     final width = rect.width.clamp(_minRoiSize, 1.0);
     final height = rect.height.clamp(_minRoiSize, 1.0);

@@ -38,7 +38,7 @@ class _FakeRun:
 def fake_run(monkeypatch: pytest.MonkeyPatch) -> _FakeRun:
     fake = _FakeRun()
     monkeypatch.setattr(runner.subprocess, "run", fake)
-    # The grant needs a real device on the other end; its own tests cover it.
+    # The grant needs a real device on the other end, and its own tests cover it.
     monkeypatch.setattr(runner, "_grant_android_camera", lambda *_: None)
     return fake
 

@@ -1,5 +1,5 @@
 name: example
-description: "Showcase app for the text_sight plugin — live and one-shot on-device text recognition."
+description: "Showcase app for the text_sight plugin: live and one-shot on-device text recognition."
 # Prevents accidental `flutter pub publish` of the demo.
 publish_to: 'none'
 version: 1.0.0+1
@@ -18,7 +18,7 @@ dependencies:
     sdk: flutter
   text_sight:
     path: ../
-  # MVVM + platform-adaptive showcase stack — mirrors the sibling package examples
+  # MVVM + platform-adaptive showcase stack, mirroring the sibling package examples
   # (platform_adaptive_widgets, better_internet_connectivity_checker). All pure-Dart/Flutter:
   # nothing here links a native ML/camera library, so the iOS no-bundling check still holds.
   pmvvm: ^4.0.1

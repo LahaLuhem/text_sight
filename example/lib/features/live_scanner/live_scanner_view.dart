@@ -23,8 +23,8 @@ class LiveScannerView extends StatelessWidget {
         child: ValueListenableBuilder(
           valueListenable: viewModel.sessionStatusListenable,
           builder: (context, status, _) => switch (status) {
-            // Readiness arrives as a sealed TextSightReadinessState — switch over it. The download
-            // path is the interesting one (Android, unbundled model); ensureReady() in the view
+            // Readiness arrives as a sealed TextSightReadinessState, so switch over it. The download
+            // path is the interesting one (Android, unbundled model). ensureReady() in the view
             // model drives the actual gate and flips to .ready / .failed once it resolves.
             .preparingModel => Center(
               child: StreamBuilder(
