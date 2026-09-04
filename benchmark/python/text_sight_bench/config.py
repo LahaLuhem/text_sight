@@ -33,6 +33,9 @@ PROFILE_ORDER = ["sign", "receipt", "document", "dense"]
 # What every delta is measured against.
 BASELINE_CANDIDATE = "map_std"
 
+# What "does the decode fit in one frame" gets measured against.
+FRAME_BUDGET_FPS = 60
+
 # --- Device scenarios, driven by `flutter drive` ---
 
 APP_DIR = BENCHMARK_ROOT / "app"

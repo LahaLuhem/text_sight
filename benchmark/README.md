@@ -119,7 +119,8 @@ uv run python run.py report ../results-local/current/codec_on_device_ios.json --
 
 Pass `--out`, or it overwrites the committed host charts. It exists to check one published claim:
 the README quotes decode as a fraction of a 60 fps frame budget, but the committed numbers are
-host-measured and a phone CPU is slower.
+host-measured and a phone CPU is slower. `SUMMARY.md` works that fraction out from the phone's own
+worst frame, so the claim in the root README can be read off a run instead of done by hand.
 
 The device run only does the profiles, no sweep, so `report` draws the profile chart and says which
 two it skipped. A chart with nothing behind it is never written, and `SUMMARY.md` names the gap.
