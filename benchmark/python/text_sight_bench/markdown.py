@@ -12,15 +12,16 @@ from text_sight_bench.config import (
     CANDIDATE_ORDER,
     LEVEL_ORDER,
     PLATFORM_LABELS,
+    PLATFORM_NAMES,
     PLATFORM_ORDER,
     PROFILE_ORDER,
 )
 from text_sight_bench.stats import grouped_median, pct_delta
 
 _SCOPE_NOTE = (
-    "> **Scope.** Pure-Dart codec cost only — *not* native encode, real-device "
+    "> **Scope.** Pure-Dart codec cost only, *not* native encode, real-device "
     "frame latency, or ML inference (which dominates end-to-end). These numbers "
-    "bound the upside of a transport change; they are not an end-to-end speedup."
+    "bound the upside of a transport change. They are not an end-to-end speedup."
 )
 
 
@@ -31,19 +32,16 @@ def render_summary_markdown(
     skipped: list[tuple[str, str]],
 ) -> str:
     """Builds the SUMMARY.md body: header, per-profile table, embedded charts."""
-    head = records[0] if records else {}
-    iterations = max((record["iteration"] for record in records), default=-1) + 1
-
     lines: list[str] = [
-        "# Codec round-trip — state of performance",
+        "# Codec round-trip: state of performance",
         "",
         "Per-frame **decode** CPU and **wire size** of the recognition-results "
         "transport, by candidate encoding. Decode is what runs on the Dart UI "
-        "isolate per delivered frame; `map_std` is today's wire and the baseline.",
+        "isolate per delivered frame. `map_std` is today's wire and the baseline.",
         "",
         _SCOPE_NOTE,
         "",
-        _capture_line(head, iterations),
+        _capture_line(records),
         "",
         "## Realistic profiles",
         "",
@@ -59,12 +57,23 @@ def render_summary_markdown(
     return "\n".join(lines) + "\n"
 
 
-def _capture_line(head: dict[str, Any], iterations: int) -> str:
+def _capture_line(records: list[dict[str, Any]]) -> str:
+    """The provenance line. A record off a phone carries a `platform`, a host one doesn't."""
+    head = records[0] if records else {}
+    iterations = max((record["iteration"] for record in records), default=-1) + 1
+    seen = {record.get("platform") for record in records}
+    platforms = [PLATFORM_NAMES[name] for name in PLATFORM_ORDER if name in seen]
+
+    if platforms:
+        where = f". Measured on {' and '.join(platforms)}, so your hardware will differ."
+    else:
+        where = " · per-machine, so your numbers will differ."
+
     return (
         f"Captured: SDK `{head.get('sdk_version', '?')}` · "
         f"package `{head.get('package_version', '?')}` · "
         f"git `{head.get('git_sha', '?')}` · N={iterations} · "
-        f"{head.get('started_at', '?')} · per-machine — your numbers will differ."
+        f"{head.get('started_at', '?')}{where}"
     )
 
 
@@ -117,7 +126,7 @@ def _skipped_note(skipped: list[tuple[str, str]]) -> list[str]:
 
 def _fmt_delta(delta: float | None) -> str:
     if delta is None:
-        return "—"
+        return "n/a"
     if abs(delta) < 0.5:
         return "0%"
     return f"{delta:+.0f}%"
@@ -144,9 +153,6 @@ def render_device_summary_markdown(
     records: list[dict[str, Any]],
 ) -> str:
     """Builds DEVICE_SUMMARY.md: header, per-platform tables, embedded chart."""
-    head = records[0] if records else {}
-    iterations = max((record["iteration"] for record in records), default=-1) + 1
-
     lines: list[str] = [
         "# One-shot recognition on device",
         "",
@@ -155,7 +161,7 @@ def render_device_summary_markdown(
         "",
         _DEVICE_SCOPE_NOTE,
         "",
-        _device_capture_line(head, iterations),
+        _capture_line(records),
         "",
         _DEVICE_CAVEATS,
         "",
@@ -193,15 +199,6 @@ def render_device_summary_markdown(
     return "\n".join(lines)
 
 
-def _device_capture_line(head: dict[str, Any], iterations: int) -> str:
-    return (
-        f"Captured: SDK `{head.get('sdk_version', '?')}` · "
-        f"package `{head.get('package_version', '?')}` · "
-        f"git `{head.get('git_sha', '?')}` · N={iterations} · "
-        f"{head.get('started_at', '?')}. Per device, so your hardware will differ."
-    )
-
-
 _LIVE_SCOPE_NOTE = (
     "> **Scope.** Recognized frames per second over a fixed window, and the gap between them. "
     "Under the single-in-flight backpressure that gap is roughly one recognition. Directional "
@@ -226,9 +223,6 @@ def render_live_summary_markdown(
 ) -> str:
     """Builds LIVE_SUMMARY.md. A table, not a chart: four numbers with an uncontrolled scene do not
     deserve the precision a chart implies."""
-    head = records[0] if records else {}
-    iterations = max((record["iteration"] for record in records), default=-1) + 1
-
     lines: list[str] = [
         "# Live recognition throughput",
         "",
@@ -236,7 +230,7 @@ def render_live_summary_markdown(
         "",
         _LIVE_SCOPE_NOTE,
         "",
-        _device_capture_line(head, iterations),
+        _capture_line(records),
         "",
         _LIVE_CAVEATS,
         "",
