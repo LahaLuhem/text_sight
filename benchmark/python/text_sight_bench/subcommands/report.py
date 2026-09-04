@@ -41,9 +41,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     df = flatten(records)
     charts.set_default_theme()
     chart_paths = [
-        charts.plot_decode_vs_lines(df, out_dir / "decode_vs_lines.png"),
-        charts.plot_wire_bytes_vs_lines(df, out_dir / "wire_bytes_vs_lines.png"),
-        charts.plot_profile_decode_bars(df, out_dir / "profile_decode_bars.png"),
+        spec.render(spec.prepare(df), out_dir / spec.filename) for spec in charts.CODEC_CHARTS
     ]
 
     summary_path = out_dir / "SUMMARY.md"
