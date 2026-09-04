@@ -2,4 +2,4 @@
 # file rather than pubspec.yaml, which the tool now deprecates.
 allow_pins: true # flutter_gen_runner is pinned to an exact version on purpose (reproducible asset codegen).
 ignore:
-  - cupertino_icons # asset glyph only (iOS back chevron via PlatformApp), never imported — so it reads as "unused".
+  - cupertino_icons # asset glyph only (iOS back chevron via PlatformApp), never imported, so it reads as "unused".

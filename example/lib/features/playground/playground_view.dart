@@ -27,7 +27,7 @@ class PlaygroundView extends StatelessWidget {
               title: 'Recognizer playground',
               description:
                   'Tune the recognition level and region-of-interest, then recognize the same '
-                  'still and compare. The ML Kit Latin recognizer ignores level on Android — see '
+                  'still and compare. The ML Kit Latin recognizer ignores level on Android, see '
                   'Under the hood.',
             ),
             const Gap(16),
@@ -49,7 +49,7 @@ class PlaygroundView extends StatelessWidget {
               builder: (context, result, _) => RecognitionResultView(
                 result: result,
                 idleHint: 'Recognize to see what the current settings find.',
-                emptyHint: 'No text found in that region — try moving the box over some text.',
+                emptyHint: 'No text found in that region. Try moving the box over some text.',
               ),
             ),
           ],
@@ -145,7 +145,7 @@ class _RoiControls extends StatelessWidget {
 
 /// The sample image with a directly-manipulated region-of-interest box: drag the interior to move
 /// it, drag a corner handle to resize. Inert (just the image) while recognition is unrestricted.
-/// The box itself is view-model-owned state; only the in-progress drag is view-local.
+/// The box itself is view-model-owned state. Only the in-progress drag is view-local.
 class _RoiEditor extends StatefulWidget {
   final RoiConfig config;
   final Color color;
@@ -159,7 +159,7 @@ class _RoiEditor extends StatefulWidget {
 
 class _RoiEditorState extends State<_RoiEditor> {
   /// The drag in progress: the grabbed corner (null ⇒ moving the whole box), with the box and
-  /// pointer captured at touch-down. Pure presentation state — observed by nothing but the
+  /// pointer captured at touch-down. Pure presentation state, observed by nothing but the
   /// gesture handlers (the box is painted from the view model), so it never triggers a rebuild.
   ({_Corner? corner, Rect startRect, Offset startPointer})? _drag;
 
@@ -189,7 +189,7 @@ class _RoiEditorState extends State<_RoiEditor> {
     },
   );
 
-  /// Hit-tests the touch-down point — done here, not in `onPanStart`, because by the time a pan is
+  /// Hit-tests the touch-down point, done here rather than in `onPanStart`, because by the time a pan is
   /// recognized the finger has drifted off a small corner handle, so the resize grab would miss.
   void _onPanDown(Offset localPosition, Size size) {
     final rect = PlaygroundViewModel.roiOf(widget.config);
@@ -228,7 +228,7 @@ class _RoiEditorState extends State<_RoiEditor> {
     return null;
   }
 
-  /// The normalized corner diagonally opposite [corner] — the fixed anchor while resizing.
+  /// The normalized corner diagonally opposite [corner], the fixed anchor while resizing.
   static Offset _anchorOf(Rect rect, _Corner corner) => switch (corner) {
     _Corner.topLeft => rect.bottomRight,
     _Corner.topRight => rect.bottomLeft,

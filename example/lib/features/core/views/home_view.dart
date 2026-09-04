@@ -40,7 +40,7 @@ class HomeView extends StatelessWidget {
               ),
               title: 'One-shot',
               description:
-                  'Recognize a still image from bytes or a file path — no camera, session, or '
+                  'Recognize a still image from bytes or a file path. No camera, session or '
                   'permission.',
               pageBuilder: (_) => const OneShotView(),
             ),

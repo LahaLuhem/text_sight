@@ -1,4 +1,4 @@
-"""Pure aggregation helpers — the highest-value unit-test target."""
+"""Pure aggregation helpers, the highest-value unit-test target."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import polars as pl
 
 
 def median(values: list[float]) -> float:
-    """Median of `values`; returns 0.0 for an empty list (caller's choice)."""
+    """Median of `values`, or 0.0 for an empty list (caller's choice)."""
     count = len(values)
     if count == 0:
         return 0.0
@@ -23,7 +23,7 @@ def grouped_median(df: pl.DataFrame, group_cols: list[str], metric: str) -> pl.D
 
 
 def pct_delta(value: float, baseline: float) -> float | None:
-    """Percent change of `value` from `baseline`; `None` if baseline is 0."""
+    """Percent change of `value` from `baseline`, or `None` if baseline is 0."""
     if baseline == 0:
         return None
     return (value - baseline) / baseline * 100.0

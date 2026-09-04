@@ -1,4 +1,4 @@
-# SwiftLint — deviations for the iOS plugin sources (the Swift under ios/). SwiftLint defaults apply
+# SwiftLint: deviations for the iOS plugin sources (the Swift under ios/). SwiftLint defaults apply
 # except the rules below, which mirror the project's Dart analysis_options posture: thorough, minus
 # the few opinionated rules that conflict with deliberate choices here.
 #
@@ -16,4 +16,4 @@ disabled_rules:
   - trailing_comma    # trailing commas are kept, consistent with the project's Dart style
 
 large_tuple:
-  warning: 3          # displayRotation returns a 3-member named tuple — idiomatic; a struct'd be ceremony
+  warning: 3          # displayRotation returns a 3-member named tuple, which is idiomatic. A struct'd be ceremony

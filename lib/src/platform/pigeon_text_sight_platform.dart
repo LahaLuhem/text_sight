@@ -19,7 +19,7 @@ import 'text_sight_platform.dart';
 /// its transport twin, while recognition results arrive as self-describing maps
 /// on the captures [EventChannel] and are decoded into [TextSightCapture]s. The
 /// preview texture id is the return of [initialize]. Registered as
-/// [TextSightPlatform.instance] by default; a future federated platform package
+/// [TextSightPlatform.instance] by default. A future federated platform package
 /// can replace it.
 final class PigeonTextSightPlatform extends TextSightPlatform {
   /// The native→Dart per-frame results stream. The name is mirrored verbatim by
@@ -127,8 +127,8 @@ extension on Iterable<Locale> {
   List<String> _toLanguageTags() => map((locale) => locale.toLanguageTag()).toList(growable: false);
 }
 
-/// Decodes one per-frame [PigeonTextSightPlatform.captures] event — a
-/// self-describing map — into a [TextSightCapture].
+/// Decodes one per-frame [PigeonTextSightPlatform.captures] event, a
+/// self-describing map, into a [TextSightCapture].
 TextSightCapture _decodeCapture(Object? event) {
   final frameMap = event! as Map<Object?, Object?>;
   final rawLines = frameMap['lines']! as List<Object?>;
@@ -138,14 +138,14 @@ TextSightCapture _decodeCapture(Object? event) {
       (frameMap['imageWidth']! as num).toDouble(),
       (frameMap['imageHeight']! as num).toDouble(),
     ),
-    // Absent on an already-upright source (e.g. the static one-shot); defaults to no rotation.
+    // Absent on an already-upright source (e.g. the static one-shot), so it defaults to no rotation.
     quarterTurns: (frameMap['quarterTurns'] as num?)?.toInt() ?? 0,
     lines: rawLines.map(_decodeLine).toList(growable: false),
   );
 }
 
 /// Decodes one line entry into a [RecognizedLine]. `elements` stays `null` in v1
-/// (reserved — the wire carries the slot for a future additive change).
+/// (reserved: the wire carries the slot for a future additive change).
 RecognizedLine _decodeLine(Object? rawLine) {
   final lineMap = rawLine! as Map<Object?, Object?>;
   final confidenceValue = lineMap['confidence'];
@@ -162,9 +162,9 @@ RecognizedLine _decodeLine(Object? rawLine) {
   );
 }
 
-/// Decodes one model-readiness event — a self-describing map — into a
+/// Decodes one model-readiness event, a self-describing map, into a
 /// [TextSightReadinessState]. Shared by the [PigeonTextSightPlatform.modelReadiness]
-/// stream and the terminal map [PigeonTextSightPlatform.ensureModelReady] returns; each
+/// stream and the terminal map [PigeonTextSightPlatform.ensureModelReady] returns. Each
 /// native side emits exactly this shape.
 TextSightReadinessState _decodeReadiness(Object? event) {
   final stateMap = event! as Map<Object?, Object?>;
@@ -176,7 +176,7 @@ TextSightReadinessState _decodeReadiness(Object? event) {
       reason: _decodeUnavailableReason(stateMap['reason'] as String?),
       details: stateMap['details'] as String?,
     ),
-    // Both ends of this channel are ours; an unknown tag means a prep that did not complete.
+    // Both ends of this channel are ours, so an unknown tag means a prep that did not complete.
     _ => const ModelUnavailable(reason: ModelUnavailableReason.downloadFailed),
   };
 }

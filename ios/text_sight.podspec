@@ -5,9 +5,9 @@
 Pod::Spec.new do |s|
   s.name             = 'text_sight'
   s.version          = '0.0.1'
-  s.summary          = 'Live, on-device text recognition — Apple Vision on iOS, ML Kit on Android.'
+  s.summary          = 'Live, on-device text recognition: Apple Vision on iOS, ML Kit on Android.'
   s.description      = <<-DESC
-Live, on-device text recognition — Apple Vision on iOS, ML Kit on Android. The text-scanning sibling to mobile_scanner.
+Live, on-device text recognition: Apple Vision on iOS, ML Kit on Android. The text-scanning sibling to mobile_scanner.
                        DESC
   s.homepage         = 'https://github.com/LahaLuhem/text_sight'
   s.license          = { :file => '../LICENSE' }

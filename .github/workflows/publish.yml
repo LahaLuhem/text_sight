@@ -9,13 +9,13 @@ on:
 # That reusable workflow runs plain `dart pub get` (no `--no-example` flag) at
 # the package root. Once an `example/` app exists (it declares its parent via
 # `path: ../`), a root `dart pub get` would transitively resolve `example/`
-# against CI's Flutter SDK — different from the `.fvmrc`-pinned local Flutter,
+# against CI's Flutter SDK, different from the `.fvmrc`-pinned local Flutter,
 # so the resolution rewrites `example/pubspec.lock` and the next step
 # (`pub publish --dry-run`) trips its "checked-in files are modified" guard.
 # `--no-example` keeps the committed lockfile byte-identical (and is a harmless
 # no-op while there is no example/). This is a Flutter package, so
 # `flutter pub get` (not `dart pub get`) is used to satisfy the
-# `flutter: sdk: flutter` constraint; `dart-lang/setup-dart` is kept first so
+# `flutter: sdk: flutter` constraint. `dart-lang/setup-dart` is kept first so
 # the OIDC env it exports is in place before publish runs.
 jobs:
   publish:
@@ -29,7 +29,7 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Install dependencies (root only — skip example/)
+      - name: Install dependencies (root only, skipping example/)
         run: flutter --no-version-check pub get --no-example
       - name: Publish dry-run
         run: flutter --no-version-check pub publish --dry-run

@@ -14,9 +14,9 @@ plugins {
     id("com.android.library")
 }
 
-// Bundled vs unbundled ML Kit text recognition is a build-time choice — the Kotlin API is identical,
+// Bundled vs unbundled ML Kit text recognition is a build-time choice, and the Kotlin API is identical,
 // so only the artifact (and the app-size / availability trade-off) differs. Default unbundled
-// (~260 KB/script, fetched via Google Play Services); a consuming app opts into the bundled model
+// (~260 KB/script, fetched via Google Play Services). A consuming app opts into the bundled model
 // (~4 MB/script/arch, in-APK, instant + offline) by setting this in its android/gradle.properties:
 //
 //     com.lahaluhem.text_sight.useBundled=true
@@ -32,7 +32,7 @@ android {
 
     // Latest STABLE API level, matching Flutter's default (flutter.compileSdkVersion). Deliberately
     // NOT a newer/preview level: AGP bakes this into the AAR as minCompileSdk, forcing every consumer
-    // to compile against >= it — and since pub.dev ships this as source, they'd also need that SDK
+    // to compile against >= it, and since pub.dev ships this as source, they'd also need that SDK
     // platform installed. A higher value here breaks stock-Flutter consumers (see APPENDIX).
     compileSdk = 36
 
@@ -41,7 +41,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // Library BuildConfig is off by default in AGP 9; enabled for the USE_BUNDLED field below.
+    // Library BuildConfig is off by default in AGP 9, enabled here for the USE_BUNDLED field below.
     buildFeatures {
         buildConfig = true
     }
@@ -67,7 +67,7 @@ android {
 
                 // Mockito's inline mock-maker loads as a Java agent (self-attach is deprecated on
                 // JDK 21+). Point -javaagent at the mockito-core jar already on the resolved test
-                // classpath — doFirst defers the lookup to execution time, when it's resolvable.
+                // classpath, so doFirst defers the lookup to execution time, when it's resolvable.
                 testTask.doFirst {
                     val agentJar = testTask.classpath.first { jar -> jar.name.startsWith("mockito-core-") }
                     testTask.jvmArgs("-javaagent:${agentJar.absolutePath}")
@@ -91,19 +91,19 @@ kotlin {
 }
 
 dependencies {
-    // Recognition + camera live ONLY here — never in the Dart pubspec (no-bundling). ML Kit text
+    // Recognition + camera live ONLY here, never in the Dart pubspec (no-bundling). ML Kit text
     // recognition is bundled or unbundled per `useBundled`: identical Kotlin API, only the artifact
     // and model delivery differ.
     if (useBundled) {
-        // Bundled: model statically linked into the APK — instant + offline, ~4 MB/script/arch.
+        // Bundled: model statically linked into the APK, so instant + offline, ~4 MB/script/arch.
         implementation("com.google.mlkit:text-recognition:16.0.1")
     } else {
         // Unbundled (default): model fetched via Google Play Services, ~260 KB/script/arch.
         implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
     }
-    // ModuleInstallClient — the app-controlled fetch + download progress behind
+    // ModuleInstallClient, the app-controlled fetch + download progress behind
     // TextSightModel.ensureReady(). The readiness code references it regardless of `useBundled`
-    // (the bundled path just never calls it), so keep it on the classpath; ML Kit pulls it anyway.
+    // (the bundled path just never calls it), so keep it on the classpath. ML Kit pulls it anyway.
     implementation("com.google.android.gms:play-services-base:18.10.1")
 
     implementation("androidx.camera:camera-core:1.6.1")
@@ -111,7 +111,7 @@ dependencies {
     implementation("androidx.camera:camera-lifecycle:1.6.1")
 
     // Reads still-image EXIF orientation for the one-shot recognizer. Android-only utility (not a
-    // recognition lib) — already transitive via CameraX; declared directly since it's used directly.
+    // recognition lib), already transitive via CameraX, but declared directly since it's used directly.
     implementation("androidx.exifinterface:exifinterface:1.4.2")
 
     // App foreground/background signal for the headless session owner. Atomic group: lifts every
@@ -135,20 +135,20 @@ dependencies {
     // mockito-kotlin's whenever/mock DSL over the already-present mockito-core, for stubbing the
     // ML Kit Text/Text.Line value graph that the frame encoder reads.
     testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
-    // Robolectric runs under its JUnit 4 runner; the vintage engine executes those tests on the
+    // Robolectric runs under its JUnit 4 runner, and the vintage engine executes those tests on the
     // JUnit Platform configured above (useJUnitPlatform).
     testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.3")
-    // JUnit Platform launcher — required on the test runtime classpath for useJUnitPlatform().
-    // The legacy AGP DSL / kotlin-android setup provided it implicitly; AGP 9's new DSL does not.
+    // JUnit Platform launcher, required on the test runtime classpath for useJUnitPlatform().
+    // The legacy AGP DSL / kotlin-android setup provided it implicitly. AGP 9's new DSL does not.
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
 }
 
 // ── Standalone-only ──────────────────────────────────────────────────────────────────────────────
 // Resolves io.flutter.* when this module is opened on its own in Android Studio. `project ==
-// rootProject` is true ONLY when android/ is the Gradle root (standalone development); inside an app
+// rootProject` is true ONLY when android/ is the Gradle root (standalone development). Inside an app
 // build the plugin is the `:text_sight` subproject and the Flutter Gradle plugin already puts the
-// engine on the classpath, so this whole block is skipped — consumers never see it. The engine
+// engine on the classpath, so this whole block is skipped, so consumers never see it. The engine
 // version is read from the pinned Flutter SDK (engine.version maps to Flutter's `1.0.0-<hash>` Maven
 // coordinate), so it tracks the SDK automatically instead of being hardcoded.
 if (project == rootProject) {

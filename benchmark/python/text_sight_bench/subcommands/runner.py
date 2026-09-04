@@ -1,4 +1,4 @@
-"""`run` and `run-device` — execute the benchmarks, capturing result JSON files."""
+"""`run` and `run-device`: execute the benchmarks, capturing result JSON files."""
 
 from __future__ import annotations
 

@@ -268,7 +268,7 @@ That is where iOS `fast` sits, at 30/s on a 30 fps camera. Everything else is pa
 recognizer.
 
 **Don't read this as iOS versus Android.** The two sides recognize at different resolutions, so they
-are not doing the same work per frame. iOS asks for `.high` and gets 1080p; Android's analysis falls
+are not doing the same work per frame. iOS asks for `.high` and gets 1080p, while Android's analysis falls
 through to CameraX's 640x480 default, 6.7x fewer pixels
 ([#61](https://github.com/LahaLuhem/text_sight/issues/61)). On the same scene Android resolved 11
 lines per capture against iOS's 21. These also depend entirely on what the camera sees, so treat

@@ -15,7 +15,7 @@ final class RecognizedElement {
   final Rect boundingBox;
 
   /// Recognition confidence in `[0, 1]`, or `null` when the platform does not
-  /// supply one. `null` means "unknown", not "low" — never compare it to a
+  /// supply one. `null` means "unknown", not "low", so never compare it to a
   /// threshold without choosing an explicit default.
   final double? confidence;
 

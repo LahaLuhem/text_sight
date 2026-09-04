@@ -1,7 +1,7 @@
-/// Live, on-device text recognition — Apple Vision on iOS, ML Kit on Android.
+/// Live, on-device text recognition: Apple Vision on iOS, ML Kit on Android.
 ///
 /// Import only this file. The live entry points are `TextSightView` with a
-/// `TextSightController`; the static one-shot is `TextSight`. Either way
+/// `TextSightController`. The static one-shot is `TextSight`. Either way
 /// recognition yields `TextSightCapture`s of `RecognizedLine`s. `TextSightModel`
 /// reports and controls when the on-device model is ready.
 library;

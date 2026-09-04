@@ -19,7 +19,7 @@ Flutter/App.framework
 Flutter/Flutter.framework
 Flutter/Flutter.podspec
 Flutter/Generated.xcconfig
-# Per-developer iOS signing (team + bundle id) — never committed; see README.
+# Per-developer iOS signing (team + bundle id), never committed. See README.
 Flutter/LocalSigning.xcconfig
 Flutter/ephemeral/
 Flutter/app.flx

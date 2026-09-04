@@ -18,7 +18,7 @@ final class LiveScannerViewModel extends ViewModel {
     unawaited(_start());
   }
 
-  /// The session controller — bound to the view's `TextSightView`, and the source of its
+  /// The session controller, bound to the view's `TextSightView`, and the source of its
   /// `captures` stream.
   TextSightController get controller => _controller;
 
@@ -26,7 +26,7 @@ final class LiveScannerViewModel extends ViewModel {
 
   ValueListenable<bool> get shouldEnableTorchListenable => _shouldEnableTorchNotifier;
 
-  /// The failure message — meaningful only while the status is [SessionStatus.failed].
+  /// The failure message, meaningful only while the status is [SessionStatus.failed].
   String get failure => _failure ?? 'Could not start the camera.';
 
   Future<void> onRetryPressed() => _start();

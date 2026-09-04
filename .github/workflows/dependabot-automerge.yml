@@ -1,6 +1,6 @@
 name: Dependabot auto-merge
 
-# Arms GitHub's native auto-merge on CI-safe Dependabot bumps; Dependabot has no
+# Arms GitHub's native auto-merge on CI-safe Dependabot bumps. Dependabot has no
 # automerge option of its own. What merges and why: APPENDIX.md#dependabot-automerge
 on:
   pull_request_target:
@@ -28,8 +28,8 @@ jobs:
         uses: dependabot/fetch-metadata@v3
 
       # Eligible: patch/minor on github_actions, gradle (both dirs) and pub under /example, plus
-      # github_actions majors; root `pub` and gradle/pub majors stay manual. `package-ecosystem`
-      # is the branch-name segment, so github-actions arrives underscored; `update-type` is the
+      # github_actions majors. Root `pub` and gradle/pub majors stay manual. `package-ecosystem`
+      # is the branch-name segment, so github-actions arrives underscored, and `update-type` is the
       # group's *highest* semver step.
       - name: Decide eligibility
         id: gate
@@ -66,7 +66,7 @@ jobs:
           echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
           echo "$ECOSYSTEM / $UPDATE_TYPE @ $DIRECTORY -> automerge: $eligible"
 
-      # `--auto` only queues it; main's required checks decide the rest. GITHUB_TOKEN,
+      # `--auto` only queues it, and main's required checks decide the rest. GITHUB_TOKEN,
       # not the changelog App: the App bypasses the ruleset it would need to wait on.
       - name: Enable auto-merge
         if: steps.gate.outputs.eligible == 'true'

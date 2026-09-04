@@ -1,4 +1,4 @@
-# SwiftLint — deviations for the example's iOS RunnerTests (the plugin's native unit tests). Kept
+# SwiftLint: deviations for the example's iOS RunnerTests (the plugin's native unit tests). Kept
 # separate from ios/.swiftlint.yml because SwiftLint resolves `included`/`excluded` relative to each
 # config's own directory, and the two trees need different deviations. Paths are relative to this file.
 included:

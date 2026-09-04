@@ -1,22 +1,22 @@
-# detekt — Kotlin static analysis for android/src (the native plugin sources). Run with
+# detekt: Kotlin static analysis for android/src (the native plugin sources). Run with
 # `--build-upon-default-config`, so this file lists ONLY the deviations from detekt's default
-# ruleset; everything not mentioned stays at its default. The deviations mirror the project's Dart
+# ruleset, and everything not mentioned stays at its default. The deviations mirror the project's Dart
 # analysis_options posture: thorough by default, with the few opinionated rules that conflict with
 # this plugin's deliberate choices switched off. Messages.g.kt (generated) is excluded at the CLI.
 
 complexity:
   TooManyFunctions:
     # The plugin entrypoint and the camera/recognition controller legitimately expose many small
-    # functions; the Dart side enforces no function-count cap either.
+    # functions, and the Dart side enforces no function-count cap either.
     active: false
   LongParameterList:
-    # The per-frame encoder helpers take the frame geometry positionally on the hot path; param
+    # The per-frame encoder helpers take the frame geometry positionally on the hot path, so param
     # count isn't enforced on the Dart side.
     active: false
 
 naming:
   PackageNaming:
-    # Package is lowercase now (com.lahaluhem.text_sight); keep this rule ACTIVE so it stays that
+    # Package is lowercase now (com.lahaluhem.text_sight), so keep this rule ACTIVE so it stays that
     # way. The pattern only adds `_` to detekt's default allowed segment chars, since the
     # `text_sight` segment deliberately mirrors the pub package name (the default forbids underscores).
     packagePattern: '[a-z]+(\.[a-z][A-Za-z0-9_]*)*'
@@ -31,9 +31,9 @@ exceptions:
   SwallowedException:
     # The control methods convert a CameraX / ML Kit failure into the FlutterError code the Dart side
     # switches on. Pigeon's generated FlutterError has no `cause` slot, so forwarding the message is
-    # the only channel there is — the rule's fix is unavailable, not declined.
+    # the only channel there is, so the rule's fix is unavailable, not declined.
     active: false
   TooGenericExceptionCaught:
-    # The camera init converts any native failure into a `FlutterError` at the channel boundary — a
+    # The camera init converts any native failure into a `FlutterError` at the channel boundary, a
     # deliberate broad catch. (Re-enable and `@Suppress` that single site if stricter checking is wanted.)
     active: false

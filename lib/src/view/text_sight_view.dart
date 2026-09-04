@@ -20,11 +20,11 @@ typedef TextSightOverlayBuilder = Widget Function(
 /// Renders the controller's [TextSightController.textureId] and rebuilds as the
 /// session state changes. Each [TextSightCapture] is delivered to [onResult]
 /// (for consumers that only need the text) and to [overlayBuilder] (for drawing
-/// boxes over the preview). Until the first capture arrives — while
-/// [TextSightController.start] opens the camera and the first frame is recognized —
+/// boxes over the preview). Until the first capture arrives (while
+/// [TextSightController.start] opens the camera and the first frame is recognized)
 /// [placeholderBuilder] is shown (the preview's upright rotation rides the capture).
 ///
-/// The view does not start or stop the session itself; the consumer drives the
+/// The view does not start or stop the session itself. The consumer drives the
 /// controller, so session lifecycle (including pausing on app background) stays
 /// in one place.
 final class TextSightView extends StatefulWidget {
@@ -38,7 +38,7 @@ final class TextSightView extends StatefulWidget {
   final TextSightOverlayBuilder? overlayBuilder;
 
   /// Builds what shows until the first capture arrives (camera opening, first frame not yet
-  /// recognized) — including before [TextSightController.start].
+  /// recognized), including before [TextSightController.start].
   final WidgetBuilder? placeholderBuilder;
 
   /// Creates a view bound to [controller].
@@ -96,8 +96,8 @@ class _TextSightViewState extends State<TextSightView> {
       return Stack(
         fit: .expand,
         children: [
-          // The preview texture is delivered in the camera's raw orientation; rotate it to
-          // display-upright. The overlay stays unrotated — its boxes are already display-oriented.
+          // The preview texture is delivered in the camera's raw orientation, so rotate it to
+          // display-upright. The overlay stays unrotated, since its boxes are already display-oriented.
           RotatedBox(
             quarterTurns: capture.quarterTurns,
             child: Texture(textureId: textureId),
@@ -114,8 +114,8 @@ class _TextSightViewState extends State<TextSightView> {
   void _subscribe() => _subscription = widget.controller.captures.listen((capture) {
     widget.onResult?.call(capture);
 
-    // Rebuild for the overlay (every frame) or when the preview rotation changes; otherwise keep
-    // the latest capture without a rebuild — an unchanged rotation has nothing new to paint.
+    // Rebuild for the overlay (every frame) or when the preview rotation changes. Otherwise keep
+    // the latest capture without a rebuild, since an unchanged rotation has nothing new to paint.
     final rotationChanged = capture.quarterTurns != _capture?.quarterTurns;
     if (widget.overlayBuilder != null || rotationChanged) {
       setState(() => _capture = capture);

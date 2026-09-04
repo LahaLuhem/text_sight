@@ -25,7 +25,7 @@ class AboutView extends StatelessWidget {
               title: 'Why text_sight',
               description:
                   'A live, cross-platform OCR plugin that links zero third-party ML libraries on '
-                  'iOS — here is how.',
+                  'iOS. Here is how.',
             ),
             const Gap(16),
             _NuanceCard(
@@ -37,9 +37,9 @@ class AboutView extends StatelessWidget {
               ),
               title: 'Zero third-party ML on iOS',
               body:
-                  'iOS uses Apple Vision, a system framework, so the iOS build links no GoogleMLKit '
-                  '— and none of the arm64 / Swift Package Manager warnings that come from running '
-                  'ML Kit on iOS. ML Kit lives only in the Android Gradle build; no recognition '
+                  'iOS uses Apple Vision, a system framework, so the iOS build links no GoogleMLKit, '
+                  'and none of the arm64 / Swift Package Manager warnings that come from running '
+                  'ML Kit on iOS. ML Kit lives only in the Android Gradle build. No recognition '
                   'library ever enters your Dart dependencies.',
             ),
             const Gap(12),
@@ -66,7 +66,7 @@ class AboutView extends StatelessWidget {
               title: 'One coordinate contract',
               body:
                   'Bounding boxes are normalized [0,1] with a top-left origin on both platforms, '
-                  'converted natively — so an overlay painter never branches on platform.',
+                  'converted natively, so an overlay painter never branches on platform.',
             ),
             const Gap(12),
             _NuanceCard(
@@ -76,7 +76,7 @@ class AboutView extends StatelessWidget {
               title: 'Confidence, with a caveat',
               body:
                   'Both engines report a per-line confidence, but the scales are not comparable '
-                  'across platforms. A null confidence means the engine supplied none — not low '
+                  'across platforms. A null confidence means the engine supplied none, not low '
                   'confidence.',
             ),
             const Gap(12),

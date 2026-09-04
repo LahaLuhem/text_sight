@@ -7,7 +7,7 @@ import '../recognition/text_sight_readiness_state.dart';
 /// recognize through the same model, so readiness belongs here, on neither driver.
 /// It exists so model loading need never block app startup. On Android the default
 /// (unbundled) ML Kit model is fetched from Google Play Services, and recognition
-/// requests made before it arrives yield no results; call [ensureReady] when the
+/// requests made before it arrives yield no results, so call [ensureReady] when the
 /// user enters an OCR feature to fetch it in the background, and watch [readiness]
 /// to surface download progress or a failure.
 ///
@@ -19,23 +19,23 @@ import '../recognition/text_sight_readiness_state.dart';
 /// [TextSightPlatform.instance], so it carries no platform knowledge and is never
 /// instantiated.
 abstract final class TextSightModel {
-  /// Ensures the recognition model is present — fetching the unbundled ML Kit model
-  /// when needed — and resolves to the terminal state: [ModelReady] on success, or
+  /// Ensures the recognition model is present (fetching the unbundled ML Kit model
+  /// when needed) and resolves to the terminal state: [ModelReady] on success, or
   /// [ModelUnavailable] if it cannot be fetched (failure is a state, not a throw).
   ///
-  /// Safe to call repeatedly and to `await` without listening to [readiness]; it
+  /// Safe to call repeatedly and to `await` without listening to [readiness]. It
   /// resolves immediately when the model is already available (always on iOS and
   /// with the bundled model). Watch [readiness] for intermediate [ModelDownloading]
   /// progress while this is in flight.
   static Future<TextSightReadinessState> ensureReady() =>
       TextSightPlatform.instance.ensureModelReady();
 
-  /// The live model-readiness stream — [ModelReady] once available,
+  /// The live model-readiness stream: [ModelReady] once available,
   /// [ModelDownloading] while the unbundled model fetches, [ModelUnavailable] on
   /// failure.
   ///
   /// Emits the current state on subscription when it is already known (e.g.
-  /// [ModelReady] on iOS). Listening only *observes*; it never starts a fetch —
-  /// that is [ensureReady]'s job. Subscribers must cancel their own subscription.
+  /// [ModelReady] on iOS). Listening only *observes* and never starts a fetch.
+  /// That is [ensureReady]'s job. Subscribers must cancel their own subscription.
   static Stream<TextSightReadinessState> get readiness => TextSightPlatform.instance.modelReadiness;
 }

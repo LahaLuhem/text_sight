@@ -145,7 +145,7 @@ final class _EncodeBench extends BenchmarkBase {
 void _printSummary(List<_Row> rows) {
   final buffer = StringBuffer()
     ..writeln()
-    ..writeln('codec_roundtrip — median decode µs / wire bytes per (payload, lines)')
+    ..writeln('codec_roundtrip: median decode µs / wire bytes per (payload, lines)')
     ..writeln('Δ vs map_std baseline; negative = smaller / faster')
     ..writeln();
 
