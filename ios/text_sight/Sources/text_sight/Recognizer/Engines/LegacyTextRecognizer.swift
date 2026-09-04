@@ -30,22 +30,20 @@ struct LegacyTextRecognizer: TextRecognizer {
     }
   }
 
-  /// Builds a fresh request from a config snapshot. Internal (not `private`) so `RunnerTests` can
-  /// exercise it via `@testable import`.
+  /// Sets every knob, since anything left alone picks up Vision's own default.
+  /// Internal so the tests can reach it.
   static func makeRequest(config: RecognitionConfig) -> VNRecognizeTextRequest {
     let request = VNRecognizeTextRequest()
     request.recognitionLevel = config.level == .accurate ? .accurate : .fast
     // Mirror the Dart `RecognitionLevel` enhanced-enum contract: accurate corrects, fast does not.
     request.usesLanguageCorrection = config.level == .accurate
-    if !config.languages.isEmpty {
-      // The legacy request takes BCP-47 language strings directly (no `Locale.Language`).
-      request.recognitionLanguages = config.languages
-    }
-    if let roi = config.roi {
-      // Vision's region-of-interest is lower-left normalized, so flip the incoming top-left rect.
-      request.regionOfInterest = CGRect(x: roi.left, y: 1 - (roi.top + roi.height),
-                                        width: roi.width, height: roi.height)
-    }
+    // Empty means no preference, so it goes through rather than being guarded away.
+    request.recognitionLanguages = config.languages
+    request.minimumTextHeight = RecognitionConfig.minimumTextHeight
+    // Vision's region is lower-left, so flip the top-left rect.
+    request.regionOfInterest = config.roi.map {
+      CGRect(x: $0.left, y: 1 - ($0.top + $0.height), width: $0.width, height: $0.height)
+    } ?? CGRect(x: 0, y: 0, width: 1, height: 1)
 
     return request
   }

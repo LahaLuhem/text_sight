@@ -20,22 +20,20 @@ struct ModernTextRecognizer: TextRecognizer {
     return Self.lines(from: observations)
   }
 
-  /// Builds a fresh request from a config snapshot. A `RecognizeTextRequest` is a value type, so
-  /// each frame/call gets its own (no shared mutable request to race). Internal (not `private`) so
-  /// `RunnerTests` can exercise it via `@testable import`.
+  /// Sets every knob, since anything left alone picks up Vision's own default.
+  /// Internal so the tests can reach it.
   static func makeRequest(config: RecognitionConfig) -> RecognizeTextRequest {
     var request = RecognizeTextRequest()
     request.recognitionLevel = config.level == .accurate ? .accurate : .fast
     // Mirror the Dart `RecognitionLevel` enhanced-enum contract: accurate corrects, fast does not.
     request.usesLanguageCorrection = config.level == .accurate
-    if !config.languages.isEmpty {
-      request.recognitionLanguages = config.languages.map { Locale.Language(identifier: $0) }
-    }
-    if let roi = config.roi {
-      // Vision's region-of-interest is lower-left normalized, so flip the incoming top-left rect.
-      request.regionOfInterest = NormalizedRect(x: roi.left, y: 1 - (roi.top + roi.height),
-                                                width: roi.width, height: roi.height)
-    }
+    // Empty means no preference, so it goes through rather than being guarded away.
+    request.recognitionLanguages = config.languages.map { Locale.Language(identifier: $0) }
+    request.minimumTextHeightFraction = RecognitionConfig.minimumTextHeight
+    // Vision's region is lower-left, so flip the top-left rect.
+    request.regionOfInterest = config.roi.map {
+      NormalizedRect(x: $0.left, y: 1 - ($0.top + $0.height), width: $0.width, height: $0.height)
+    } ?? NormalizedRect(x: 0, y: 0, width: 1, height: 1)
 
     return request
   }
