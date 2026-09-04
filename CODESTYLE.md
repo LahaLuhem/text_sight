@@ -118,6 +118,18 @@ style.
   getter (`foo`), or a setter (`set foo(…)`) if writable. A mutation that *can't* be a setter
   (async or side-effecting, since a setter can't be awaited nor surface an error) takes the verb
   for what it does: `updateRegionOfInterest(roi)`, **not** `setRegionOfInterest(roi)`.
+- **A public *option* a platform silently ignores says so in its name.** Prefix it with the
+  platform tree it actually applies to (`darwinRecognitionLevel`, not `level`). A dartdoc alone
+  never reaches the consumer who sets `fast` on Android, gets `accurate` behaviour, and has no
+  indication why. Use `darwin` rather than `ios`, since the constraint is Apple Vision, which a
+  macOS target would share, and it matches the shared Apple source directory. Keep the dartdoc as
+  well: the name flags the asymmetry, the doc explains it.
+
+  | Prefix it when                                                    | Leave it neutral when                                                                   |
+  |-------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+  | It is an **option**, so setting it promises behaviour that changes | It is an **observation**: `TextSightModel.ensureReady()` resolving instantly on iOS still did what it promised |
+  | The gap is **structural**: ML Kit's text API has no accuracy dial at any dependency (its Latin `TextRecognizerOptions.Builder` exposes only `setExecutor`) | The gap is **delivery**: `languages` becomes meaningful once the other ML Kit script recognizers land, so a prefix would force a second rename |
+
 - **Local-variable names carry a concise type-suffix.** Dart is strongly typed, but a
   reader without IDE inlay-hints can't see the inferred type, so the *name* has to do
   that work. Suffix a local with what it *is* so the next reader doesn't have to scroll
