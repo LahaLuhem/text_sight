@@ -1,6 +1,7 @@
 ## [Unreleased]
 ### Fixed
 - benchmark: never write a blank chart, and take report provenance from the data
+- \[#58\] Decide Vision's text-height floor instead of inheriting it
 
 ## [0.2.1] - 2026-09-04
 ### Added
