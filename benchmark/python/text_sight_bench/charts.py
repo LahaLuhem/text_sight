@@ -1,4 +1,5 @@
-"""Chart renderers. Each returns the `Path` it wrote, for threading into the markdown.
+"""Charts in two halves: `prepare_*` crunches the numbers, `render_*` draws them, so you can
+check what came back before drawing it.
 
 Module-level matplotlib imports are deliberate: `cmd_report` gates the call site with a
 `find_spec` check that points at `uv sync`.
@@ -6,7 +7,9 @@ Module-level matplotlib imports are deliberate: `cmd_report` gates the call site
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import NamedTuple
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -33,17 +36,21 @@ def set_default_theme() -> None:
     sns.set_theme(style="whitegrid", context="paper")
 
 
-def plot_decode_vs_lines(df: pl.DataFrame, out_path: Path) -> Path:
-    """Median decode µs vs lines-per-frame, one line per candidate (sweep)."""
-    agg = grouped_median(
+def prepare_decode_vs_lines(df: pl.DataFrame) -> pl.DataFrame:
+    """Median decode µs per candidate, at each swept line count."""
+    # Only the sweep holds text length steady, so line count is the one thing moving here.
+    return grouped_median(
         df.filter(pl.col("payload") == "sweep"),
         ["candidate", "line_count"],
         "decode_microseconds",
-    ).to_pandas()
+    )
 
+
+def render_decode_vs_lines(agg: pl.DataFrame, out_path: Path) -> Path:
+    """Decode µs against lines-per-frame, one line per candidate."""
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.lineplot(
-        data=agg,
+        data=agg.to_pandas(),
         x="line_count",
         y="decode_microseconds",
         hue="candidate",
@@ -62,21 +69,20 @@ def plot_decode_vs_lines(df: pl.DataFrame, out_path: Path) -> Path:
     return out_path
 
 
-def plot_wire_bytes_vs_lines(df: pl.DataFrame, out_path: Path) -> Path:
-    """Wire size (KB) vs lines-per-frame, one line per candidate (sweep)."""
-    agg = (
-        grouped_median(
-            df.filter(pl.col("payload") == "sweep"),
-            ["candidate", "line_count"],
-            "wire_bytes",
-        )
-        .with_columns((pl.col("wire_bytes") / 1024.0).alias("wire_kb"))
-        .to_pandas()
-    )
+def prepare_wire_bytes_vs_lines(df: pl.DataFrame) -> pl.DataFrame:
+    """Median wire size per candidate at each swept line count, in KB."""
+    return grouped_median(
+        df.filter(pl.col("payload") == "sweep"),
+        ["candidate", "line_count"],
+        "wire_bytes",
+    ).with_columns((pl.col("wire_bytes") / 1024.0).alias("wire_kb"))
 
+
+def render_wire_bytes_vs_lines(agg: pl.DataFrame, out_path: Path) -> Path:
+    """Wire size in KB against lines-per-frame, one line per candidate."""
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.lineplot(
-        data=agg,
+        data=agg.to_pandas(),
         x="line_count",
         y="wire_kb",
         hue="candidate",
@@ -95,17 +101,20 @@ def plot_wire_bytes_vs_lines(df: pl.DataFrame, out_path: Path) -> Path:
     return out_path
 
 
-def plot_profile_decode_bars(df: pl.DataFrame, out_path: Path) -> Path:
-    """Median decode µs per realistic profile, grouped bars per candidate."""
-    agg = grouped_median(
+def prepare_profile_decode_bars(df: pl.DataFrame) -> pl.DataFrame:
+    """Median decode µs per realistic profile and candidate."""
+    return grouped_median(
         df.filter(pl.col("payload").is_in(PROFILE_ORDER)),
         ["payload", "candidate"],
         "decode_microseconds",
-    ).to_pandas()
+    )
 
+
+def render_profile_decode_bars(agg: pl.DataFrame, out_path: Path) -> Path:
+    """Decode µs per profile, grouped bars per candidate."""
     fig, ax = plt.subplots(figsize=(9, 5))
     sns.barplot(
-        data=agg,
+        data=agg.to_pandas(),
         x="payload",
         y="decode_microseconds",
         order=PROFILE_ORDER,
@@ -122,6 +131,21 @@ def plot_profile_decode_bars(df: pl.DataFrame, out_path: Path) -> Path:
     fig.savefig(out_path, dpi=CHART_DPI)
     plt.close(fig)
     return out_path
+
+
+class ChartSpec(NamedTuple):
+    """A chart's filename plus its two halves."""
+
+    filename: str
+    prepare: Callable[[pl.DataFrame], pl.DataFrame]
+    render: Callable[[pl.DataFrame, Path], Path]
+
+
+CODEC_CHARTS = (
+    ChartSpec("decode_vs_lines.png", prepare_decode_vs_lines, render_decode_vs_lines),
+    ChartSpec("wire_bytes_vs_lines.png", prepare_wire_bytes_vs_lines, render_wire_bytes_vs_lines),
+    ChartSpec("profile_decode_bars.png", prepare_profile_decode_bars, render_profile_decode_bars),
+)
 
 
 def plot_one_shot_latency(df: pl.DataFrame, out_path: Path) -> Path:
