@@ -22,6 +22,8 @@ struct RecognizerRequestTests {
 
   static let languages = ["en-US", "fr"]
 
+  static let wholeFrame = CGRect(x: 0, y: 0, width: 1, height: 1)
+
   @available(iOS 18, *)
   @Test("Modern: the level picks the Vision level and its language correction",
         arguments: RecognizerRequestTests.levels)
@@ -87,6 +89,33 @@ struct RecognizerRequestTests {
 
     #expect(isClose(originX: region.origin.x, originY: region.origin.y,
                     width: region.width, height: region.height, to: Self.flippedRoi))
+  }
+
+  @available(iOS 18, *)
+  @Test("Modern: a bare config still leaves nothing to Vision")
+  func modernFillsEveryKnob() {
+    let request = ModernTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: [], roi: nil)
+    )
+    let region = request.regionOfInterest
+
+    #expect(request.minimumTextHeightFraction == 0)
+    #expect(request.recognitionLanguages.isEmpty)
+    #expect(isClose(originX: region.origin.x, originY: region.origin.y,
+                    width: region.width, height: region.height, to: Self.wholeFrame))
+  }
+
+  @Test("Legacy: a bare config still leaves nothing to Vision")
+  func legacyFillsEveryKnob() {
+    let request = LegacyTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: [], roi: nil)
+    )
+    let region = request.regionOfInterest
+
+    #expect(request.minimumTextHeight == 0)
+    #expect(request.recognitionLanguages.isEmpty)
+    #expect(isClose(originX: region.origin.x, originY: region.origin.y,
+                    width: region.width, height: region.height, to: Self.wholeFrame))
   }
 }
 
