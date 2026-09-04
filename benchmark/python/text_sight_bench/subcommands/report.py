@@ -1,4 +1,4 @@
-"""`report` and `report-device` — render committed charts + summaries from result JSON."""
+"""`report`, `report-device` and `report-live`: charts + summaries from result JSON."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Shared constants — paths, chart styling, candidate / profile ordering."""
+"""Shared constants: paths, chart styling, candidate / profile ordering."""
 
 from __future__ import annotations
 
@@ -49,6 +49,8 @@ LEVEL_ORDER = ["fast", "accurate"]
 LEVEL_COLORS = {"fast": "#4c72b0", "accurate": "#c44e52"}
 PLATFORM_ORDER = ["ios", "android"]
 PLATFORM_LABELS = {"ios": "iOS (Apple Vision)", "android": "Android (ML Kit)"}
+# For prose, where naming the recognizer would be noise.
+PLATFORM_NAMES = {"ios": "iOS", "android": "Android"}
 
 # For the adb camera grant the live scenario needs.
 BENCH_APP_ANDROID_ID = "com.lahaluhem.benchmark.text_sight_bench_host"
