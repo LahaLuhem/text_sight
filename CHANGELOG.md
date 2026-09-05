@@ -1,4 +1,4 @@
-## [Unreleased]
+## [0.2.2] - 2026-09-05
 ### Fixed
 - \[#60\] never write a blank chart
 - \[#58\] Decide Vision's text-height floor instead of inheriting it
@@ -48,7 +48,7 @@
 - Recognizer configuration on the controller: region of interest (a normalized `Rect`), recognition level, language preferences, and torch.
 - A unified result model — per-line confidence and normalized `[0,1]` top-left bounding boxes, identical across platforms, with a rotation-aware preview.
 
-[Unreleased]: https://github.com/LahaLuhem/text_sight/compare/0.2.1...HEAD
+[0.2.2]: https://github.com/LahaLuhem/text_sight/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/LahaLuhem/text_sight/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/LahaLuhem/text_sight/compare/0.1.1...0.2.0
 [0.1.1]: https://github.com/LahaLuhem/text_sight/compare/0.1.0...0.1.1
