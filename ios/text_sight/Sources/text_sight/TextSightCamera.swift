@@ -210,7 +210,7 @@ final class TextSightCamera: NSObject {
     // whole process: start/stopRunning then raise an ObjC exception, which Swift cannot catch.
     defer { session.commitConfiguration() }
 
-    session.sessionPreset = .high
+    session.sessionPreset = Self.preset(for: session)
 
     guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
     else { throw CameraError.noCaptureDevice }
@@ -232,6 +232,12 @@ final class TextSightCamera: NSObject {
     ]
 
     return (session, device)
+  }
+
+  /// ~2 MP, matching what Android asks for. `.high` is whatever the device fancies, so it is only
+  /// the fallback. Internal so the tests can reach it.
+  static func preset(for session: AVCaptureSession) -> AVCaptureSession.Preset {
+    session.canSetSessionPreset(.hd1920x1080) ? .hd1920x1080 : .high
   }
 
   /// Picks the capture pixel format: the camera's own biplanar YUV where offered, else BGRA.
