@@ -1,10 +1,10 @@
 package com.lahaluhem.text_sight.camera
 
 import android.util.Size
-import com.lahaluhem.text_sight.CaptureResolutionMessage
 import androidx.camera.core.resolutionselector.AspectRatioStrategy
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
+import com.lahaluhem.text_sight.CaptureResolutionMessage
 
 /**
  * Both streams need the same ratio, or boxes drawn on the preview land off. 4:3 is the sensor's own

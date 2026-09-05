@@ -479,6 +479,10 @@ iOS (Vision) and are **no-ops on Android** (the ML Kit Latin recognizer exposes 
 Latin only). Per-line `confidence` is supplied by both, but the scales are **not comparable**. These
 are documented in the [README](./README.md), and they are engine properties, not defects.
 
+**The two platforms capture different shapes, and cannot be matched.** Android runs 4:3, the
+sensor's own shape. iOS has no 4:3 HD preset, so it runs 16:9. Forcing Android to match would crop
+away page for nothing. `CaptureResolution` picks the size, the shape stays the platform's.
+
 **Background auto-pause (both platforms).** The live session stops itself when the app leaves the
 foreground and restarts on return, torch intent re-asserted. Rationale: both OSes forcibly gate the
 camera for backgrounded apps anyway (iOS interrupts the session, Android revokes the camera from
