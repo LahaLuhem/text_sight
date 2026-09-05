@@ -277,12 +277,12 @@ That is where iOS `fast` sits, at 30/s on a 30 fps camera. The
 recognizer paces everything else. Same issue as above: iOS `fast` was skipping small text when this
 ran, so some of that headroom was work it never did.
 
-**Don't read this as iOS versus Android.** The two sides recognize different resolutions, so they
-are not doing the same work per frame. iOS asks for `.high` and gets 1080p, while Android's analysis
-falls through to CameraX's 640x480 default, 6.7x fewer pixels
-([#61](https://github.com/LahaLuhem/text_sight/issues/61)). On the same scene Android resolved 11
-lines per capture against iOS's 21. These also depend entirely on what the camera sees, so treat
-them as directional either way.
+**They predate the resolution fix too.** Android ran at CameraX's 640x480 default here. It now asks
+for about 2 MP in 4:3, which roughly doubles the lines it reads and costs frame rate.
+`CaptureResolution.low` gets the old speed back. iOS asks for 1080p.
+
+**Don't read this as iOS versus Android.** The two still capture at different sizes and shapes, so
+they are not doing the same work per frame, and both depend entirely on what the camera sees.
 
 ### The transport is not the bottleneck
 
