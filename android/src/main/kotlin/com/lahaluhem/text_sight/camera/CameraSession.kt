@@ -161,18 +161,22 @@ internal class CameraSession(
         val provider = cameraProvider ?: return
         val producer = surfaceProducer ?: return
 
-        val preview = Preview.Builder().build().apply {
-            setSurfaceProvider(mainExecutor) { request ->
-                producer.setSize(request.resolution.width, request.resolution.height)
-                request.provideSurface(producer.surface, mainExecutor) { _ ->
-                    // Flutter owns the Surface via the SurfaceProducer, so nothing to release here.
+        val preview = Preview.Builder()
+            .setResolutionSelector(previewResolutionSelector())
+            .build()
+            .apply {
+                setSurfaceProvider(mainExecutor) { request ->
+                    producer.setSize(request.resolution.width, request.resolution.height)
+                    request.provideSurface(producer.surface, mainExecutor) { _ ->
+                        // Flutter owns the Surface via the SurfaceProducer, so nothing to release.
+                    }
                 }
             }
-        }
 
         val analysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setTargetRotation(currentRotation())
+            .setResolutionSelector(analysisResolutionSelector())
             .build()
         imageAnalysis = analysis
 
