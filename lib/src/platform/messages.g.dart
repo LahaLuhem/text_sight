@@ -98,6 +98,9 @@ int _deepHash(Object? value) {
 /// Transport twin of the public `RecognitionLevel`.
 enum RecognitionLevelMessage { fast, accurate }
 
+/// Transport twin of the public `CaptureResolution`.
+enum CaptureResolutionMessage { low, medium, high }
+
 /// Transport twin of the public `CameraPermissionStatus`.
 enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
 
@@ -222,14 +225,17 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is RecognitionLevelMessage) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    } else if (value is CameraPermissionStatusMessage) {
+    } else if (value is CaptureResolutionMessage) {
       buffer.putUint8(130);
       writeValue(buffer, value.index);
-    } else if (value is RegionOfInterestMessage) {
+    } else if (value is CameraPermissionStatusMessage) {
       buffer.putUint8(131);
+      writeValue(buffer, value.index);
+    } else if (value is RegionOfInterestMessage) {
+      buffer.putUint8(132);
       writeValue(buffer, value.encode());
     } else if (value is TextSightOptionsMessage) {
-      buffer.putUint8(132);
+      buffer.putUint8(133);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -244,10 +250,13 @@ class _PigeonCodec extends StandardMessageCodec {
         return value == null ? null : RecognitionLevelMessage.values[value];
       case 130:
         final value = readValue(buffer) as int?;
-        return value == null ? null : CameraPermissionStatusMessage.values[value];
+        return value == null ? null : CaptureResolutionMessage.values[value];
       case 131:
-        return RegionOfInterestMessage.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : CameraPermissionStatusMessage.values[value];
       case 132:
+        return RegionOfInterestMessage.decode(readValue(buffer)!);
+      case 133:
         return TextSightOptionsMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -272,11 +281,15 @@ class TextSightHostApi {
 
   final String pigeonVar_messageChannelSuffix;
 
-  /// Opens the camera with [options]. Returns the preview texture id.
+  /// Opens the camera with [options] at [resolution]. Returns the preview texture id.
   ///
   /// Reopening an already-open session is fine: the old one is released first, so the id this
-  /// returns replaces the previous one. Recognition comes back off until [start].
-  Future<int> initialize(TextSightOptionsMessage options) async {
+  /// returns replaces the previous one. Recognition comes back off until [start]. Resolution rides
+  /// here, not on the options, because it cannot change mid-session.
+  Future<int> initialize(
+    TextSightOptionsMessage options,
+    CaptureResolutionMessage resolution,
+  ) async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.initialize$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
@@ -284,7 +297,10 @@ class TextSightHostApi {
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[options]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[
+      options,
+      resolution,
+    ]);
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(

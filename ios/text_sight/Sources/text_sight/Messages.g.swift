@@ -190,6 +190,13 @@ enum RecognitionLevelMessage: Int, CaseIterable {
   case accurate = 1
 }
 
+/// Transport twin of the public `CaptureResolution`.
+enum CaptureResolutionMessage: Int, CaseIterable {
+  case low = 0
+  case medium = 1
+  case high = 2
+}
+
 /// Transport twin of the public `CameraPermissionStatus`.
 enum CameraPermissionStatusMessage: Int, CaseIterable {
   case granted = 0
@@ -308,12 +315,18 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
     case 130:
       let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
       if let enumResultAsInt = enumResultAsInt {
-        return CameraPermissionStatusMessage(rawValue: enumResultAsInt)
+        return CaptureResolutionMessage(rawValue: enumResultAsInt)
       }
       return nil
     case 131:
-      return RegionOfInterestMessage.fromList(self.readValue() as! [Any?])
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return CameraPermissionStatusMessage(rawValue: enumResultAsInt)
+      }
+      return nil
     case 132:
+      return RegionOfInterestMessage.fromList(self.readValue() as! [Any?])
+    case 133:
       return TextSightOptionsMessage.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -326,14 +339,17 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     if let value = value as? RecognitionLevelMessage {
       super.writeByte(129)
       super.writeValue(value.rawValue)
-    } else if let value = value as? CameraPermissionStatusMessage {
+    } else if let value = value as? CaptureResolutionMessage {
       super.writeByte(130)
       super.writeValue(value.rawValue)
-    } else if let value = value as? RegionOfInterestMessage {
+    } else if let value = value as? CameraPermissionStatusMessage {
       super.writeByte(131)
+      super.writeValue(value.rawValue)
+    } else if let value = value as? RegionOfInterestMessage {
+      super.writeByte(132)
       super.writeValue(value.toList())
     } else if let value = value as? TextSightOptionsMessage {
-      super.writeByte(132)
+      super.writeByte(133)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -361,11 +377,12 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 ///
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol TextSightHostApi {
-  /// Opens the camera with [options]. Returns the preview texture id.
+  /// Opens the camera with [options] at [resolution]. Returns the preview texture id.
   ///
   /// Reopening an already-open session is fine: the old one is released first, so the id this
-  /// returns replaces the previous one. Recognition comes back off until [start].
-  func initialize(options: TextSightOptionsMessage) async throws -> Int64
+  /// returns replaces the previous one. Recognition comes back off until [start]. Resolution rides
+  /// here, not on the options, because it cannot change mid-session.
+  func initialize(options: TextSightOptionsMessage, resolution: CaptureResolutionMessage) async throws -> Int64
   /// Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
   /// Dart signature is `Future<void>` either way.
   func start() throws
@@ -400,18 +417,20 @@ class TextSightHostApiSetup {
   /// Sets up an instance of `TextSightHostApi` to handle messages through the `binaryMessenger`.
   static func setUp(binaryMessenger: FlutterBinaryMessenger, api: TextSightHostApi?, messageChannelSuffix: String = "") {
     let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
-    /// Opens the camera with [options]. Returns the preview texture id.
+    /// Opens the camera with [options] at [resolution]. Returns the preview texture id.
     ///
     /// Reopening an already-open session is fine: the old one is released first, so the id this
-    /// returns replaces the previous one. Recognition comes back off until [start].
+    /// returns replaces the previous one. Recognition comes back off until [start]. Resolution rides
+    /// here, not on the options, because it cannot change mid-session.
     let initializeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.initialize\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       initializeChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
         let optionsArg = args[0] as! TextSightOptionsMessage
+        let resolutionArg = args[1] as! CaptureResolutionMessage
         Task { @MainActor in
           do {
-            let result = try await api.initialize(options: optionsArg)
+            let result = try await api.initialize(options: optionsArg, resolution: resolutionArg)
             reply(wrapResult(result))
           } catch {
             reply(wrapError(error))

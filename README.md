@@ -89,6 +89,12 @@ level, languages, or torch while the session runs.
 TextSightController(options: TextSightOptions(roi: Rect.fromLTWH(0.1, 0.4, 0.8, 0.2)));
 ```
 
+Scanning small print? Turn the camera up. Set once, unlike the knobs above.
+
+```dart
+TextSightController(resolution: CaptureResolution.high);
+```
+
 Backgrounding the app pauses the session on its own and picks it back up when you return.
 
 One Android thing worth knowing up front: the model downloads on first use, so [give it a head
@@ -119,6 +125,7 @@ One import gets you everything: `package:text_sight/text_sight.dart`.
 | `TextSightCapture` and `RecognizedLine` | results: text, normalized box, confidence                    |
 | `TextSightModel`                        | Android model readiness, `ensureReady()` plus a stream       |
 | `RecognitionLevel`                      | `fast` or `accurate` (iOS)                                   |
+| `CaptureResolution`                     | how many pixels the camera feeds the recognizer              |
 | `CameraPermissionStatus`                | granted, denied, permanently denied                          |
 | `RecognizedElement`                     | reserved. Always `null` in v1, word-level results come later |
 

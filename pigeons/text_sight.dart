@@ -44,6 +44,9 @@ class TextSightOptionsMessage {
   RegionOfInterestMessage? roi;
 }
 
+/// Transport twin of the public `CaptureResolution`.
+enum CaptureResolutionMessage { low, medium, high }
+
 /// Transport twin of the public `CameraPermissionStatus`.
 enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
 
@@ -51,12 +54,13 @@ enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
 /// EventChannel and the preview is a texture. Neither rides this API.
 @HostApi()
 abstract class TextSightHostApi {
-  /// Opens the camera with [options]. Returns the preview texture id.
+  /// Opens the camera with [options] at [resolution]. Returns the preview texture id.
   ///
   /// Reopening an already-open session is fine: the old one is released first, so the id this
-  /// returns replaces the previous one. Recognition comes back off until [start].
+  /// returns replaces the previous one. Recognition comes back off until [start]. Resolution rides
+  /// here, not on the options, because it cannot change mid-session.
   @async
-  int initialize(TextSightOptionsMessage options);
+  int initialize(TextSightOptionsMessage options, CaptureResolutionMessage resolution);
 
   /// Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
   /// Dart signature is `Future<void>` either way.

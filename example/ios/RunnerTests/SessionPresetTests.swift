@@ -11,12 +11,21 @@ struct SessionPresetTests {
     let session = AVCaptureSession()
 
     #expect(session.canSetSessionPreset(.hd1920x1080))
-    #expect(TextSightCamera.preset(for: session) == .hd1920x1080)
+    #expect(TextSightCamera.preset(for: session, resolution: .medium) == .hd1920x1080)
+  }
+
+  @Test("Each rung asks for a different size")
+  func rungsDiffer() {
+    let session = AVCaptureSession()
+    let presets = [CaptureResolutionMessage.low, .medium, .high]
+      .map { TextSightCamera.preset(for: session, resolution: $0) }
+
+    #expect(Set(presets).count == presets.count)
   }
 
   @Test("Hardware without it falls back instead of failing")
   func fallsBack() {
-    #expect(TextSightCamera.preset(for: RefusingCaptureSession()) == .high)
+    #expect(TextSightCamera.preset(for: RefusingCaptureSession(), resolution: .medium) == .high)
   }
 }
 

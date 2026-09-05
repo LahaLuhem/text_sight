@@ -210,6 +210,19 @@ enum class RecognitionLevelMessage(val raw: Int) {
   }
 }
 
+/** Transport twin of the public `CaptureResolution`. */
+enum class CaptureResolutionMessage(val raw: Int) {
+  LOW(0),
+  MEDIUM(1),
+  HIGH(2);
+
+  companion object {
+    fun ofRaw(raw: Int): CaptureResolutionMessage? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 /** Transport twin of the public `CameraPermissionStatus`. */
 enum class CameraPermissionStatusMessage(val raw: Int) {
   GRANTED(0),
@@ -334,15 +347,20 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       130.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          CameraPermissionStatusMessage.ofRaw(it.toInt())
+          CaptureResolutionMessage.ofRaw(it.toInt())
         }
       }
       131.toByte() -> {
+        return (readValue(buffer) as Long?)?.let {
+          CameraPermissionStatusMessage.ofRaw(it.toInt())
+        }
+      }
+      132.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           RegionOfInterestMessage.fromList(it)
         }
       }
-      132.toByte() -> {
+      133.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           TextSightOptionsMessage.fromList(it)
         }
@@ -356,16 +374,20 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(129)
         writeValue(stream, value.raw.toLong())
       }
-      is CameraPermissionStatusMessage -> {
+      is CaptureResolutionMessage -> {
         stream.write(130)
         writeValue(stream, value.raw.toLong())
       }
-      is RegionOfInterestMessage -> {
+      is CameraPermissionStatusMessage -> {
         stream.write(131)
+        writeValue(stream, value.raw.toLong())
+      }
+      is RegionOfInterestMessage -> {
+        stream.write(132)
         writeValue(stream, value.toList())
       }
       is TextSightOptionsMessage -> {
-        stream.write(132)
+        stream.write(133)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -382,12 +404,13 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
  */
 interface TextSightHostApi {
   /**
-   * Opens the camera with [options]. Returns the preview texture id.
+   * Opens the camera with [options] at [resolution]. Returns the preview texture id.
    *
    * Reopening an already-open session is fine: the old one is released first, so the id this
-   * returns replaces the previous one. Recognition comes back off until [start].
+   * returns replaces the previous one. Recognition comes back off until [start]. Resolution rides
+   * here, not on the options, because it cannot change mid-session.
    */
-  suspend fun initialize(options: TextSightOptionsMessage): Long
+  suspend fun initialize(options: TextSightOptionsMessage, resolution: CaptureResolutionMessage): Long
   /**
    * Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
    * Dart signature is `Future<void>` either way.
@@ -434,9 +457,10 @@ interface TextSightHostApi {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
             val optionsArg = args[0] as TextSightOptionsMessage
+            val resolutionArg = args[1] as CaptureResolutionMessage
             CoroutineScope(Dispatchers.Main).launch {
               val wrapped: List<Any?> = try {
-                listOf(api.initialize(optionsArg))
+                listOf(api.initialize(optionsArg, resolutionArg))
               } catch (exception: Throwable) {
                 MessagesPigeonUtils.wrapError(exception)
               }

@@ -7,6 +7,7 @@
 library;
 
 export 'src/capture/camera_permission_status.dart';
+export 'src/capture/capture_resolution.dart';
 export 'src/capture/text_sight.dart';
 export 'src/capture/text_sight_controller.dart';
 export 'src/capture/text_sight_model.dart';

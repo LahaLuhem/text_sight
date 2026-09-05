@@ -150,9 +150,12 @@ void main() {
             level: ctx.example.val('level') as RecognitionLevel,
             languages: ctx.example.val('locales') as Iterable<Locale>,
           ),
+          CaptureResolution.high,
         );
 
-        final options = (call.payload! as List<Object?>).single! as TextSightOptionsMessage;
+        final arguments = call.payload! as List<Object?>;
+        final options = arguments.first! as TextSightOptionsMessage;
+        check(arguments[1]).equals(CaptureResolutionMessage.high);
         check(options.level).equals(ctx.example.val('twin') as RecognitionLevelMessage);
         check<Iterable<Object?>>(options.languages)
             .deepEquals(ctx.example.val('tags') as List<String>);

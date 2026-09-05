@@ -15,6 +15,7 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import com.lahaluhem.text_sight.CaptureResolutionMessage
 import com.lahaluhem.text_sight.FlutterError
 import com.lahaluhem.text_sight.await
 import io.flutter.view.TextureRegistry
@@ -51,6 +52,9 @@ internal class CameraSession(
     private var imageAnalysis: ImageAnalysis? = null
     private var camera: Camera? = null
     private var isRecognizing = false
+
+    // Kept because [bindUseCases] also runs from the surface callback, long after open() returned.
+    private var captureResolution = CaptureResolutionMessage.MEDIUM
     private var torchEnabled = false
 
     /**
@@ -87,12 +91,14 @@ internal class CameraSession(
     }
 
     /** Opens the camera and returns the preview texture id. Reopening an open session is fine. */
-    suspend fun open(): Long = withContext(mainDispatcher) {
+    suspend fun open(resolution: CaptureResolutionMessage): Long = withContext(mainDispatcher) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) !=
             PackageManager.PERMISSION_GRANTED
         ) {
             throw FlutterError("permission-denied", "Camera permission has not been granted.")
         }
+
+        captureResolution = resolution
 
         // Hot restart gets here with the camera still up: Dart lost the texture id, we didn't.
         // Nothing else ever releases a producer, so skipping this strands the old one for good.
@@ -176,7 +182,7 @@ internal class CameraSession(
         val analysis = ImageAnalysis.Builder()
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setTargetRotation(currentRotation())
-            .setResolutionSelector(analysisResolutionSelector())
+            .setResolutionSelector(analysisResolutionSelector(captureResolution))
             .build()
         imageAnalysis = analysis
 

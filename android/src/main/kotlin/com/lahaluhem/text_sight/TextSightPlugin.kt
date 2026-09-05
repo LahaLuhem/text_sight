@@ -52,10 +52,13 @@ class TextSightPlugin :
         permissions = null
     }
 
-    override suspend fun initialize(options: TextSightOptionsMessage): Long {
+    override suspend fun initialize(
+        options: TextSightOptionsMessage,
+        resolution: CaptureResolutionMessage,
+    ): Long {
         val activeCamera = camera ?: throw detachedError()
 
-        return engine.run { activeCamera.initialize(options) }
+        return engine.run { activeCamera.initialize(options, resolution) }
     }
 
     override fun start() {

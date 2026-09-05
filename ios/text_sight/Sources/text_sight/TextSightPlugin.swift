@@ -47,8 +47,9 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     camera.detach()
   }
 
-  func initialize(options: TextSightOptionsMessage) async throws -> Int64 {
-    try await camera.initialize(options: options)
+  func initialize(options: TextSightOptionsMessage,
+                  resolution: CaptureResolutionMessage) async throws -> Int64 {
+    try await camera.initialize(options: options, resolution: resolution)
   }
 
   func start() throws {

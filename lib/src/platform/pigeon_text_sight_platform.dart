@@ -3,6 +3,7 @@ import 'dart:ui' show Locale, Rect, Size;
 import 'package:flutter/services.dart';
 
 import '../capture/camera_permission_status.dart';
+import '../capture/capture_resolution.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/recognized_line.dart';
 import '../recognition/text_sight_capture.dart';
@@ -41,7 +42,8 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
       .map(_decodeReadiness);
 
   @override
-  Future<int> initialize(TextSightOptions options) => _hostApi.initialize(options._toMessage());
+  Future<int> initialize(TextSightOptions options, CaptureResolution resolution) =>
+      _hostApi.initialize(options._toMessage(), resolution._toMessage());
 
   @override
   Future<void> start() => _hostApi.start();
@@ -106,6 +108,14 @@ extension on RecognitionLevel {
   RecognitionLevelMessage _toMessage() => switch (this) {
     .fast => .fast,
     .accurate => .accurate,
+  };
+}
+
+extension on CaptureResolution {
+  CaptureResolutionMessage _toMessage() => switch (this) {
+    .low => .low,
+    .medium => .medium,
+    .high => .high,
   };
 }
 

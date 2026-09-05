@@ -14,6 +14,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.lahaluhem.text_sight.CaptureResolutionMessage
 import com.lahaluhem.text_sight.FlutterError
 import com.lahaluhem.text_sight.RegionOfInterestMessage
 import com.lahaluhem.text_sight.TextSightOptionsMessage
@@ -69,12 +70,15 @@ internal class TextSightCamera(
         eventSink = null
     }
 
-    suspend fun initialize(options: TextSightOptionsMessage): Long {
+    suspend fun initialize(
+        options: TextSightOptionsMessage,
+        resolution: CaptureResolutionMessage,
+    ): Long {
         // Recognition level and languages have no ML Kit Latin equivalent (see the
         // TextSightOptions docs). Only the region-of-interest is honoured here.
         regionOfInterest = options.roi
 
-        return session.open()
+        return session.open(resolution)
     }
 
     fun start() = session.startAnalysis()

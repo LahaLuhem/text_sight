@@ -2,6 +2,7 @@ package com.lahaluhem.text_sight.camera
 
 import android.Manifest
 import androidx.camera.core.ImageAnalysis
+import com.lahaluhem.text_sight.CaptureResolutionMessage
 import com.lahaluhem.text_sight.FlutterError
 import io.flutter.view.TextureRegistry
 import java.util.concurrent.Executor
@@ -37,7 +38,7 @@ class CameraSessionTest {
         val recording = RecordingDispatcher(StandardTestDispatcher(testScheduler))
 
         // Robolectric denies the camera permission, so open() fails fast. The dispatch is the point.
-        assertFailsWith<FlutterError> { newSession(recording).open() }
+        assertFailsWith<FlutterError> { newSession(recording).open(CaptureResolutionMessage.MEDIUM) }
 
         assertTrue(recording.dispatches > 0, "open() never went through mainDispatcher")
     }
@@ -45,7 +46,7 @@ class CameraSessionTest {
     @Test
     fun `open reports permission-denied when the camera permission is missing`() = runTest {
         val error = assertFailsWith<FlutterError> {
-            newSession(StandardTestDispatcher(testScheduler)).open()
+            newSession(StandardTestDispatcher(testScheduler)).open(CaptureResolutionMessage.MEDIUM)
         }
 
         assertEquals("permission-denied", error.code)
@@ -59,7 +60,7 @@ class CameraSessionTest {
 
         // CameraX cannot start under Robolectric, so open() always fails once past the producer.
         assertFailsWith<FlutterError> {
-            newSession(StandardTestDispatcher(testScheduler), registry).open()
+            newSession(StandardTestDispatcher(testScheduler), registry).open(CaptureResolutionMessage.MEDIUM)
         }
 
         verify(producer).release()
@@ -77,8 +78,8 @@ class CameraSessionTest {
         }
         val session = newSession(StandardTestDispatcher(testScheduler), registry)
 
-        assertFailsWith<FlutterError> { session.open() }
-        assertFailsWith<FlutterError> { session.open() }
+        assertFailsWith<FlutterError> { session.open(CaptureResolutionMessage.MEDIUM) }
+        assertFailsWith<FlutterError> { session.open(CaptureResolutionMessage.MEDIUM) }
 
         verify(registry, times(2)).createSurfaceProducer()
         verify(first).release()

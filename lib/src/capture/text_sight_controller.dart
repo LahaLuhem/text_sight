@@ -9,6 +9,7 @@ import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
 import 'camera_permission_status.dart';
+import 'capture_resolution.dart';
 
 /// Configures and drives a live camera recognition session.
 ///
@@ -25,17 +26,20 @@ final class TextSightController extends ChangeNotifier {
   var _isRunning = false;
   int? _textureId;
 
-  /// Creates a controller seeded from [options] (the shared recognizer config) and an initial torch state.
-  /// Nothing opens the camera until [start].
-  new({TextSightOptions options = const TextSightOptions(), bool torchEnabled = false})
-    : assert(
-        options.roi.isNormalizedRoi,
-        'Region-of-interest must be a normalized [0,1] rect with positive extent.',
-      ),
-      _level = options.level,
-      _languages = options.languages.toList(growable: false),
-      _roi = options.roi,
-      _isTorchEnabled = torchEnabled;
+  /// Creates a controller from [options], a [resolution] and an initial torch state. Nothing opens
+  /// the camera until [start]. [resolution] cannot change after, it rebuilds the capture graph.
+  new({
+    TextSightOptions options = const TextSightOptions(),
+    this.resolution = CaptureResolution.medium,
+    bool torchEnabled = false,
+  }) : assert(
+         options.roi.isNormalizedRoi,
+         'Region-of-interest must be a normalized [0,1] rect with positive extent.',
+       ),
+       _level = options.level,
+       _languages = options.languages.toList(growable: false),
+       _roi = options.roi,
+       _isTorchEnabled = torchEnabled;
 
   /// The current accuracy/latency level.
   RecognitionLevel get recognitionLevel => _level;
@@ -45,6 +49,9 @@ final class TextSightController extends ChangeNotifier {
 
   /// The current scan-box, or `null` when recognition spans the whole frame.
   Rect? get regionOfInterest => _roi;
+
+  /// Fixed for this controller's life.
+  final CaptureResolution resolution;
 
   /// Whether the torch is currently requested on.
   bool get isTorchEnabled => _isTorchEnabled;
@@ -66,7 +73,7 @@ final class TextSightController extends ChangeNotifier {
   /// Opens the camera if needed and begins recognition. Idempotent on the texture:
   /// a session acquired once is reused across stop/start.
   Future<void> start() async {
-    _textureId ??= await TextSightPlatform.instance.initialize(_options);
+    _textureId ??= await TextSightPlatform.instance.initialize(_options, resolution);
     await TextSightPlatform.instance.start();
     _isRunning = true;
     notifyListeners();
