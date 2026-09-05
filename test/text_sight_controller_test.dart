@@ -29,6 +29,23 @@ void main() {
       });
 
   Bdd(lifecycle)
+      .scenario('The chosen capture resolution reaches the platform')
+      .given('a controller built with <resolution>')
+      .when('it is started')
+      .then('the platform is opened at <resolution>')
+      .example(val('resolution', CaptureResolution.high))
+      .example(val('resolution', CaptureResolution.low))
+      .run((ctx) async {
+        final platform = _RecordingPlatform();
+        TextSightPlatform.instance = platform;
+        final resolution = ctx.example.val('resolution') as CaptureResolution;
+
+        await TextSightController(resolution: resolution).start();
+
+        check(platform.lastResolution).equals(resolution);
+      });
+
+  Bdd(lifecycle)
       .scenario('Disposing releases the native session even when start was never called')
       .given('a controller that was built but never started')
       .when('the controller is disposed')
@@ -49,13 +66,20 @@ final class _RecordingPlatform extends TextSightPlatform {
 
   final bool failsToInitialize;
   var disposeCalls = 0;
+  CaptureResolution? lastResolution;
 
   @override
-  Future<int> initialize(TextSightOptions options) async {
+  Future<int> initialize(TextSightOptions options, CaptureResolution resolution) async {
     if (failsToInitialize) throw StateError('no camera here');
+    lastResolution = resolution;
 
     return 7;
   }
+
+  @override
+  // No-op
+  // ignore: no-empty-block
+  Future<void> start() async {}
 
   @override
   Future<void> dispose() async => disposeCalls++;

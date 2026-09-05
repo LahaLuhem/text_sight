@@ -49,7 +49,7 @@ final class ControlSurfaceTests: XCTestCase {
                   "camera is authorized in this host")
 
     await assertThrowsPigeonError(code: "permission-denied") {
-      _ = try await self.makeCamera().initialize(options: self.options)
+      _ = try await self.makeCamera().initialize(options: self.options, resolution: .medium)
     }
   }
 

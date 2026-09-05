@@ -4,6 +4,7 @@ import 'dart:ui' show Locale, Rect;
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../capture/camera_permission_status.dart';
+import '../capture/capture_resolution.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
@@ -44,7 +45,7 @@ abstract class TextSightPlatform extends PlatformInterface {
   ///
   /// Reopening an already-open session is fine: the old one is released first, so the id this
   /// returns replaces the previous one.
-  Future<int> initialize(TextSightOptions options) =>
+  Future<int> initialize(TextSightOptions options, CaptureResolution resolution) =>
       throw UnimplementedError('initialize() has not been implemented.');
 
   /// Begins delivering frames to the recognizer and emitting on [captures].

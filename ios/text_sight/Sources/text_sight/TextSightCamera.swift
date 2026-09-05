@@ -72,6 +72,9 @@ final class TextSightCamera: NSObject {
 
   private var isRecognizing = false
 
+  /// Written at initialize, read on the session queue when the graph is built, so it takes the lock.
+  private var captureResolution: CaptureResolutionMessage = .medium
+
   /// Set when the engine detaches, so a control call that was already in flight cannot rebuild the
   /// session behind teardown's back.
   private var isDetached = false
@@ -97,12 +100,14 @@ final class TextSightCamera: NSObject {
 
   // MARK: Control channel (delegated from TextSightPlugin's TextSightHostApi conformance)
 
-  func initialize(options: TextSightOptionsMessage) async throws -> Int64 {
-    // One lock hold for all three, so a frame never snapshots a half-applied update.
+  func initialize(options: TextSightOptionsMessage,
+                  resolution: CaptureResolutionMessage) async throws -> Int64 {
+    // One lock hold for all four, so a frame never snapshots a half-applied update.
     stateLock.withLock {
       recognitionLevel = options.level
       recognitionLanguages = options.languages
       regionOfInterest = options.roi
+      captureResolution = resolution
     }
 
     guard AVCaptureDevice.authorizationStatus(for: .video) == .authorized else {
@@ -210,7 +215,8 @@ final class TextSightCamera: NSObject {
     // whole process: start/stopRunning then raise an ObjC exception, which Swift cannot catch.
     defer { session.commitConfiguration() }
 
-    session.sessionPreset = Self.preset(for: session)
+    session.sessionPreset = Self.preset(for: session,
+                                        resolution: stateLock.withLock { captureResolution })
 
     guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back)
     else { throw CameraError.noCaptureDevice }
@@ -234,10 +240,17 @@ final class TextSightCamera: NSObject {
     return (session, device)
   }
 
-  /// ~2 MP, matching what Android asks for. `.high` is whatever the device fancies, so it is only
-  /// the fallback. Internal so the tests can reach it.
-  static func preset(for session: AVCaptureSession) -> AVCaptureSession.Preset {
-    session.canSetSessionPreset(.hd1920x1080) ? .hd1920x1080 : .high
+  /// `.high` is whatever the device fancies, so it only covers a missing preset.
+  /// Internal for tests.
+  static func preset(for session: AVCaptureSession,
+                     resolution: CaptureResolutionMessage) -> AVCaptureSession.Preset {
+    let wanted: AVCaptureSession.Preset = switch resolution {
+    case .low: .vga640x480
+    case .medium: .hd1920x1080
+    case .high: .hd4K3840x2160
+    }
+
+    return session.canSetSessionPreset(wanted) ? wanted : .high
   }
 
   /// Picks the capture pixel format: the camera's own biplanar YUV where offered, else BGRA.
