@@ -2,6 +2,7 @@
 ### Fixed
 - \[#60\] never write a blank chart
 - \[#58\] Decide Vision's text-height floor instead of inheriting it
+- \[#61\] Decide the capture resolution instead of inheriting it
 
 ## [0.2.1] - 2026-09-04
 ### Added
