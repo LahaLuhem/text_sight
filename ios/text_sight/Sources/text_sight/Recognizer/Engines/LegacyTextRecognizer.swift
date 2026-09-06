@@ -4,6 +4,9 @@ import Vision
 /// one. Its `perform` is synchronous, so it gets its own serial queue and a continuation to bridge
 /// to `async`, keeping a slow read off Swift concurrency's shared threads.
 struct LegacyTextRecognizer: TextRecognizer {
+  /// This backend grades its confidences, unlike the modern one.
+  let confidenceScale = ConfidenceScaleMessage.visionGraded
+
   private let queue = DispatchQueue(label: "com.lahaluhem.text_sight.legacy-recognition")
 
   func recognize(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation,

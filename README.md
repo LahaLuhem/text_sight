@@ -123,6 +123,8 @@ One import gets you everything: `package:text_sight/text_sight.dart`.
 | `TextSight`                             | the static one-shot, on bytes or a file path                 |
 | `TextSightOptions`                      | region of interest, plus a `darwin` group of Vision-only knobs |
 | `TextSightCapture` and `RecognizedLine` | results: text, normalized box, confidence                    |
+| `TextSightEngine`                       | what this device's engine is like, e.g. `confidenceScale`    |
+| `ConfidenceScale`                       | what a confidence number means here, and whether it ranks    |
 | `TextSightModel`                        | Android model readiness, `ensureReady()` plus a stream       |
 | `DarwinOptions`                         | level, language correction, languages, text-height floor. iOS and macOS only |
 | `RecognitionLevel`                      | `fast` or `accurate`, inside `DarwinOptions`                 |

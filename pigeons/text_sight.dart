@@ -53,6 +53,9 @@ class TextSightOptionsMessage {
   RegionOfInterestMessage? roi;
 }
 
+/// Transport twin of the public `ConfidenceScale`.
+enum ConfidenceScaleMessage { visionGraded, visionCoarse, mlKit }
+
 /// Transport twin of the public `CaptureResolution`.
 enum CaptureResolutionMessage { low, medium, high }
 
@@ -98,6 +101,10 @@ abstract class TextSightHostApi {
 
   /// Turns the camera torch on or off.
   void setTorchEnabled(bool enabled);
+
+  /// What a per-line confidence means on this device. Fixed once the engine is picked, so the
+  /// Dart side reads it once and caches.
+  ConfidenceScaleMessage confidenceScale();
 
   // Readiness sits here because both drivers share the one model. Progress streams over
   // com.lahaluhem.text_sight/readiness, so this call only hands back the final state.

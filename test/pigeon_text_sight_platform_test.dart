@@ -89,6 +89,28 @@ void main() {
       });
 
   Bdd(control)
+      .scenario('The confidence scale is decoded, and read from the host only once')
+      .given('a host reporting the <twin> scale')
+      .when('confidenceScale is awaited twice')
+      .then('it decodes to <scale> and the host was asked once')
+      .example(
+        val('twin', ConfidenceScaleMessage.visionCoarse),
+        val('scale', ConfidenceScale.visionCoarse),
+      )
+      .example(val('twin', ConfidenceScaleMessage.mlKit), val('scale', ConfidenceScale.mlKit))
+      .run((ctx) async {
+        final platform = PigeonTextSightPlatform();
+        final call = _mockHostMethod(messenger, 'confidenceScale', reply: ctx.example.val('twin'));
+
+        final first = await platform.confidenceScale;
+        final second = await platform.confidenceScale;
+
+        check(first).equals(ctx.example.val('scale') as ConfidenceScale);
+        check(second).equals(first);
+        check(call.invocations).equals(1);
+      });
+
+  Bdd(control)
       .scenario('Torch state is forwarded to the host')
       .given('a platform talking to a mocked host')
       .when('updateTorchEnabled is called with <enabled>')
@@ -307,7 +329,7 @@ void main() {
         ),
         row(
           val('text', 'WORLD'),
-          val('confidence', null),
+          val('confidence', 0.42),
           val('left', 0.05),
           val('top', 0.6),
           val('width', 0.4),
@@ -344,7 +366,7 @@ void main() {
         for (final (index, expected) in lineRows.indexed) {
           final line = capture.lines[index];
           check(line.text).equals(expected.val('text') as String);
-          check(line.confidence).equals(expected.val('confidence') as double?);
+          check(line.confidence).equals(expected.val('confidence') as double);
           check(line.boundingBox).equals(
             Rect.fromLTWH(
               expected.val('left') as double,
@@ -628,6 +650,7 @@ TextSightOptionsMessage _sentOptions(_HostCall call) =>
 final class _HostCall {
   Object? payload;
   var invoked = false;
+  var invocations = 0;
 }
 
 /// Installs a mock handler for the Pigeon `@HostApi` [method], recording the
@@ -642,6 +665,7 @@ _HostCall _mockHostMethod(TestDefaultBinaryMessenger messenger, String method, {
   messenger.setMockDecodedMessageHandler<Object?>(channel, (message) {
     call
       ..invoked = true
+      ..invocations += 1
       ..payload = message;
 
     return Future<Object?>.syncValue(<Object?>[reply]);

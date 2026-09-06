@@ -4,6 +4,9 @@ import Vision
 /// API, iOS 18+). Mirrors `RecognizedTextObservation`s into the neutral `RecognizedLineData`.
 @available(iOS 18, *)
 struct ModernTextRecognizer: TextRecognizer {
+  /// This backend hands back coarse values, frequently exactly 1.0.
+  let confidenceScale = ConfidenceScaleMessage.visionCoarse
+
   func recognize(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation,
                  config: RecognitionConfig) async throws -> [RecognizedLineData] {
     let observations = try await Self.makeRequest(config: config)

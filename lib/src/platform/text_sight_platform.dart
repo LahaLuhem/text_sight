@@ -4,6 +4,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../capture/camera_permission_status.dart';
 import '../capture/capture_resolution.dart';
+import '../recognition/confidence_scale.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
 import '../recognition/text_sight_readiness_state.dart';
@@ -67,6 +68,10 @@ abstract class TextSightPlatform extends PlatformInterface {
   /// Replaces the recognizer settings on an open session.
   Future<void> updateOptions(TextSightOptions options) =>
       throw UnimplementedError('updateOptions() has not been implemented.');
+
+  /// What a recognized line's confidence means on this device's engine.
+  Future<ConfidenceScale> get confidenceScale =>
+      throw UnimplementedError('confidenceScale has not been implemented.');
 
   /// Turns the camera torch on or off when the device has one.
   Future<void> updateTorchEnabled({required bool enabled}) =>

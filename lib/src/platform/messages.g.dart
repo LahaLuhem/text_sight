@@ -98,6 +98,9 @@ int _deepHash(Object? value) {
 /// Transport twin of the public `RecognitionLevel`.
 enum RecognitionLevelMessage { fast, accurate }
 
+/// Transport twin of the public `ConfidenceScale`.
+enum ConfidenceScaleMessage { visionGraded, visionCoarse, mlKit }
+
 /// Transport twin of the public `CaptureResolution`.
 enum CaptureResolutionMessage { low, medium, high }
 
@@ -242,17 +245,20 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is RecognitionLevelMessage) {
       buffer.putUint8(129);
       writeValue(buffer, value.index);
-    } else if (value is CaptureResolutionMessage) {
+    } else if (value is ConfidenceScaleMessage) {
       buffer.putUint8(130);
       writeValue(buffer, value.index);
-    } else if (value is CameraPermissionStatusMessage) {
+    } else if (value is CaptureResolutionMessage) {
       buffer.putUint8(131);
       writeValue(buffer, value.index);
-    } else if (value is RegionOfInterestMessage) {
+    } else if (value is CameraPermissionStatusMessage) {
       buffer.putUint8(132);
+      writeValue(buffer, value.index);
+    } else if (value is RegionOfInterestMessage) {
+      buffer.putUint8(133);
       writeValue(buffer, value.encode());
     } else if (value is TextSightOptionsMessage) {
-      buffer.putUint8(133);
+      buffer.putUint8(134);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -267,13 +273,16 @@ class _PigeonCodec extends StandardMessageCodec {
         return value == null ? null : RecognitionLevelMessage.values[value];
       case 130:
         final value = readValue(buffer) as int?;
-        return value == null ? null : CaptureResolutionMessage.values[value];
+        return value == null ? null : ConfidenceScaleMessage.values[value];
       case 131:
         final value = readValue(buffer) as int?;
-        return value == null ? null : CameraPermissionStatusMessage.values[value];
+        return value == null ? null : CaptureResolutionMessage.values[value];
       case 132:
-        return RegionOfInterestMessage.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : CameraPermissionStatusMessage.values[value];
       case 133:
+        return RegionOfInterestMessage.decode(readValue(buffer)!);
+      case 134:
         return TextSightOptionsMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
@@ -443,6 +452,27 @@ class TextSightHostApi {
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
+  }
+
+  /// What a per-line confidence means on this device. Fixed once the engine is picked, so the
+  /// Dart side reads it once and caches.
+  Future<ConfidenceScaleMessage> confidenceScale() async {
+    final pigeonVar_channelName =
+        'dev.flutter.pigeon.text_sight.TextSightHostApi.confidenceScale$pigeonVar_messageChannelSuffix';
+    final pigeonVar_channel = BasicMessageChannel<Object?>(
+      pigeonVar_channelName,
+      pigeonChannelCodec,
+      binaryMessenger: pigeonVar_binaryMessenger,
+    );
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(null);
+    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
+
+    final Object? pigeonVar_replyValue = _extractReplyValueOrThrow(
+      pigeonVar_replyList,
+      pigeonVar_channelName,
+      isNullValid: false,
+    );
+    return pigeonVar_replyValue! as ConfidenceScaleMessage;
   }
 
   /// Ensures the recognition model is present (fetching the unbundled ML Kit model via

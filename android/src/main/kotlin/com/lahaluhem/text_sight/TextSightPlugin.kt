@@ -95,6 +95,8 @@ class TextSightPlugin :
         camera?.setOptions(options)
     }
 
+    override fun confidenceScale(): ConfidenceScaleMessage = ConfidenceScaleMessage.ML_KIT
+
     override fun setTorchEnabled(enabled: Boolean) {
         camera?.setTorchEnabled(enabled)
     }

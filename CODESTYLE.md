@@ -50,9 +50,9 @@ own, so the conventions below are applied by hand, the way the [DCM rules](#dcm-
   the body).
 - **Nullability is explicit.** Use `T?` everywhere a value can be missing.
   `cast_nullable_to_non_nullable` is on, so `as T` on a `T?` will fail lint. This matters
-  for the result models: `RecognizedLine.confidence` is nullable by contract (Vision
-  supplies it, ML Kit does not expose a per-line equivalent), so the type carries the
-  "may be absent" fact. Don't paper over it with a cast or a sentinel.
+  Equally, don't declare `T?` for a state that cannot occur: `RecognizedLine.confidence` was
+  `double?` while both engines always supplied one, and the nullability only ever taught consumers
+  the `?? 1` idiom that turns "unknown" into "perfect".
 - **Constrain generic type parameters to `<T extends Object>` by default.** Unbounded
   `<T>` lets `null` and `dynamic` satisfy `T`, the same failure modes the explicit-
   nullability rule and the [`dynamic`-escape-hatch ban](./.ai/AGENTS.md#hard-rules)
@@ -501,7 +501,7 @@ Prefer the `dart:core` `Iterable` / `Set` / `Map` methods (`where`, `whereType<T
 ```dart
 // Prefer: states the intent directly:
 final highConfidenceText = capture.lines
-        .where((line) => (line.confidence ?? 1) >= minConfidence)
+        .where((line) => line.confidence >= minConfidence)
         .map((line) => line.text)
         .join('\n');
 ```
@@ -566,9 +566,15 @@ list anyway. Make the constructor `const`, assign fields directly, and keep leaf
 
 Not a smell on its own. Legitimate uses: sealed-class cases across files (Dart 3
 requires the same library for sealed subtypes), and code-generation outputs. Here, the
-Pigeon-generated `messages.g.dart`. Avoid `part`/`part of` for general code
-organisation, since imports/exports are explicit, parts hide dependencies and leak
-`_private` symbols across files within the library.
+Pigeon-generated `messages.g.dart` and the `copy_with_extension_gen` `copyWith`s. Avoid
+`part`/`part of` for general code organisation, since imports/exports are explicit, parts
+hide dependencies and leak `_private` symbols across files within the library.
+
+**`copyWith` is generated, never hand-written.** Annotate the value type with `@CopyWith()` and let
+the builder derive it from the fields. A hand-rolled one compiles perfectly well while missing a
+field added later, and no test can catch a field that nobody remembered to write down. Generating it
+makes that drift impossible rather than merely detectable, and CI's `codegen-freshness` job fails if
+the committed output has fallen behind.
 
 ---
 

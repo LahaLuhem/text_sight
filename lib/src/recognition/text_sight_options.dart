@@ -10,7 +10,7 @@ import 'darwin_options.dart';
 ///
 /// Two fields, so rebuilding one is a line. There is no `copyWith` here on purpose: clearing [roi]
 /// would need a sentinel, and `TextSightOptions(darwin: options.darwin)` already says it plainly.
-/// [DarwinOptions.copyWith] is where it earns its keep.
+/// [DarwinOptions] has the generated `copyWith`, where it earns its keep.
 final class TextSightOptions {
   /// The scan-box recognition is restricted to: a normalized `[0, 1]`, top-left `Rect`, or `null`
   /// for the whole frame.

@@ -43,7 +43,6 @@ abstract final class Payloads {
 
   // Uniform draw ranges (min + span) for the normalized box values. Changing any of these
   // reshapes the payloads, so re-capture baselines afterwards.
-  static const _confidenceChance = 0.9;
   static const _minConfidence = 0.5;
   static const _confidenceSpan = 0.5;
   static const _maxLeftFraction = 0.9;
@@ -90,9 +89,7 @@ abstract final class Payloads {
       lineCount,
       (_) => BenchLine(
         text: _text(rng, minTextLen + rng.nextInt(textSpan)),
-        confidence: rng.nextDouble() >= _confidenceChance
-            ? null
-            : rng.nextDouble() * _confidenceSpan + _minConfidence,
+        confidence: rng.nextDouble() * _confidenceSpan + _minConfidence,
         left: rng.nextDouble() * _maxLeftFraction,
         top: rng.nextDouble() * _maxTopFraction,
         width: rng.nextDouble() * _widthSpanFraction + _minWidthFraction,

@@ -79,7 +79,7 @@ final class MapStdCodec implements CaptureCodec {
 
   BenchLine _decodeLine(Map<Object?, Object?> map) => BenchLine(
     text: map['text']! as String,
-    confidence: (map['confidence'] as num?)?.toDouble(),
+    confidence: (map['confidence']! as num).toDouble(),
     left: (map['left']! as num).toDouble(),
     top: (map['top']! as num).toDouble(),
     width: (map['width']! as num).toDouble(),
@@ -127,7 +127,7 @@ final class ListStdCodec implements CaptureCodec {
 
   BenchLine _decodeLine(List<Object?> fields) => BenchLine(
     text: fields[0]! as String,
-    confidence: (fields[1] as num?)?.toDouble(),
+    confidence: (fields[1]! as num).toDouble(),
     left: (fields[2]! as num).toDouble(),
     top: (fields[3]! as num).toDouble(),
     width: (fields[4]! as num).toDouble(),
@@ -197,7 +197,7 @@ final class _PigeonCodec extends StandardMessageCodec {
 
           return BenchLine(
             text: fields[0]! as String,
-            confidence: (fields[1] as num?)?.toDouble(),
+            confidence: (fields[1]! as num).toDouble(),
             left: (fields[2]! as num).toDouble(),
             top: (fields[3]! as num).toDouble(),
             width: (fields[4]! as num).toDouble(),
@@ -247,7 +247,7 @@ final class PackedCodec implements CaptureCodec {
       _putFloat(out, line.top);
       _putFloat(out, line.width);
       _putFloat(out, line.height);
-      _putFloat(out, line.confidence ?? double.nan);
+      _putFloat(out, line.confidence);
       final textBytes = utf8.encode(line.text);
       _putUint32(out, textBytes.length);
       out.add(textBytes);
@@ -284,7 +284,7 @@ final class PackedCodec implements CaptureCodec {
 
     return BenchLine(
       text: text,
-      confidence: confidence.isNaN ? null : confidence,
+      confidence: confidence,
       left: left,
       top: top,
       width: width,

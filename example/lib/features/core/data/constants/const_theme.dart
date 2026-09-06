@@ -10,7 +10,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 /// (`defaultTargetPlatform`, the same dispatch as `context.platformIcon`) and then run
 /// through [CupertinoDynamicColor.resolve] so the iOS system colours follow light/dark
 /// mode. Recognized lines are tinted by confidence: [green] high, [orange] medium,
-/// [red] low, [blueGrey] when the engine supplies none.
+/// [red] low.
 abstract final class ConstTheme {
   /// Alpha for a confidence-tinted chip fill.
   static const confidenceFillAlpha = 0.15;
@@ -21,10 +21,8 @@ abstract final class ConstTheme {
   /// Confidence at or above which a line is treated as medium (orange). Below is low (red).
   static const mediumConfidence = 0.5;
 
-  /// The tier colour for a line [value] in `[0, 1]`: [green] high, [orange] medium,
-  /// [red] low, [blueGrey] when the engine supplied none (`null`).
-  static Color confidence(BuildContext context, double? value) => switch (value) {
-    null => blueGrey(context),
+  /// The tier colour for a line [value] in `[0, 1]`: [green] high, [orange] medium, [red] low.
+  static Color confidence(BuildContext context, double value) => switch (value) {
     final v when v >= highConfidence => green(context),
     final v when v >= mediumConfidence => orange(context),
     _ => red(context),
@@ -41,11 +39,6 @@ abstract final class ConstTheme {
   /// Low confidence: [Colors.red] / [CupertinoColors.systemRed].
   static Color red(BuildContext context) =>
       _resolve(context, material: Colors.red, cupertino: CupertinoColors.systemRed);
-
-  /// Unknown confidence (the engine supplied none): [Colors.blueGrey] /
-  /// [CupertinoColors.systemGrey].
-  static Color blueGrey(BuildContext context) =>
-      _resolve(context, material: Colors.blueGrey, cupertino: CupertinoColors.systemGrey);
 
   static Color _resolve(
     BuildContext context, {

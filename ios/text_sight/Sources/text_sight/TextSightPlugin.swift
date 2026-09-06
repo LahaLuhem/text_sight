@@ -71,6 +71,10 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     camera.setOptions(options: options)
   }
 
+  func confidenceScale() throws -> ConfidenceScaleMessage {
+    camera.confidenceScale
+  }
+
   func setTorchEnabled(enabled: Bool) throws {
     camera.setTorchEnabled(enabled: enabled)
   }
