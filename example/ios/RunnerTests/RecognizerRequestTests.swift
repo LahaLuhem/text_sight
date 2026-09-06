@@ -161,6 +161,19 @@ struct RecognizerRequestTests {
     #expect(request.minimumTextHeight == Self.textHeightFloor / Float(Self.roi.height))
   }
 
+  // Vision's two backends grade confidence differently, and this is what the Dart side reports
+  // through `TextSightEngine.confidenceScale`.
+  @available(iOS 18, *)
+  @Test("Modern: reports a coarse confidence scale")
+  func modernConfidenceScale() {
+    #expect(ModernTextRecognizer().confidenceScale == .visionCoarse)
+  }
+
+  @Test("Legacy: reports a graded confidence scale")
+  func legacyConfidenceScale() {
+    #expect(LegacyTextRecognizer().confidenceScale == .visionGraded)
+  }
+
   @available(iOS 18, *)
   @Test("Modern: a bare config still leaves nothing to Vision")
   func modernFillsEveryKnob() {

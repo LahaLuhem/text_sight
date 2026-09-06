@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../capture/camera_permission_status.dart';
 import '../capture/capture_resolution.dart';
+import '../recognition/confidence_scale.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/recognized_line.dart';
 import '../recognition/text_sight_capture.dart';
@@ -63,6 +64,14 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
   @override
   Future<void> updateTorchEnabled({required bool enabled}) => _hostApi.setTorchEnabled(enabled);
 
+  /// Read once and cached: the engine is chosen at plugin registration and never changes.
+  late final Future<ConfidenceScale> _confidenceScale = _hostApi.confidenceScale().then(
+    (message) => message._toPublic(),
+  );
+
+  @override
+  Future<ConfidenceScale> get confidenceScale => _confidenceScale;
+
   @override
   Stream<TextSightCapture> get captures => _captures;
 
@@ -108,6 +117,14 @@ extension on CaptureResolution {
   };
 }
 
+extension on ConfidenceScaleMessage {
+  ConfidenceScale _toPublic() => switch (this) {
+    .visionGraded => .visionGraded,
+    .visionCoarse => .visionCoarse,
+    .mlKit => .mlKit,
+  };
+}
+
 /// Maps the Pigeon permission-status twin back to the public enum.
 extension on CameraPermissionStatusMessage {
   CameraPermissionStatus _toPublic() => switch (this) {
@@ -147,7 +164,6 @@ TextSightCapture _decodeCapture(Object? event) {
 /// (reserved: the wire carries the slot for a future additive change).
 RecognizedLine _decodeLine(Object? rawLine) {
   final lineMap = rawLine! as Map<Object?, Object?>;
-  final confidenceValue = lineMap['confidence'];
 
   return RecognizedLine(
     text: lineMap['text']! as String,
@@ -157,7 +173,7 @@ RecognizedLine _decodeLine(Object? rawLine) {
       (lineMap['width']! as num).toDouble(),
       (lineMap['height']! as num).toDouble(),
     ),
-    confidence: (confidenceValue as num?)?.toDouble(),
+    confidence: (lineMap['confidence']! as num).toDouble(),
   );
 }
 

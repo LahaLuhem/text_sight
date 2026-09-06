@@ -75,9 +75,9 @@ class AboutView extends StatelessWidget {
               ),
               title: 'Confidence, with a caveat',
               body:
-                  'Both engines report a per-line confidence, but the scales are not comparable '
-                  'across platforms. A null confidence means the engine supplied none, not low '
-                  'confidence.',
+                  'Both engines report a per-line confidence, but the numbers only mean something '
+                  'next to others from the same engine. Ask TextSightEngine.confidenceScale what '
+                  'you are holding before you rank or threshold.',
             ),
             const Gap(12),
             _NuanceCard(

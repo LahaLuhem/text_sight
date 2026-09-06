@@ -47,6 +47,8 @@ final class StubTextureRegistry: NSObject, FlutterTextureRegistry {
 /// Never finishes on its own: it parks until its task is cancelled. Lets a test hold a recognition
 /// in flight and watch what teardown does to it.
 final class ParkedRecognizer: TextRecognizer, @unchecked Sendable {
+  let confidenceScale = ConfidenceScaleMessage.visionGraded
+
   let started = XCTestExpectation(description: "the first frame reached the recognizer")
   let cancelled = XCTestExpectation(description: "the parked recognition was cancelled")
   /// Inverted, so waiting on it asserts that no second frame ever got through the gate.
@@ -94,6 +96,8 @@ final class ParkedRecognizer: TextRecognizer, @unchecked Sendable {
 
 /// Takes a fixed time and timestamps every entry, so a test can read the gap between them.
 final class TimedRecognizer: TextRecognizer, @unchecked Sendable {
+  let confidenceScale = ConfidenceScaleMessage.visionGraded
+
   private let latencyNanos: UInt64
   private let lock = NSLock()
   private var startNanos: [UInt64] = []

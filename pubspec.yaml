@@ -36,6 +36,7 @@ dependencies:
     sdk: flutter
   plugin_platform_interface: ^2.1.8
   meta: ^1.18.0
+  copy_with_extension: ^17.1.0
 
 
 
@@ -43,9 +44,15 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # Generators
+  build_runner: ^2.16.1
+  copy_with_extension_gen: ^17.1.0
+  pigeon: ^28.0.0
+
+  # Testing
   bdd_framework: ^4.0.7
   benchmark_harness: ^2.4.0
-  pigeon: ^28.0.0
   checks: ^0.3.1
   standard_message_codec: ^0.0.1+5
 

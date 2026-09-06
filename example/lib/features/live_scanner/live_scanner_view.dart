@@ -168,7 +168,7 @@ class _RecognizedTextPanel extends StatelessWidget {
 /// Strokes each recognized line's normalized box, tinted by its confidence tier.
 class _ConfidenceBoxPainter extends CustomPainter {
   final List<RecognizedLine> lines;
-  final Color Function(double? confidence) colorFor;
+  final Color Function(double confidence) colorFor;
 
   new(this.lines, this.colorFor);
 

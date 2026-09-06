@@ -37,7 +37,7 @@ final class BenchLine {
   final String text;
 
   /// `null` when the platform supplies none.
-  final double? confidence;
+  final double confidence;
 
   final double left;
   final double top;

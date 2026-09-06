@@ -210,6 +210,19 @@ enum class RecognitionLevelMessage(val raw: Int) {
   }
 }
 
+/** Transport twin of the public `ConfidenceScale`. */
+enum class ConfidenceScaleMessage(val raw: Int) {
+  VISION_GRADED(0),
+  VISION_COARSE(1),
+  ML_KIT(2);
+
+  companion object {
+    fun ofRaw(raw: Int): ConfidenceScaleMessage? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 /** Transport twin of the public `CaptureResolution`. */
 enum class CaptureResolutionMessage(val raw: Int) {
   LOW(0),
@@ -360,20 +373,25 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       130.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          CaptureResolutionMessage.ofRaw(it.toInt())
+          ConfidenceScaleMessage.ofRaw(it.toInt())
         }
       }
       131.toByte() -> {
         return (readValue(buffer) as Long?)?.let {
-          CameraPermissionStatusMessage.ofRaw(it.toInt())
+          CaptureResolutionMessage.ofRaw(it.toInt())
         }
       }
       132.toByte() -> {
+        return (readValue(buffer) as Long?)?.let {
+          CameraPermissionStatusMessage.ofRaw(it.toInt())
+        }
+      }
+      133.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           RegionOfInterestMessage.fromList(it)
         }
       }
-      133.toByte() -> {
+      134.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
           TextSightOptionsMessage.fromList(it)
         }
@@ -387,20 +405,24 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(129)
         writeValue(stream, value.raw.toLong())
       }
-      is CaptureResolutionMessage -> {
+      is ConfidenceScaleMessage -> {
         stream.write(130)
         writeValue(stream, value.raw.toLong())
       }
-      is CameraPermissionStatusMessage -> {
+      is CaptureResolutionMessage -> {
         stream.write(131)
         writeValue(stream, value.raw.toLong())
       }
-      is RegionOfInterestMessage -> {
+      is CameraPermissionStatusMessage -> {
         stream.write(132)
+        writeValue(stream, value.raw.toLong())
+      }
+      is RegionOfInterestMessage -> {
+        stream.write(133)
         writeValue(stream, value.toList())
       }
       is TextSightOptionsMessage -> {
-        stream.write(133)
+        stream.write(134)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -444,6 +466,11 @@ interface TextSightHostApi {
   fun setOptions(options: TextSightOptionsMessage)
   /** Turns the camera torch on or off. */
   fun setTorchEnabled(enabled: Boolean)
+  /**
+   * What a per-line confidence means on this device. Fixed once the engine is picked, so the
+   * Dart side reads it once and caches.
+   */
+  fun confidenceScale(): ConfidenceScaleMessage
   /**
    * Ensures the recognition model is present (fetching the unbundled ML Kit model via
    * Google Play Services when needed) and returns the terminal readiness state.
@@ -592,6 +619,21 @@ interface TextSightHostApi {
             val wrapped: List<Any?> = try {
               api.setTorchEnabled(enabledArg)
               listOf(null)
+            } catch (exception: Throwable) {
+              MessagesPigeonUtils.wrapError(exception)
+            }
+            reply.reply(wrapped)
+          }
+        } else {
+          channel.setMessageHandler(null)
+        }
+      }
+      run {
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.confidenceScale$separatedMessageChannelSuffix", codec)
+        if (api != null) {
+          channel.setMessageHandler { _, reply ->
+            val wrapped: List<Any?> = try {
+              listOf(api.confidenceScale())
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)
             }

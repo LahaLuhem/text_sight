@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../platform/text_sight_platform.dart';
+import '../recognition/darwin_options.dart';
 import '../recognition/normalized_roi.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';

@@ -3,7 +3,11 @@ library;
 
 import 'dart:ui' show Locale;
 
+import 'package:copy_with_extension/copy_with_extension.dart';
+
 import 'recognition_level.dart';
+
+part 'darwin_options.g.dart';
 
 /// Recognizer settings that only Apple Vision has, so iOS and macOS honour them and Android does
 /// nothing with them.
@@ -11,6 +15,9 @@ import 'recognition_level.dart';
 /// Grouped rather than prefixed one by one, so the platform is stated once and a new Vision knob is
 /// a field here instead of a change to [TextSightOptions]. ML Kit's Latin recognizer exposes none of
 /// these, and its own knobs (picking a script bundle) will land in a sibling group.
+///
+/// `copyWith` is generated from the fields, so adding one cannot leave the copy behind.
+@CopyWith()
 final class DarwinOptions {
   /// The accuracy/latency trade-off. The one-shot raises it to [RecognitionLevel.accurate], having
   /// no per-frame budget to protect.
@@ -43,19 +50,6 @@ final class DarwinOptions {
     this.preferredLanguages = const [.fromSubtags(languageCode: 'en', countryCode: 'US')],
     this.minimumTextHeight = 0,
   });
-
-  /// A copy with the named fields replaced. Omitted fields keep their current value.
-  DarwinOptions copyWith({
-    RecognitionLevel? recognitionLevel,
-    bool? usesLanguageCorrection,
-    Iterable<Locale>? preferredLanguages,
-    double? minimumTextHeight,
-  }) => DarwinOptions(
-    recognitionLevel: recognitionLevel ?? this.recognitionLevel,
-    usesLanguageCorrection: usesLanguageCorrection ?? this.usesLanguageCorrection,
-    preferredLanguages: preferredLanguages ?? this.preferredLanguages,
-    minimumTextHeight: minimumTextHeight ?? this.minimumTextHeight,
-  );
 
   @override
   String toString() =>

@@ -144,6 +144,9 @@ final class TextSightCamera: NSObject {
     sessionQueue.async { self.releaseSession() }
   }
 
+  /// Delegated to the backend, so the factory's `#available` stays the only version gate.
+  var confidenceScale: ConfidenceScaleMessage { recognizer.confidenceScale }
+
   func setOptions(options: TextSightOptionsMessage) {
     stateLock.withLock { applyLocked(options) }
   }

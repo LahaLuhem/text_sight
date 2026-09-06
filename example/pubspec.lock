@@ -161,6 +161,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.2"
+  copy_with_extension:
+    dependency: transitive
+    description:
+      name: copy_with_extension
+      sha256: e4fcee1392f7413aa252e408474cf4b3a70ee88cc378600c81f66a422f19814d
+      url: "https://pub.dev"
+    source: hosted
+    version: "17.1.0"
   crypto:
     dependency: transitive
     description:

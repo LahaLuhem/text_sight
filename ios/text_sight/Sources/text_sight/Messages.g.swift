@@ -190,6 +190,13 @@ enum RecognitionLevelMessage: Int, CaseIterable {
   case accurate = 1
 }
 
+/// Transport twin of the public `ConfidenceScale`.
+enum ConfidenceScaleMessage: Int, CaseIterable {
+  case visionGraded = 0
+  case visionCoarse = 1
+  case mlKit = 2
+}
+
 /// Transport twin of the public `CaptureResolution`.
 enum CaptureResolutionMessage: Int, CaseIterable {
   case low = 0
@@ -328,18 +335,24 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
     case 130:
       let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
       if let enumResultAsInt = enumResultAsInt {
-        return CaptureResolutionMessage(rawValue: enumResultAsInt)
+        return ConfidenceScaleMessage(rawValue: enumResultAsInt)
       }
       return nil
     case 131:
       let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
       if let enumResultAsInt = enumResultAsInt {
-        return CameraPermissionStatusMessage(rawValue: enumResultAsInt)
+        return CaptureResolutionMessage(rawValue: enumResultAsInt)
       }
       return nil
     case 132:
-      return RegionOfInterestMessage.fromList(self.readValue() as! [Any?])
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return CameraPermissionStatusMessage(rawValue: enumResultAsInt)
+      }
+      return nil
     case 133:
+      return RegionOfInterestMessage.fromList(self.readValue() as! [Any?])
+    case 134:
       return TextSightOptionsMessage.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
@@ -352,17 +365,20 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     if let value = value as? RecognitionLevelMessage {
       super.writeByte(129)
       super.writeValue(value.rawValue)
-    } else if let value = value as? CaptureResolutionMessage {
+    } else if let value = value as? ConfidenceScaleMessage {
       super.writeByte(130)
       super.writeValue(value.rawValue)
-    } else if let value = value as? CameraPermissionStatusMessage {
+    } else if let value = value as? CaptureResolutionMessage {
       super.writeByte(131)
       super.writeValue(value.rawValue)
-    } else if let value = value as? RegionOfInterestMessage {
+    } else if let value = value as? CameraPermissionStatusMessage {
       super.writeByte(132)
+      super.writeValue(value.rawValue)
+    } else if let value = value as? RegionOfInterestMessage {
+      super.writeByte(133)
       super.writeValue(value.toList())
     } else if let value = value as? TextSightOptionsMessage {
-      super.writeByte(133)
+      super.writeByte(134)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -412,6 +428,9 @@ protocol TextSightHostApi {
   func setOptions(options: TextSightOptionsMessage) throws
   /// Turns the camera torch on or off.
   func setTorchEnabled(enabled: Bool) throws
+  /// What a per-line confidence means on this device. Fixed once the engine is picked, so the
+  /// Dart side reads it once and caches.
+  func confidenceScale() throws -> ConfidenceScaleMessage
   /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
   /// Google Play Services when needed) and returns the terminal readiness state.
   func ensureModelReady() async throws -> [String: Any?]
@@ -557,6 +576,21 @@ class TextSightHostApiSetup {
       }
     } else {
       setTorchEnabledChannel.setMessageHandler(nil)
+    }
+    /// What a per-line confidence means on this device. Fixed once the engine is picked, so the
+    /// Dart side reads it once and caches.
+    let confidenceScaleChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.confidenceScale\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    if let api = api {
+      confidenceScaleChannel.setMessageHandler { _, reply in
+        do {
+          let result = try api.confidenceScale()
+          reply(wrapResult(result))
+        } catch {
+          reply(wrapError(error))
+        }
+      }
+    } else {
+      confidenceScaleChannel.setMessageHandler(nil)
     }
     /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
     /// Google Play Services when needed) and returns the terminal readiness state.

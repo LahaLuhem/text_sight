@@ -242,9 +242,9 @@ cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
 `imageHeight` (doubles, pixels post-rotation), `quarterTurns` (int, clockwise quarter-turns to
 rotate the raw preview texture to display-upright, per [#coordinate-normalization](#coordinate-normalization)),
 plus `lines`, a `List` of per-line maps:
-`text` (String), `confidence` (double or null), `left` / `top` / `width` / `height` (the box,
+`text` (String), `confidence` (double), `left` / `top` / `width` / `height` (the box,
 normalized `[0,1]` top-left per [#coordinate-normalization](#coordinate-normalization)), and
-`elements` (null in v1, reserved). `confidence` is null when the platform supplies none (ML Kit).
+`elements` (null in v1, reserved).
 `elements` rides the wire as a reserved slot so populating it later is additive. The Dart side
 decodes this in `PigeonTextSightPlatform`, and **each native side must emit exactly this shape.**
 Map-based, not positional, so adding a key is non-breaking and frames stay legible in logs.
@@ -255,6 +255,22 @@ consumers and CI need no codegen step) and regenerated from the schema, never pa
 `dart run pigeon --input pigeons/text_sight.dart` then
 `dart format lib/src/platform/messages.g.dart`, because Pigeon emits ~80-column Dart while the
 project's formatter gate (`page_width: 100`, applied tree-wide) would otherwise flag the output.
+
+**`copyWith` is generated too, and that is why one runtime dependency was accepted.** A
+hand-written `copyWith` compiles fine while silently missing a field added later, and no test can
+catch a field nobody wrote down anywhere. `copy_with_extension_gen` derives it from the fields, so
+the drift cannot happen rather than merely being detectable. The generator and `build_runner` are
+dev-only; the `copy_with_extension` annotation is a **runtime** dependency because the annotated
+source ships to consumers. Its own dependency list is just `meta`, which this package already
+declared, so the consumer-visible closure grows by exactly one package. A pure-Dart alternative was
+tried first and rejected: an all-required private constructor makes the drift a compile error, but
+declaring one needs `const DarwinOptions._(...)`, which `unnecessary_type_name_in_constructor`
+(enabled here, and fatal under CI's `--fatal-infos`) rejects, while the `._(...)` form the lint asks
+for does not parse on Dart 3.13. It would have cost a permanent lint suppression.
+
+**CI regenerates and diffs.** The `codegen-freshness` job runs both generators and asserts
+`git status --porcelain` is empty. `--porcelain` rather than `git diff`, so a generator emitting a
+brand-new untracked file counts as stale too.
 The `dart format` pass is deterministic and mechanical, not a hand-edit, so it does not breach the
 never-patch rule, and a freshness check (regenerate-and-diff) must run the same format step before
 comparing. The bounding-box geometry these channels carry is specified in
@@ -589,15 +605,17 @@ seam shows in the tree. Each public type gets its own file (per
 
 - **`RecognizedLine.confidence` is `double?`, range `[0,1]`.** Both engines supply a per-line
   confidence: Apple Vision, and (re-verified for the pinned `play-services-mlkit-text-recognition`
-  19.0.1) ML Kit v2 via `Text.Line.getConfidence()`. It is `null` only when the engine omits one
-  for a given line, and the two scales are **not guaranteed comparable** across platforms, nor, on
-  iOS, across versions: the modern `RecognizeTextRequest` (18+) reports **coarse** confidence
-  (frequently `1.0`), whereas the legacy `VNRecognizeTextRequest` (15-17) is **graded**, so the same
-  image read on an iOS 15 device scored `~0.5` for lines the iOS 18+ path scored `1.0`
-  (device-verified). `null`
-  means **"not supplied,"** *not* "low confidence", so never synthesize a value to fill it. A
-  consumer thresholding picks an explicit default (`(line.confidence ?? 1) >= min`) and never
-  compares `null` to a bound.
+  19.0.1) ML Kit v2 via `Text.Line.getConfidence()`, so it is never null and the type says so.
+  The scales are **not comparable**, across platforms or across iOS versions: the modern
+  `RecognizeTextRequest` (18+) reports **coarse** values (frequently `1.0`), the legacy
+  `VNRecognizeTextRequest` (15-17) is **graded**, and the same image scored `~0.5` on iOS 15 for
+  lines the 18+ path scored `1.0` (device-verified). `TextSightEngine.confidenceScale` names which
+  one you have, and `isRankable` answers the only question most consumers actually have.
+
+  On Android below Google Play services 22.30 the unbundled ML Kit returns `0` for every line
+  instead of a real value. No runtime gate is built for it: those devices are years stale and
+  shrinking, and keeping the field nullable to model them would tax every consumer forever. If it
+  ever matters it becomes a `ConfidenceScale` value, not a per-line null.
 - **`RecognizedLine.elements` is a reserved `List<RecognizedElement>?`.** Word-level elements
   are part of the model shape from v1 but stay **`null` until the feature ships**, so
   populating them later is an additive minor, not a breaking change. `RecognizedElement` is

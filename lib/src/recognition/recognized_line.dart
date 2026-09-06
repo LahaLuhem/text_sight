@@ -10,14 +10,12 @@ final class RecognizedLine {
   /// The recognized text of this line.
   final String text;
 
-  /// Recognition confidence in `[0, 1]`, or `null` when the engine supplies none
-  /// for this line. Both Apple Vision and ML Kit provide a per-line value, though
-  /// the scales are not guaranteed comparable across platforms, nor, on iOS,
-  /// across versions: iOS 18+ (`RecognizeTextRequest`) reports coarse values
-  /// (often `1.0`), while iOS 15-17 (`VNRecognizeTextRequest`) is graded. `null`
-  /// means "unknown", not "low", so threshold against an explicit default
-  /// (`(line.confidence ?? 1) >= min`), never compare `null` to a bound.
-  final double? confidence;
+  /// How sure the engine is about this line, in `[0, 1]`.
+  ///
+  /// Engine-relative, not an absolute quality score: what a number means depends on
+  /// `TextSightEngine.confidenceScale`, and values from different scales are never comparable.
+  /// Both engines always supply one, so this is never null.
+  final double confidence;
 
   /// Bounding box normalized to `[0, 1]` with a top-left origin (the unified
   /// coordinate contract, converted natively), as a [Rect] for an overlay
@@ -31,7 +29,12 @@ final class RecognizedLine {
   final List<RecognizedElement>? elements;
 
   /// Creates a recognized line.
-  const new({required this.text, required this.boundingBox, this.confidence, this.elements});
+  const new({
+    required this.text,
+    required this.boundingBox,
+    required this.confidence,
+    this.elements,
+  });
 
   @override
   String toString() =>
