@@ -5,18 +5,11 @@ on:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+' # tag-pattern on pub.dev: '{{version}}'
 
-# Inlined instead of using dart-lang/setup-dart/.github/workflows/publish.yml@v1.
-# That reusable workflow runs plain `dart pub get` (no `--no-example` flag) at
-# the package root. Once an `example/` app exists (it declares its parent via
-# `path: ../`), a root `dart pub get` would transitively resolve `example/`
-# against CI's Flutter SDK, different from the `.fvmrc`-pinned local Flutter,
-# so the resolution rewrites `example/pubspec.lock` and the next step
-# (`pub publish --dry-run`) trips its "checked-in files are modified" guard.
-# `--no-example` keeps the committed lockfile byte-identical (and is a harmless
-# no-op while there is no example/). This is a Flutter package, so
-# `flutter pub get` (not `dart pub get`) is used to satisfy the
-# `flutter: sdk: flutter` constraint. `dart-lang/setup-dart` is kept first so
-# the OIDC env it exports is in place before publish runs.
+# Inlined rather than using setup-dart's reusable publish workflow, which runs `dart pub get`
+# without `--no-example`. That resolves example/ against CI's Flutter instead of the .fvmrc-pinned
+# one, rewriting example/pubspec.lock, and the dry-run then trips its "checked-in files are
+# modified" guard. `flutter pub get` (not dart) satisfies the `flutter: sdk: flutter` constraint,
+# and setup-dart stays first so its OIDC env is in place before publish runs.
 jobs:
   publish:
     runs-on: ubuntu-latest

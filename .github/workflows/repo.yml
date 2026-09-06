@@ -11,9 +11,8 @@ concurrency:
 permissions:
   contents: read
 
-# Prebuilt multi-arch image bundling the CLI linters (shellcheck, actionlint, ...), pulled
-# anonymously from GHCR (it's public, no login). One ref here is the single source of truth, so a
-# future tag bump or digest pin is a one-line change. https://github.com/LahaLuhem/linterpol
+# Prebuilt image bundling the CLI linters, pulled anonymously from public GHCR. One ref here, so
+# a tag bump or digest pin is a one-line change. https://github.com/LahaLuhem/linterpol
 env:
   LINTERPOL_IMAGE: ghcr.io/lahaluhem/linterpol:latest
 
@@ -26,9 +25,8 @@ jobs:
       - uses: dart-lang/setup-dart@v1
         with:
           sdk: stable
-      # Format scans files in place, so no pub-get needed. The setup-flutter composite
-      # is reserved for jobs that need resolved dependencies, so skipping it here
-      # saves ~10-30s per run.
+      # Format scans in place, so no pub-get needed. Skipping the setup-flutter composite saves
+      # ~10-30s per run.
       - run: dart format --output=none --set-exit-if-changed .
 
   shellcheck:

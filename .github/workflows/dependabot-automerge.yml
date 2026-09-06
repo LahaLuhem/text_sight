@@ -27,10 +27,9 @@ jobs:
         id: meta
         uses: dependabot/fetch-metadata@v3
 
-      # Eligible: patch/minor on github_actions, gradle (both dirs) and pub under /example, plus
-      # github_actions majors. Root `pub` and gradle/pub majors stay manual. `package-ecosystem`
-      # is the branch-name segment, so github-actions arrives underscored, and `update-type` is the
-      # group's *highest* semver step.
+      # Eligible: patch/minor on github_actions, gradle and /example pub, plus github_actions majors.
+      # Root pub and gradle/pub majors stay manual. `package-ecosystem` is the branch-name segment, so
+      # github-actions arrives underscored, and `update-type` is the group's highest semver step.
       - name: Decide eligibility
         id: gate
         env:

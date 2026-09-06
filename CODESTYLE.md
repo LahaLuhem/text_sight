@@ -555,11 +555,10 @@ exposing a private growable list, use `List.unmodifiable(…)` (same for `Set` /
 holder of the underlying list can still mutate it, and the view follows). Use the view only for
 deliberate read-through visibility into private mutable state, which is rare here.
 
-**Never inside a value type's constructor**, though: `: lines = List.unmodifiable(lines)` blocks
-a `const` constructor for no gain, since the result types (`TextSightCapture`, `RecognizedLine`) are
-package-built from fresh channel data, and a `const` instance is passed a `const` (immutable)
-list anyway. Make the constructor `const`, assign fields directly, and keep leaf types
-(`RecognizedElement`) `const` so the types composing them can be too.
+**Never inside a value type's constructor**, though: `: lines = List.unmodifiable(lines)` blocks a
+`const` constructor for no gain. Assign fields directly and keep leaf types (`RecognizedElement`)
+`const` so the types composing them can be too. Reasoning in
+[`APPENDIX.md`](./APPENDIX.md#public-api-via-single-export-file).
 
 <a id="part-part-of-only-when-structurally-needed"></a>
 ### `part` / `part of` only when structurally needed
@@ -571,10 +570,8 @@ Pigeon-generated `messages.g.dart` and the `copy_with_extension_gen` `copyWith`s
 hide dependencies and leak `_private` symbols across files within the library.
 
 **`copyWith` is generated, never hand-written.** Annotate the value type with `@CopyWith()` and let
-the builder derive it from the fields. A hand-rolled one compiles perfectly well while missing a
-field added later, and no test can catch a field that nobody remembered to write down. Generating it
-makes that drift impossible rather than merely detectable, and CI's `codegen-freshness` job fails if
-the committed output has fallen behind.
+the builder derive it from the fields, so a field added later cannot leave the copy behind. Why a
+runtime dependency was worth it: [`APPENDIX.md`](./APPENDIX.md#channel-topology).
 
 ---
 

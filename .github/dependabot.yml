@@ -18,15 +18,12 @@ version: 2
 
 updates:
   # --- Dart / Flutter: published library ---
-  # Bumps the version constraints in the root pubspec.yaml. pub.dev packages
-  # only. Git / path deps are not eligible.
+  # Bumps the root pubspec's constraints. pub.dev only, git and path deps are not eligible.
   #
-  # `versioning-strategy: increase` so bumps land as `^28.0.0`, not
-  # `">=27.3.2 <29.0.0"`. On `auto` Dependabot sees `version:`, reads this as a
-  # library, and widens the range instead of raising the floor (no caret spans
-  # two majors, hence the long form). Widening buys nothing here, most root deps
-  # are dev-only and consumers never resolve those. /example is fine on `auto`,
-  # its `publish_to: none` already reads as an app.
+  # `versioning-strategy: increase` so bumps land as `^28.0.0` rather than a widened range. On
+  # `auto` Dependabot reads `version:` as "this is a library" and widens instead of raising the
+  # floor, which buys nothing when most root deps are dev-only. /example is fine on `auto`, its
+  # `publish_to: none` already reads as an app.
   - package-ecosystem: "pub"
     directory: "/"
     versioning-strategy: "increase"
@@ -48,13 +45,10 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- Android / Gradle: plugin module ---
-  # The plugin's own Gradle build, and the only place recognition/camera deps
-  # are allowed to live (no-bundling is the *iOS* contract). These ship to every
-  # downstream Android consumer via the AAR's POM: ML Kit / Play Services,
-  # CameraX, exifinterface. Also covers the AGP/plugin version in
-  # settings.gradle.kts, the JVM test stack (mockito / robolectric / junit), and
-  # the wrapper. Bumps here are publish-relevant, so weigh the transitive-closure
-  # impact per PR.
+  # The plugin's own Gradle build, and the only place recognition and camera deps may live
+  # (no-bundling is the iOS contract). These reach every Android consumer through the AAR's POM.
+  # Also covers AGP in settings.gradle.kts, the JVM test stack, and the wrapper. Publish-relevant,
+  # so weigh the transitive-closure impact per PR.
   - package-ecosystem: "gradle"
     directory: "/android"
     schedule:
@@ -65,9 +59,7 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- Android / Gradle: example app ---
-  # Covers the plugins/deps in the *.gradle.kts files AND the Gradle wrapper
-  # version in gradle/wrapper/gradle-wrapper.properties
-  # (dependabot-core#7124, shipped Feb 2026).
+  # Covers the *.gradle.kts deps and the wrapper version in gradle-wrapper.properties.
   - package-ecosystem: "gradle"
     directory: "/example/android"
     schedule:
@@ -78,8 +70,7 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- GitHub Actions ---
-  # `directory: "/"` scans everything under .github/: the workflows and the
-  # local composite action at .github/actions/setup-flutter.
+  # `directory: "/"` scans everything under .github/, workflows and the local composite action.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -90,11 +81,7 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- No `swift` (SPM) ecosystem (yet) ---
-  # Deliberately absent, and NOT because Apple-side deps are banned. The
-  # contract is *prefer-native*, not *zero-dependency* (AGENTS.md hard rule 2):
-  # a legit SPM lib with no system-framework equivalent would be allowed. There
-  # is just nothing to track today, since the plugin's Package.swift carries only a
-  # local `path:` dep (FlutterFramework), and the example's SPM manifest is
-  # Flutter-generated + gitignored, so no committed, version-resolved manifest
-  # exists for Dependabot to act on. Add a `swift` block here the day a real SPM
-  # *registry* dependency lands.
+  # Absent because there is nothing to track, not because Apple-side deps are banned: the contract
+  # is prefer-native, not zero-dependency (AGENTS.md hard rule 2). Package.swift carries only a
+  # local `path:` dep, and the example's SPM manifest is Flutter-generated and gitignored, so no
+  # committed resolved manifest exists. Add a `swift` block the day a registry dep lands.

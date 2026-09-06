@@ -619,8 +619,9 @@ seam shows in the tree. Each public type gets its own file (per
 - **`RecognizedLine.elements` is a reserved `List<RecognizedElement>?`.** Word-level elements
   are part of the model shape from v1 but stay **`null` until the feature ships**, so
   populating them later is an additive minor, not a breaking change. `RecognizedElement` is
-  intentionally minimal: `text` · `boundingBox` · `confidence?`, the same contract as a line,
-  one level down.
+  intentionally minimal: `text` · `boundingBox` · `confidence?`. Its confidence stays nullable
+  where a line's is not, because whether both engines report a per-word value is unsettled until
+  the feature ships.
 - **Both result types are capture-agnostic, immutable, and `const`-constructible**, with
   `toString`. They hold their lists directly, with no defensive copy, since a `const` instance is
   passed a `const` (immutable) list (see
