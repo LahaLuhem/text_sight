@@ -47,9 +47,16 @@ DEVICE_SCENARIOS = {
 }
 DEVICE_SUMMARY_FILENAME = "DEVICE_SUMMARY.md"
 
-# Cheapest first, so charts read left to right as more work.
-LEVEL_ORDER = ["fast", "accurate"]
-LEVEL_COLORS = {"fast": "#4c72b0", "accurate": "#c44e52"}
+# Cheapest first, so charts read left to right as more work. Language correction is its own axis,
+# so each level appears twice. Anything missing from here is dropped from charts AND tables, so a
+# new candidate has to be added in both places below.
+LEVEL_ORDER = ["fast", "fast+corrected", "accurate", "accurate+corrected"]
+LEVEL_COLORS = {
+    "fast": "#4c72b0",
+    "fast+corrected": "#a3b8dc",
+    "accurate": "#c44e52",
+    "accurate+corrected": "#e0a3a5",
+}
 PLATFORM_ORDER = ["ios", "android"]
 PLATFORM_LABELS = {"ios": "iOS (Apple Vision)", "android": "Android (ML Kit)"}
 # For prose, where naming the recognizer would be noise.

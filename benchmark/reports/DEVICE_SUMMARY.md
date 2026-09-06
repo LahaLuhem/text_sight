@@ -4,7 +4,10 @@ How long `TextSight.recognizeImage` takes on real hardware, by page profile and 
 
 > **Scope.** One-shot API latency as an app sees it: image decode, ML inference, the native encode and the channel hop, all inside one number. Inference dominates, but this does not isolate it. Live-camera throughput is a different measurement and not covered here.
 
-Captured: SDK `3.13.2` · package `0.2.0` · git `bef2acd` · N=3 · 2026-09-03T08:34:12.303439Z. Measured on iOS and Android, so your hardware will differ.
+Captured (Android): SDK `3.13.2` · package `0.2.2` · git `bf2d478` · N=3 · 2026-09-06T13:33:54.999847Z
+Captured (iOS): SDK `3.13.2` · package `0.2.0` · git `bef2acd` · N=3 · 2026-09-03T08:31:25.632612Z
+
+Measured on iOS and Android, so your hardware will differ.
 
 - `level` is a no-op on Android, so its two rows should land on top of each other.
 - Read **lines** beside the latency. A level that recognizes nothing returns fast, which would otherwise look like a win.
@@ -27,13 +30,21 @@ Captured: SDK `3.13.2` · package `0.2.0` · git `bef2acd` · N=3 · 2026-09-03T
 
 | Profile | Level | Lines | p50 (ms) | p95 (ms) |
 |---|---|--:|--:|--:|
-| sign | `fast` | 3 | 81.9 | 92.7 |
-| sign | `accurate` | 3 | 80.8 | 97.1 |
-| receipt | `fast` | 21 | 152.0 | 155.1 |
-| receipt | `accurate` | 21 | 149.4 | 152.7 |
-| document | `fast` | 63 | 341.0 | 343.4 |
-| document | `accurate` | 63 | 273.1 | 303.1 |
-| dense | `fast` | 126 | 328.7 | 333.2 |
-| dense | `accurate` | 126 | 316.4 | 339.0 |
+| sign | `fast` | 3 | 146.9 | 147.1 |
+| sign | `fast+corrected` | 3 | 130.0 | 137.5 |
+| sign | `accurate` | 3 | 129.2 | 132.4 |
+| sign | `accurate+corrected` | 3 | 127.0 | 141.5 |
+| receipt | `fast` | 21 | 203.5 | 209.0 |
+| receipt | `fast+corrected` | 21 | 183.9 | 188.0 |
+| receipt | `accurate` | 21 | 181.7 | 191.9 |
+| receipt | `accurate+corrected` | 21 | 193.1 | 206.2 |
+| document | `fast` | 63 | 409.5 | 418.6 |
+| document | `fast+corrected` | 63 | 392.9 | 411.8 |
+| document | `accurate` | 63 | 397.9 | 416.6 |
+| document | `accurate+corrected` | 63 | 421.3 | 426.8 |
+| dense | `fast` | 128 | 725.1 | 809.5 |
+| dense | `fast+corrected` | 128 | 551.3 | 605.0 |
+| dense | `accurate` | 128 | 628.7 | 671.2 |
+| dense | `accurate+corrected` | 128 | 480.1 | 498.6 |
 
 ![One-shot latency](one_shot_latency.png)

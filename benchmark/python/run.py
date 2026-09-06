@@ -39,6 +39,11 @@ def main() -> int:
     device_parser.add_argument(
         "--include-virtual", action="store_true", help="allow simulators and emulators"
     )
+    device_parser.add_argument(
+        "--reverse",
+        action="store_true",
+        help="run the candidate sweep backwards, to separate real gaps from order effects",
+    )
     device_parser.add_argument("--out", default=None, help="output dir")
     device_parser.set_defaults(func=runner.cmd_run_device)
 
