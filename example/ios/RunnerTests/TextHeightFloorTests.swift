@@ -4,8 +4,8 @@ import UIKit
 
 @testable import text_sight
 
-/// Fails the moment anything stops pinning the recognizers' text-height floor to zero. The legacy
-/// backend defaults to zero anyway, so that half is a guard rather than a proof.
+/// A zero floor reads type that Vision's own default would shrink away. The legacy backend
+/// defaults to zero anyway, so that half is a guard rather than a proof.
 @Suite("Small text recognition")
 struct TextHeightFloorTests {
   static let lineCount = 8
@@ -25,7 +25,8 @@ struct TextHeightFloorTests {
     let page = try Self.renderPage()
     let lines = try await recognizer.recognize(
       cgImage: page, orientation: .up,
-      config: RecognitionConfig(level: .fast, languages: [], roi: nil)
+      config: RecognitionConfig(level: .fast, languages: [],
+                                minimumTextHeight: 0, roi: nil)
     )
 
     #expect(lines.count == Self.lineCount)

@@ -159,6 +159,7 @@ void main() {
         check(options.level).equals(ctx.example.val('twin') as RecognitionLevelMessage);
         check<Iterable<Object?>>(options.languages)
             .deepEquals(ctx.example.val('tags') as List<String>);
+        check(options.minimumTextHeight).equals(0);
         check(options.roi).isNull();
         check(returned).equals(textureId);
       });

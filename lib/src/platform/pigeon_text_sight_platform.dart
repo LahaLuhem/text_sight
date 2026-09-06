@@ -12,22 +12,17 @@ import '../recognition/text_sight_readiness_state.dart';
 import 'messages.g.dart';
 import 'text_sight_platform.dart';
 
-/// The default [TextSightPlatform], backed by the Pigeon control channel plus a
-/// plain `EventChannel` for the per-frame results stream.
+/// The default [TextSightPlatform]: Pigeon for control calls, a plain `EventChannel` for the
+/// per-frame results.
 ///
-/// The single seam between the public Dart API and the native sides: control
-/// calls go through the generated [TextSightHostApi], mapping each public type to
-/// its transport twin, while recognition results arrive as self-describing maps
-/// on the captures [EventChannel] and are decoded into [TextSightCapture]s. The
-/// preview texture id is the return of [initialize]. Registered as
-/// [TextSightPlatform.instance] by default. A future federated platform package
-/// can replace it.
+/// The one place public types meet their transport twins. Frames arrive as self-describing maps
+/// and are decoded into [TextSightCapture]s here. A federated platform package could replace it.
 final class PigeonTextSightPlatform extends TextSightPlatform {
-  /// The native→Dart per-frame results stream. The name is mirrored verbatim by
+  /// Per-frame results coming up from native. The name is mirrored verbatim by
   /// the native `EventChannel` registration on each platform.
   static const _capturesChannel = EventChannel('com.lahaluhem.text_sight/captures');
 
-  /// The native→Dart model-readiness stream, mirrored verbatim by the native
+  /// Model readiness coming up from native, the name mirrored verbatim by the
   /// `EventChannel` registration on each platform.
   static const _readinessChannel = EventChannel('com.lahaluhem.text_sight/readiness');
 
@@ -100,6 +95,8 @@ extension on TextSightOptions {
   TextSightOptionsMessage _toMessage() => TextSightOptionsMessage(
     level: level._toMessage(),
     languages: languages._toLanguageTags(),
+    // Pinned until the options type carries it: 0 keeps every pixel, so small print survives.
+    minimumTextHeight: 0,
     roi: roi?._toMessage(),
   );
 }

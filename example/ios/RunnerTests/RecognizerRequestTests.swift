@@ -24,12 +24,17 @@ struct RecognizerRequestTests {
 
   static let wholeFrame = CGRect(x: 0, y: 0, width: 1, height: 1)
 
+  /// A floor Vision would act on, so a pass proves the config got through rather than matching
+  /// a default.
+  static let textHeightFloor: Float = 0.05
+
   @available(iOS 18, *)
   @Test("Modern: the level picks the Vision level and its language correction",
         arguments: RecognizerRequestTests.levels)
   func modernLevel(level: RecognitionLevelMessage, correction: Bool) {
     let request = ModernTextRecognizer.makeRequest(
-      config: RecognitionConfig(level: level, languages: [], roi: nil)
+      config: RecognitionConfig(level: level, languages: [],
+                                minimumTextHeight: 0, roi: nil)
     )
 
     #expect(request.recognitionLevel == (level == .fast ? .fast : .accurate))
@@ -40,7 +45,8 @@ struct RecognizerRequestTests {
   @Test("Modern: languages map in preference order")
   func modernLanguages() {
     let request = ModernTextRecognizer.makeRequest(
-      config: RecognitionConfig(level: .fast, languages: Self.languages, roi: nil)
+      config: RecognitionConfig(level: .fast, languages: Self.languages,
+                                minimumTextHeight: 0, roi: nil)
     )
 
     #expect(request.recognitionLanguages == Self.languages.map(Locale.Language.init(identifier:)))
@@ -50,7 +56,8 @@ struct RecognizerRequestTests {
   @Test("Modern: the scan box flips into Vision's lower-left space")
   func modernRegion() {
     let request = ModernTextRecognizer.makeRequest(
-      config: RecognitionConfig(level: .fast, languages: [], roi: Self.roi)
+      config: RecognitionConfig(level: .fast, languages: [],
+                                minimumTextHeight: 0, roi: Self.roi)
     )
 
     let region = request.regionOfInterest
@@ -63,7 +70,8 @@ struct RecognizerRequestTests {
         arguments: RecognizerRequestTests.levels)
   func legacyLevel(level: RecognitionLevelMessage, correction: Bool) {
     let request = LegacyTextRecognizer.makeRequest(
-      config: RecognitionConfig(level: level, languages: [], roi: nil)
+      config: RecognitionConfig(level: level, languages: [],
+                                minimumTextHeight: 0, roi: nil)
     )
 
     #expect(request.recognitionLevel == (level == .fast ? .fast : .accurate))
@@ -73,7 +81,8 @@ struct RecognizerRequestTests {
   @Test("Legacy: languages pass through in order")
   func legacyLanguages() {
     let request = LegacyTextRecognizer.makeRequest(
-      config: RecognitionConfig(level: .fast, languages: Self.languages, roi: nil)
+      config: RecognitionConfig(level: .fast, languages: Self.languages,
+                                minimumTextHeight: 0, roi: nil)
     )
 
     #expect(request.recognitionLanguages == Self.languages)
@@ -82,7 +91,8 @@ struct RecognizerRequestTests {
   @Test("Legacy: the scan box flips into Vision's lower-left space")
   func legacyRegion() {
     let request = LegacyTextRecognizer.makeRequest(
-      config: RecognitionConfig(level: .fast, languages: [], roi: Self.roi)
+      config: RecognitionConfig(level: .fast, languages: [],
+                                minimumTextHeight: 0, roi: Self.roi)
     )
 
     let region = request.regionOfInterest
@@ -92,10 +102,32 @@ struct RecognizerRequestTests {
   }
 
   @available(iOS 18, *)
+  @Test("Modern: the text-height floor reaches the request")
+  func modernTextHeightFloor() {
+    let request = ModernTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: [],
+                                minimumTextHeight: Self.textHeightFloor, roi: nil)
+    )
+
+    #expect(request.minimumTextHeightFraction == Self.textHeightFloor)
+  }
+
+  @Test("Legacy: the text-height floor reaches the request")
+  func legacyTextHeightFloor() {
+    let request = LegacyTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, languages: [],
+                                minimumTextHeight: Self.textHeightFloor, roi: nil)
+    )
+
+    #expect(request.minimumTextHeight == Self.textHeightFloor)
+  }
+
+  @available(iOS 18, *)
   @Test("Modern: a bare config still leaves nothing to Vision")
   func modernFillsEveryKnob() {
     let request = ModernTextRecognizer.makeRequest(
-      config: RecognitionConfig(level: .fast, languages: [], roi: nil)
+      config: RecognitionConfig(level: .fast, languages: [],
+                                minimumTextHeight: 0, roi: nil)
     )
     let region = request.regionOfInterest
 
@@ -108,7 +140,8 @@ struct RecognizerRequestTests {
   @Test("Legacy: a bare config still leaves nothing to Vision")
   func legacyFillsEveryKnob() {
     let request = LegacyTextRecognizer.makeRequest(
-      config: RecognitionConfig(level: .fast, languages: [], roi: nil)
+      config: RecognitionConfig(level: .fast, languages: [],
+                                minimumTextHeight: 0, roi: nil)
     )
     let region = request.regionOfInterest
 

@@ -1,11 +1,11 @@
-/// A recognizer-config snapshot, decoupled from the Pigeon wire types so a single value carries it
-/// across the recognition `Task`. Mirrors the live-tunable knobs (`updateX` on the controller) and
-/// the one-shot's per-call options.
+/// One snapshot of the recognizer settings, free of the Pigeon types so it can ride the
+/// recognition `Task` as a single value.
 struct RecognitionConfig {
-  /// 0 stops Vision downscaling, so we read the smallest text the pixels allow.
-  static let minimumTextHeight: Float = 0
-
   let level: RecognitionLevelMessage
   let languages: [String]
+
+  /// Smallest text to read, as a fraction of the scan box. Vision shrinks the image to suit, so 0
+  /// keeps every pixel.
+  let minimumTextHeight: Float
   let roi: RegionOfInterestMessage?
 }
