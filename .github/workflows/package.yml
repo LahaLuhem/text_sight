@@ -15,10 +15,9 @@ permissions:
   contents: read
 
 jobs:
-  # A push to main that's just a merged PR was already fully checked on that PR, so the jobs
-  # below skip it. A *direct* push to main (and every PR) still runs them. The push payload can't
-  # distinguish the two, so ask the API whether the pushed commit belongs to a merged PR,
-  # strategy-agnostic (works for squash, merge-commit, and rebase merges).
+  # A push to main that is just a merged PR was already checked on that PR, so the jobs below
+  # skip it. A direct push, and every PR, still runs them. The payload cannot tell the two apart,
+  # so ask the API whether the pushed commit belongs to a merged PR.
   gate:
     name: Decide whether to run
     runs-on: ubuntu-latest
@@ -68,10 +67,9 @@ jobs:
       # resolved deps, so one root run covers lib/test/pigeons AND example/.
       - run: dart format --output=none --set-exit-if-changed .
 
-  # DCM (dart_code_metrics) CI job removed for now, pending dcm.dev's free open-source-project
-  # license (the DCM_CI_KEY / DCM_EMAIL secrets). The DCM rules still live in analysis_options.yaml
-  # and are applied by hand per CLAUDE.md's definition of done. Restore this job from git history
-  # once the license lands and the secrets are set.
+  # No DCM job yet, pending dcm.dev's free open-source licence and its secrets. The rules live in
+  # analysis_options.yaml and are applied by hand meanwhile. Restore the job from git history once
+  # the licence lands.
 
   detekt:
     name: detekt (Kotlin)
@@ -111,10 +109,9 @@ jobs:
       - uses: ./.github/actions/setup-flutter
       - run: flutter --no-version-check test
 
-  # --- Native plugin CI -----------------------------------------------------
-  # The package's defining guarantee is that iOS links ZERO third-party ML
-  # libraries (no GoogleMLKit), see APPENDIX.md#no-bundling. The Dart jobs above
-  # never touch the native sides, so these build the example app per platform.
+  # --- Native plugin CI ---
+  # iOS links zero third-party ML libraries, which is the package's whole point. The Dart jobs
+  # never touch the native sides, so these build the example per platform.
 
   android-example:
     name: Android example build + unit tests
@@ -133,16 +130,13 @@ jobs:
       - uses: ./.github/actions/setup-flutter
         with:
           working-directory: example
-      # --release so R8 runs over the Kotlin + ML Kit deps and the Kotlin compiles.
-      # (Runtime R8 breakage, e.g. missing keep rules in consumer-rules.pro, is only
-      # shows when the app runs, so catching that fully would need an emulator smoke
-      # test, and this guards compile- and shrink-time regressions.)
+      # --release so R8 runs over the Kotlin and ML Kit deps. A missing keep rule in
+      # consumer-rules.pro only shows at runtime, so this guards compile and shrink time only.
       - run: flutter --no-version-check build apk --release
         working-directory: example
-      # Kotlin unit tests (android/src/test) run in the example's Gradle build, where the Flutter
-      # Gradle plugin supplies the engine (io.flutter). The build above also regenerates the
-      # example/android wrapper (not committed). The standalone android/ build can't resolve
-      # io.flutter in CI, since its local.properties / flutter.sdk is gitignored.
+      # Kotlin unit tests run in the example's Gradle build, where the Flutter Gradle plugin supplies
+      # io.flutter. The standalone android/ build cannot resolve it in CI, since its local.properties
+      # is gitignored.
       - run: ./gradlew :text_sight:testDebugUnitTest
         working-directory: example/android
 
@@ -160,9 +154,8 @@ jobs:
           working-directory: example
       - run: flutter --no-version-check build ios --release --no-codesign
         working-directory: example
-      # No-bundling: no ML Kit anywhere under example/ios, sources AND the generated
-      # SPM manifest (FlutterGeneratedPluginSwiftPackage). grep (not rg) so the
-      # gitignored generated path is scanned, and -I skips built binaries.
+      # No ML Kit under example/ios, sources and the generated SPM manifest alike. grep not rg, so
+      # the gitignored generated path is scanned, and -I skips binaries.
       - name: Assert no ML Kit on the iOS side
         run: |
           if grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios; then
@@ -180,16 +173,13 @@ jobs:
       - uses: ./.github/actions/setup-flutter
         with:
           working-directory: example
-      # `--config-only` writes Generated.xcconfig and the SPM manifest without compiling, so the one
-      # compile this leg needs is the simulator build xcodebuild does below. A full `flutter build`
-      # here would compile everything twice, and its CONFIGURATION_BUILD_DIR would send Runner.app to
-      # the device path where the test host cannot find it.
+      # --config-only writes Generated.xcconfig and the SPM manifest without compiling, so the only
+      # compile here is xcodebuild's simulator build below. A full `flutter build` would compile twice
+      # and send Runner.app where the test host cannot find it.
       - run: flutter --no-version-check build ios --config-only --debug --simulator
         working-directory: example
-      # Native XCTest cases (example/ios/RunnerTests, reaching TextSightCamera via @testable import)
-      # run through the Runner scheme's test action.
-      # Pick the first available iPhone simulator so no device name is hardcoded across runner images
-      # (the iOS 18 floor is met by the bundled sims).
+      # Native XCTest (example/ios/RunnerTests) through the Runner scheme. Pick the first available
+      # iPhone simulator so no device name is hardcoded across runner images.
       - name: RunnerTests (iOS simulator)
         working-directory: example/ios
         run: |
@@ -199,10 +189,9 @@ jobs:
             echo "::error::No iPhone simulator available on the runner"
             exit 1
           fi
-          # -quiet trims the log to warnings + errors, since a full xcodebuild test transcript is several
-          # thousand lines. A failing test still prints, and the result bundle carries the details.
-          # -parallel-testing-enabled NO skips cloning the simulator, which cost more than the 29s
-          # of tests it was parallelising.
+          # -quiet trims a several-thousand-line transcript to warnings and errors. A failing test still
+          # prints, and the bundle carries the rest. -parallel-testing-enabled NO skips cloning the
+          # simulator, which cost more than the 29s it was parallelising.
           xcodebuild test -quiet \
             -parallel-testing-enabled NO \
             -resultBundlePath "$RUNNER_TEMP/RunnerTests.xcresult" \
@@ -223,18 +212,15 @@ jobs:
           # -quiet drops swift-testing output entirely, so for those the bundle is the only place a
           # failure's name and message survive. xcodebuild's exit code is still what fails the job.
           jq -r '.testFailures[]? | "FAILED \(.testName): \(.failureText)"' "$summary"
-      # SwiftLint over the plugin's Swift (ios/.swiftlint.yml) and the example's RunnerTests
-      # (example/ios/.swiftlint.yml). Two configs, because SwiftLint resolves included/excluded
-      # relative to each config's own dir, and the trees need different deviations. Folded into this
-      # macOS job to avoid a second ~10x-cost runner, and the portable binary is version-pinned.
+      # Two configs, because SwiftLint resolves included/excluded relative to each config's own dir.
+      # Folded into this macOS job to avoid a second ~10x-cost runner, binary version-pinned.
       - name: SwiftLint
         run: |
           curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip" https://github.com/realm/SwiftLint/releases/download/0.63.3/portable_swiftlint.zip
           unzip -oq "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
           SL="$RUNNER_TEMP/swiftlint/swiftlint"
-          # Disjoint trees, so lint them concurrently. Each writes its own log (printed in a
-          # collapsible group after both finish, to keep concurrent output readable). The step fails
-          # if EITHER run fails, so all lint errors surface in one run, not just the first config's.
+          # Disjoint trees, so lint concurrently, each to its own log. The step fails if either run does,
+          # so all errors surface in one go rather than just the first config's.
           "$SL" lint --strict --config ios/.swiftlint.yml > "$RUNNER_TEMP/sl-plugin.log" 2>&1 & p1=$!
           "$SL" lint --strict --config example/ios/.swiftlint.yml > "$RUNNER_TEMP/sl-tests.log" 2>&1 & p2=$!
           r1=0; wait "$p1" || r1=$?
@@ -243,28 +229,33 @@ jobs:
           echo "::group::SwiftLint, RunnerTests (example/ios/.swiftlint.yml)"; cat "$RUNNER_TEMP/sl-tests.log"; echo "::endgroup::"
           [ "$r1" -eq 0 ] && [ "$r2" -eq 0 ]
 
-  pigeon-freshness:
-    name: Pigeon codegen freshness
+  codegen-freshness:
+    name: Codegen freshness (Pigeon + build_runner)
     needs: gate
     if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-flutter
-      # Regenerate, then format the Dart output (Pigeon emits ~80-col, the gate is
-      # 100), the repo's two-step regen, then assert nothing changed.
+      # Pigeon writes the wire types, build_runner writes the copyWiths. Neither knows about the
+      # other, so order does not matter.
       - run: dart run pigeon --input pigeons/text_sight.dart
-      - run: dart format lib/src/platform/messages.g.dart
+      - run: dart run build_runner build --delete-conflicting-outputs
+      # Both emit ~80-column Dart and the gate is 100, so the regen is never complete without this.
+      - run: dart format lib
       - name: Assert generated code is up to date
         run: |
-          if ! git diff --exit-code; then
-            echo "::error::Pigeon output is stale, run: dart run pigeon --input pigeons/text_sight.dart && dart format lib/src/platform/messages.g.dart"
+          # --porcelain rather than `git diff`, which cannot see a generator's brand-new untracked
+          # file.
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short
+            echo "::error::Generated code is stale. Run: dart run pigeon --input pigeons/text_sight.dart && dart run build_runner build --delete-conflicting-outputs && dart format lib"
             exit 1
           fi
 
   # Single required-check contract for the ruleset. APPENDIX.md#dependabot-automerge
   package-ok:
-    needs: [gate, analyze, format, detekt, deps, test, android-example, ios-build, ios-tests, pigeon-freshness]
+    needs: [gate, analyze, format, detekt, deps, test, android-example, ios-build, ios-tests, codegen-freshness]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
@@ -282,7 +273,7 @@ jobs:
             android-example=${{ needs.android-example.result }}
             ios-build=${{ needs.ios-build.result }}
             ios-tests=${{ needs.ios-tests.result }}
-            pigeon-freshness=${{ needs.pigeon-freshness.result }}
+            codegen-freshness=${{ needs.codegen-freshness.result }}
         run: |
           echo "$RESULTS"
           exit 1

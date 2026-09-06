@@ -52,11 +52,14 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
   `apply plugin: 'kotlin-android'`, which re-introduces the KGP deprecation warning this
   package exists to avoid.
 - **Channel topology** ([`APPENDIX.md#channel-topology`](../APPENDIX.md#channel-topology)):
-  the typed **control API** (initialize / start / stop / set-ROI / set-level /
-  set-languages / toggle-torch / dispose) is **Pigeon** codegen (`@HostApi`). **Per-frame
-  results** stream over a plain **`EventChannel`**, and the **camera preview** is a `Texture`.
-  Pigeon is the planned codegen tool (Golubets is a viable alternative, and both are dev-time
-  only, zero runtime/bundling impact). It isn't in `dev_dependencies` yet.
+  the typed **control API** (initialize / start / stop / set-options / toggle-torch / dispose)
+  is **Pigeon** codegen (`@HostApi`). **Per-frame results** stream over a plain **`EventChannel`**,
+  and the **camera preview** is a `Texture`. Pigeon is a dev dependency, so it costs consumers
+  nothing at runtime.
+- **Two generators, one freshness gate.** Pigeon writes the wire types, `copy_with_extension_gen`
+  writes `copyWith` for the public value types. Both outputs are committed, and CI's
+  `codegen-freshness` job regenerates and fails if anything differs, so neither can drift from its
+  source.
 - **`flutter analyze`** for pedantic static analysis, and the lint posture is deliberately
   strict (`strict-casts` / `strict-inference` / `strict-raw-types` + the `errors:`-promoted
   block in `analysis_options.yaml`). Pedantic mode is intentional, not negotiable.
