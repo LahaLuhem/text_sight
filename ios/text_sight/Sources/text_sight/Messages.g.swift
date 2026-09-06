@@ -401,12 +401,9 @@ protocol TextSightHostApi {
   func checkCameraPermission() throws -> CameraPermissionStatusMessage
   /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
   func requestCameraPermission() async throws -> CameraPermissionStatusMessage
-  /// Restricts recognition to [roi], or clears it (whole frame) when null.
-  func setRegionOfInterest(roi: RegionOfInterestMessage?) throws
-  /// Switches the recognizer's accuracy/latency level.
-  func setRecognitionLevel(level: RecognitionLevelMessage) throws
-  /// Replaces the preferred recognition languages (BCP-47 tags).
-  func setLanguages(languages: [String]) throws
+  /// Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
+  /// change mid-session, so it rides [initialize] instead.
+  func setOptions(options: TextSightOptionsMessage) throws
   /// Turns the camera torch on or off.
   func setTorchEnabled(enabled: Bool) throws
   /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
@@ -522,53 +519,22 @@ class TextSightHostApiSetup {
     } else {
       requestCameraPermissionChannel.setMessageHandler(nil)
     }
-    /// Restricts recognition to [roi], or clears it (whole frame) when null.
-    let setRegionOfInterestChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.setRegionOfInterest\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    /// Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
+    /// change mid-session, so it rides [initialize] instead.
+    let setOptionsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.setOptions\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
-      setRegionOfInterestChannel.setMessageHandler { message, reply in
+      setOptionsChannel.setMessageHandler { message, reply in
         let args = message as! [Any?]
-        let roiArg: RegionOfInterestMessage? = nilOrValue(args[0])
+        let optionsArg = args[0] as! TextSightOptionsMessage
         do {
-          try api.setRegionOfInterest(roi: roiArg)
+          try api.setOptions(options: optionsArg)
           reply(wrapResult(nil))
         } catch {
           reply(wrapError(error))
         }
       }
     } else {
-      setRegionOfInterestChannel.setMessageHandler(nil)
-    }
-    /// Switches the recognizer's accuracy/latency level.
-    let setRecognitionLevelChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.setRecognitionLevel\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
-    if let api = api {
-      setRecognitionLevelChannel.setMessageHandler { message, reply in
-        let args = message as! [Any?]
-        let levelArg = args[0] as! RecognitionLevelMessage
-        do {
-          try api.setRecognitionLevel(level: levelArg)
-          reply(wrapResult(nil))
-        } catch {
-          reply(wrapError(error))
-        }
-      }
-    } else {
-      setRecognitionLevelChannel.setMessageHandler(nil)
-    }
-    /// Replaces the preferred recognition languages (BCP-47 tags).
-    let setLanguagesChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.setLanguages\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
-    if let api = api {
-      setLanguagesChannel.setMessageHandler { message, reply in
-        let args = message as! [Any?]
-        let languagesArg = args[0] as! [String]
-        do {
-          try api.setLanguages(languages: languagesArg)
-          reply(wrapResult(nil))
-        } catch {
-          reply(wrapError(error))
-        }
-      }
-    } else {
-      setLanguagesChannel.setMessageHandler(nil)
+      setOptionsChannel.setMessageHandler(nil)
     }
     /// Turns the camera torch on or off.
     let setTorchEnabledChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.setTorchEnabled\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)

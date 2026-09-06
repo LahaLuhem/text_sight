@@ -432,12 +432,11 @@ interface TextSightHostApi {
   fun checkCameraPermission(): CameraPermissionStatusMessage
   /** Prompts for camera permission when it has not yet been decided, resolving to the resulting status. */
   suspend fun requestCameraPermission(): CameraPermissionStatusMessage
-  /** Restricts recognition to [roi], or clears it (whole frame) when null. */
-  fun setRegionOfInterest(roi: RegionOfInterestMessage?)
-  /** Switches the recognizer's accuracy/latency level. */
-  fun setRecognitionLevel(level: RecognitionLevelMessage)
-  /** Replaces the preferred recognition languages (BCP-47 tags). */
-  fun setLanguages(languages: List<String>)
+  /**
+   * Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
+   * change mid-session, so it rides [initialize] instead.
+   */
+  fun setOptions(options: TextSightOptionsMessage)
   /** Turns the camera torch on or off. */
   fun setTorchEnabled(enabled: Boolean)
   /**
@@ -562,49 +561,13 @@ interface TextSightHostApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.setRegionOfInterest$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.setOptions$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { message, reply ->
             val args = message as List<Any?>
-            val roiArg = args[0] as RegionOfInterestMessage?
+            val optionsArg = args[0] as TextSightOptionsMessage
             val wrapped: List<Any?> = try {
-              api.setRegionOfInterest(roiArg)
-              listOf(null)
-            } catch (exception: Throwable) {
-              MessagesPigeonUtils.wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.setRecognitionLevel$separatedMessageChannelSuffix", codec)
-        if (api != null) {
-          channel.setMessageHandler { message, reply ->
-            val args = message as List<Any?>
-            val levelArg = args[0] as RecognitionLevelMessage
-            val wrapped: List<Any?> = try {
-              api.setRecognitionLevel(levelArg)
-              listOf(null)
-            } catch (exception: Throwable) {
-              MessagesPigeonUtils.wrapError(exception)
-            }
-            reply.reply(wrapped)
-          }
-        } else {
-          channel.setMessageHandler(null)
-        }
-      }
-      run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.setLanguages$separatedMessageChannelSuffix", codec)
-        if (api != null) {
-          channel.setMessageHandler { message, reply ->
-            val args = message as List<Any?>
-            val languagesArg = args[0] as List<String>
-            val wrapped: List<Any?> = try {
-              api.setLanguages(languagesArg)
+              api.setOptions(optionsArg)
               listOf(null)
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)

@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:ui' show Locale, Rect;
 
 import 'package:flutter/foundation.dart';
 
 import '../platform/text_sight_platform.dart';
 import '../recognition/normalized_roi.dart';
-import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
 import 'camera_permission_status.dart';
@@ -19,9 +17,7 @@ import 'capture_resolution.dart';
 /// [textureId]. Every call delegates to [TextSightPlatform.instance], so the controller carries
 /// no platform knowledge of its own.
 final class TextSightController extends ChangeNotifier {
-  RecognitionLevel _level;
-  Iterable<Locale> _languages;
-  Rect? _roi;
+  TextSightOptions _options;
   bool _isTorchEnabled;
   var _isRunning = false;
   int? _textureId;
@@ -36,19 +32,11 @@ final class TextSightController extends ChangeNotifier {
          options.roi.isNormalizedRoi,
          'Region-of-interest must be a normalized [0,1] rect with positive extent.',
        ),
-       _level = options.level,
-       _languages = options.languages.toList(growable: false),
-       _roi = options.roi,
+       _options = options._stable(),
        _isTorchEnabled = torchEnabled;
 
-  /// The current accuracy/latency level.
-  RecognitionLevel get recognitionLevel => _level;
-
-  /// The current preferred recognition languages, most-preferred first.
-  Iterable<Locale> get languages => _languages;
-
-  /// The current scan-box, or `null` when recognition spans the whole frame.
-  Rect? get regionOfInterest => _roi;
+  /// The recognizer settings in force. Change them with [updateOptions].
+  TextSightOptions get options => _options;
 
   /// Fixed for this controller's life.
   final CaptureResolution resolution;
@@ -66,9 +54,6 @@ final class TextSightController extends ChangeNotifier {
   /// The live per-frame results stream. Subscribers must cancel their own subscription.
   /// The controller does not own it.
   Stream<TextSightCapture> get captures => TextSightPlatform.instance.captures;
-
-  TextSightOptions get _options =>
-      TextSightOptions(level: _level, languages: _languages, roi: _roi);
 
   /// Opens the camera if needed and begins recognition. Idempotent on the texture:
   /// a session acquired once is reused across stop/start.
@@ -104,29 +89,17 @@ final class TextSightController extends ChangeNotifier {
   Future<CameraPermissionStatus> requestCameraPermission() =>
       TextSightPlatform.instance.requestCameraPermission();
 
-  /// Switches the accuracy/latency [level] of the running recognizer.
-  Future<void> updateRecognitionLevel(RecognitionLevel level) async {
-    await TextSightPlatform.instance.updateRecognitionLevel(level);
-    _level = level;
-    notifyListeners();
-  }
-
-  /// Replaces the preferred recognition [languages], most-preferred first.
-  Future<void> updateLanguages(Iterable<Locale> languages) async {
-    final selected = languages.toList(growable: false);
-    await TextSightPlatform.instance.updateLanguages(selected);
-    _languages = selected;
-    notifyListeners();
-  }
-
-  /// Restricts recognition to [roi], or clears it (whole frame) when `null`.
-  Future<void> updateRegionOfInterest(Rect? roi) async {
+  /// Replaces the recognizer settings on the open session.
+  ///
+  /// Every setting goes at once, so read [options] first when you only mean to change one.
+  Future<void> updateOptions(TextSightOptions settings) async {
     assert(
-      roi.isNormalizedRoi,
+      settings.roi.isNormalizedRoi,
       'Region-of-interest must be a normalized [0,1] rect with positive extent.',
     );
-    await TextSightPlatform.instance.updateRegionOfInterest(roi);
-    _roi = roi;
+    final stable = settings._stable();
+    await TextSightPlatform.instance.updateOptions(stable);
+    _options = stable;
     notifyListeners();
   }
 
@@ -147,4 +120,15 @@ final class TextSightController extends ChangeNotifier {
 
     super.dispose();
   }
+}
+
+/// A stable copy. `languages` can arrive lazy or growable and is read more than once, and a repeat
+/// means nothing in a preference order, so drop repeats but keep the order given. A `const`
+/// constructor cannot do any of that itself.
+extension on TextSightOptions {
+  TextSightOptions _stable() => TextSightOptions(
+    level: level,
+    languages: languages.toSet().toList(growable: false),
+    roi: roi,
+  );
 }

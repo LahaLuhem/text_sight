@@ -1,9 +1,8 @@
 import Vision
 
 /// Vision's older `VNRecognizeTextRequest` backend for iOS 15-17, same text engine as the modern
-/// one. Its `perform` is synchronous, so it runs on its own serial queue and is bridged to `async`
-/// with a continuation. That keeps a slow recognition off Swift concurrency's shared threads, and
-/// the single-in-flight gate upstream stops the queue piling up.
+/// one. Its `perform` is synchronous, so it gets its own serial queue and a continuation to bridge
+/// to `async`, keeping a slow read off Swift concurrency's shared threads.
 struct LegacyTextRecognizer: TextRecognizer {
   private let queue = DispatchQueue(label: "com.lahaluhem.text_sight.legacy-recognition")
 

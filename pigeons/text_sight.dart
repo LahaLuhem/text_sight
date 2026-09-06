@@ -83,14 +83,9 @@ abstract class TextSightHostApi {
   @async
   CameraPermissionStatusMessage requestCameraPermission();
 
-  /// Restricts recognition to [roi], or clears it (whole frame) when null.
-  void setRegionOfInterest(RegionOfInterestMessage? roi);
-
-  /// Switches the recognizer's accuracy/latency level.
-  void setRecognitionLevel(RecognitionLevelMessage level);
-
-  /// Replaces the preferred recognition languages (BCP-47 tags).
-  void setLanguages(List<String> languages);
+  /// Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
+  /// change mid-session, so it rides [initialize] instead.
+  void setOptions(TextSightOptionsMessage options);
 
   /// Turns the camera torch on or off.
   void setTorchEnabled(bool enabled);

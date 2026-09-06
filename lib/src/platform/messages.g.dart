@@ -408,46 +408,17 @@ class TextSightHostApi {
     return pigeonVar_replyValue! as CameraPermissionStatusMessage;
   }
 
-  /// Restricts recognition to [roi], or clears it (whole frame) when null.
-  Future<void> setRegionOfInterest(RegionOfInterestMessage? roi) async {
+  /// Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
+  /// change mid-session, so it rides [initialize] instead.
+  Future<void> setOptions(TextSightOptionsMessage options) async {
     final pigeonVar_channelName =
-        'dev.flutter.pigeon.text_sight.TextSightHostApi.setRegionOfInterest$pigeonVar_messageChannelSuffix';
+        'dev.flutter.pigeon.text_sight.TextSightHostApi.setOptions$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,
       binaryMessenger: pigeonVar_binaryMessenger,
     );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[roi]);
-    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
-
-    _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
-  }
-
-  /// Switches the recognizer's accuracy/latency level.
-  Future<void> setRecognitionLevel(RecognitionLevelMessage level) async {
-    final pigeonVar_channelName =
-        'dev.flutter.pigeon.text_sight.TextSightHostApi.setRecognitionLevel$pigeonVar_messageChannelSuffix';
-    final pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
-    );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[level]);
-    final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
-
-    _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
-  }
-
-  /// Replaces the preferred recognition languages (BCP-47 tags).
-  Future<void> setLanguages(List<String> languages) async {
-    final pigeonVar_channelName =
-        'dev.flutter.pigeon.text_sight.TextSightHostApi.setLanguages$pigeonVar_messageChannelSuffix';
-    final pigeonVar_channel = BasicMessageChannel<Object?>(
-      pigeonVar_channelName,
-      pigeonChannelCodec,
-      binaryMessenger: pigeonVar_binaryMessenger,
-    );
-    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[languages]);
+    final Future<Object?> pigeonVar_sendFuture = pigeonVar_channel.send(<Object?>[options]);
     final pigeonVar_replyList = await pigeonVar_sendFuture as List<Object?>?;
 
     _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);

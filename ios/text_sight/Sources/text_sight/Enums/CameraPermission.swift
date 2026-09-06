@@ -1,13 +1,10 @@
 import AVFoundation
 
-/// Maps the system camera-authorization state to the Pigeon transport enum and drives the one-shot
-/// permission prompt. System frameworks only (AVFoundation), per the no-bundling contract.
+/// Turns iOS's camera-authorization state into the Pigeon enum, and runs the one prompt iOS allows.
 ///
-/// iOS surfaces the prompt exactly once: after the user decides, `requestAccess` resolves immediately
-/// with the stored decision and never prompts again. So a refusal (`.denied`) and the
-/// non-user-controllable `.restricted` (parental controls / MDM) both map to `permanentlyDenied`:
-/// only Settings can change them. `.notDetermined` maps to `.denied` (not granted, but a request can
-/// still surface the dialog).
+/// Once the user decides, `requestAccess` just replays that decision and never asks again. So
+/// `.denied` and `.restricted` (parental controls, MDM) both become `permanentlyDenied`, since only
+/// Settings can undo them. `.notDetermined` becomes `denied`, because a request can still prompt.
 enum CameraPermission {
   /// The current authorization, without prompting.
   static func current() -> CameraPermissionStatusMessage {

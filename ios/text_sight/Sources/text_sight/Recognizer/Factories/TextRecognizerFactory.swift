@@ -1,6 +1,6 @@
-/// Picks the recognizer backend once, by OS: the modern Swift `RecognizeTextRequest` on iOS 18+,
-/// the legacy `VNRecognizeTextRequest` on iOS 15-17. This `#available` is the *only* version gate.
-/// resolving it once (at `TextSightCamera` init) keeps it out of the per-frame path.
+/// Picks the backend once by OS: modern `RecognizeTextRequest` on iOS 18+, legacy
+/// `VNRecognizeTextRequest` below that. The only version gate in the package, and resolving it at
+/// init keeps it off the per-frame path.
 enum TextRecognizerFactory {
   static func make() -> any TextRecognizer {
     if #available(iOS 18, *) {

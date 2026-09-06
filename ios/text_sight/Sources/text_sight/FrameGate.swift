@@ -1,11 +1,8 @@
 import CoreVideo
 
-/// Paces live recognition: newest frame only, one at a time, and the next starts as soon as the
-/// previous returns.
-///
-/// `bufferingNewest(1)` plus one consumer loop enforces that, rather than a hand-managed slot.
-/// Waiting on a camera callback to reopen the gate is what capped the rate at
-/// `ceil(latency / frameInterval)` frames.
+/// Paces live recognition: newest frame only, one at a time, the next starting as soon as the
+/// previous returns. `bufferingNewest(1)` plus one consumer loop does that without a hand-managed
+/// slot. Waiting on a camera callback to reopen the gate is what used to cap the rate.
 final class FrameGate {
   /// What runs for each frame. Set once, when the camera is built.
   var onFrame: (CVPixelBuffer) async -> Void = { _ in }

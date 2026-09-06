@@ -9,10 +9,9 @@ import UIKit
 /// Owns the `AVCaptureSession`, the Vision recognizer, and the preview texture for one live
 /// session. The Android twin is its own `TextSightCamera`.
 ///
-/// Recognition runs off the main thread and results marshal back to it before reaching the captures
-/// sink. Boxes come out top-left normalized, since Vision hands back lower-left. Backpressure is
-/// the `FrameGate` plus `alwaysDiscardsLateVideoFrames`, so a late frame is dropped, never queued.
-/// Imports stay system-only, which is the no-bundling contract.
+/// Recognition runs off the main thread and hops back before reaching the captures sink. Boxes come
+/// out top-left normalized, since Vision hands back lower-left. The `FrameGate` plus
+/// `alwaysDiscardsLateVideoFrames` is the backpressure, so a late frame is dropped, never queued.
 final class TextSightCamera: NSObject {
   /// One open capture session: the graph, the camera behind it, and the texture the preview
   /// renders. Built as a unit, dropped as a unit.
@@ -31,9 +30,8 @@ final class TextSightCamera: NSObject {
   /// per call), so the live path and the one-shot share this one instance, race-free.
   private let recognizer: any TextRecognizer
 
-  /// Guards every field touched from more than one thread: the latest pixel buffer (capture
-  /// queue writes, raster thread reads via `copyPixelBuffer`), the sink, the open session, and the
-  /// recognizer config (control channel writes, capture queue reads). The gate does its own locking.
+  /// Guards every field two threads touch: the latest pixel buffer, the sink, the open session and
+  /// the recognizer config. The gate does its own locking.
   private let stateLock = NSLock()
 
   /// Paces recognition: newest frame only, one at a time, next one starts on completion.
@@ -55,10 +53,9 @@ final class TextSightCamera: NSObject {
   private var rotationCoordinator: Any?
   private var rotationObservation: NSKeyValueObservation?
 
-  /// Clockwise degrees (from the rotation coordinator) to rotate the sensor buffer upright. The
-  /// buffer is delivered unrotated. This drives the Vision orientation and the reported
-  /// `quarterTurns` that `TextSightView` applies to the preview texture. Stays `0` on iOS 15-16
-  /// (no `RotationCoordinator`): preview and recognition do not follow live rotation there.
+  /// Clockwise degrees to turn the sensor buffer upright, from the rotation coordinator. Drives the
+  /// Vision orientation and the `quarterTurns` the view applies. Stays `0` on iOS 15-16, which have
+  /// no coordinator, so nothing follows rotation there.
   private var currentRotationAngle: CGFloat = 0
 
   // Recognizer config, stored as the Pigeon transport types and snapshotted into a
@@ -70,7 +67,7 @@ final class TextSightCamera: NSObject {
 
   private var isRecognizing = false
 
-  /// Written at initialize, read on the session queue when the graph is built, so it takes the lock.
+  /// Written at initialize, read on the session queue when the graph builds, so it takes the lock.
   private var captureResolution: CaptureResolutionMessage = .medium
 
   /// Set when the engine detaches, so a control call that was already in flight cannot rebuild the
@@ -100,12 +97,9 @@ final class TextSightCamera: NSObject {
 
   func initialize(options: TextSightOptionsMessage,
                   resolution: CaptureResolutionMessage) async throws -> Int64 {
-    // One lock hold for all five, so a frame never snapshots a half-applied update.
+    // One lock hold, so a frame never snapshots a half-applied update.
     stateLock.withLock {
-      recognitionLevel = options.level
-      recognitionLanguages = options.languages
-      minimumTextHeight = Float(options.minimumTextHeight)
-      regionOfInterest = options.roi
+      applyLocked(options)
       captureResolution = resolution
     }
 
@@ -149,16 +143,16 @@ final class TextSightCamera: NSObject {
     sessionQueue.async { self.releaseSession() }
   }
 
-  func setRegionOfInterest(roi: RegionOfInterestMessage?) {
-    stateLock.withLock { regionOfInterest = roi }
+  func setOptions(options: TextSightOptionsMessage) {
+    stateLock.withLock { applyLocked(options) }
   }
 
-  func setRecognitionLevel(level: RecognitionLevelMessage) {
-    stateLock.withLock { recognitionLevel = level }
-  }
-
-  func setLanguages(languages: [String]) {
-    stateLock.withLock { recognitionLanguages = languages }
+  /// Caller holds `stateLock`.
+  private func applyLocked(_ options: TextSightOptionsMessage) {
+    recognitionLevel = options.level
+    recognitionLanguages = options.languages
+    minimumTextHeight = Float(options.minimumTextHeight)
+    regionOfInterest = options.roi
   }
 
   func setTorchEnabled(enabled: Bool) {
@@ -172,9 +166,8 @@ final class TextSightCamera: NSObject {
 
   // MARK: Session lifecycle
 
-  /// Registers the preview texture and starts the session over a freshly built graph. Runs on
-  /// `sessionQueue`, since `startRunning()` must never block main. Internal (not `private`) so
-  /// `RunnerTests` can drive a reconfigure.
+  /// Registers the texture and starts the session on a freshly built graph. On `sessionQueue`,
+  /// because `startRunning()` must never block main. Internal for `RunnerTests`.
   func configureSession() throws -> Int64 {
     // A control call still in flight when detach landed must not rebuild the session. The other
     // ordering is already safe: a release queued behind us on `sessionQueue` tears this back down.
@@ -252,11 +245,10 @@ final class TextSightCamera: NSObject {
     return session.canSetSessionPreset(wanted) ? wanted : .high
   }
 
-  /// Picks the capture pixel format: the camera's own biplanar YUV where offered, else BGRA.
-  ///
-  /// YUV drops AVFoundation's per-frame conversion and costs 1.5 bytes a pixel instead of 4. Vision
-  /// reads it and Flutter wraps both planes without copying. Video range first, since that is what
-  /// the sensor hands out. Internal (not `private`) so `RunnerTests` can reach it.
+  /// Picks the capture pixel format: the camera's own biplanar YUV when offered, else BGRA. YUV
+  /// skips AVFoundation's per-frame conversion and costs 1.5 bytes a pixel instead of 4. Vision
+  /// reads it fine and Flutter wraps both planes without copying. Video range first, that is what
+  /// the sensor hands out. Internal for `RunnerTests`.
   static func pixelFormat(from available: [OSType]) -> OSType {
     let offered = Set(available)
     let preferred: [OSType] = [
@@ -267,11 +259,9 @@ final class TextSightCamera: NSObject {
     return preferred.first(where: offered.contains) ?? kCVPixelFormatType_32BGRA
   }
 
-  /// Tracks device-to-upright rotation with `AVCaptureDevice.RotationCoordinator` (iOS 17+).
-  ///
-  /// The buffer stays unrotated, which is cheaper. The angle goes to Dart as `quarterTurns` for the
-  /// preview and orients Vision so boxes come out upright. On iOS 15-16 it stays `0`, so live
-  /// rotation simply does not happen there.
+  /// Tracks device-to-upright rotation with `AVCaptureDevice.RotationCoordinator` (iOS 17+). The
+  /// buffer stays unrotated because that is cheaper. The angle goes to Dart as `quarterTurns` and
+  /// orients Vision so boxes come out upright. On iOS 15-16 it stays `0`, so nothing rotates.
   @available(iOS 17, *)
   private func startTrackingRotation(for device: AVCaptureDevice) {
     let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
@@ -291,9 +281,8 @@ final class TextSightCamera: NSObject {
     stateLock.withLock { currentRotationAngle = angle }
   }
 
-  /// Stops capture while the app is backgrounded and restarts it on return. Stopping explicitly
-  /// releases the camera instead of riding the system interruption, and the restart re-asserts
-  /// the torch.
+  /// Stops capture while backgrounded and restarts on return. Stopping explicitly hands the camera
+  /// back rather than riding the system interruption, and the restart re-asserts the torch.
   private func observeAppLifecycle() {
     let center = NotificationCenter.default
     let onBackground = center.addObserver(
@@ -414,9 +403,8 @@ final class TextSightCamera: NSObject {
                           quarterTurns: rotation.quarterTurns))
   }
 
-  /// Runs `work` on `sessionQueue`, bridged to `async`. The queue is the session's synchronisation
-  /// domain (`torchEnabled`, `suspendSession`, `resumeSession` all live on it), so callers keep the
-  /// hop rather than replacing it.
+  /// Runs `work` on `sessionQueue`, bridged to `async`. That queue owns `torchEnabled` and the
+  /// suspend/resume pair, so callers keep the hop rather than replacing it.
   private func onSessionQueue<T>(_ work: @escaping () throws -> T) async throws -> T {
     try await withCheckedThrowingContinuation { continuation in
       sessionQueue.async { continuation.resume(with: Result(catching: work)) }
@@ -452,9 +440,8 @@ final class TextSightCamera: NSObject {
     return try await recognizeStill(source, options: options)
   }
 
-  /// Decodes a still from `source` (honouring EXIF orientation) and returns the same per-frame map
-  /// the live path emits, with `quarterTurns` 0 since a still is already upright. No session,
-  /// texture, or sink is touched.
+  /// Decodes a still from `source` (EXIF orientation honoured) and emits the same per-frame map the
+  /// live path does, `quarterTurns` 0 since a still is upright. No session or texture involved.
   private func recognizeStill(_ source: CGImageSource,
                               options: TextSightOptionsMessage) async throws -> [String: Any?] {
     let config = RecognitionConfig(level: options.level, languages: options.languages,
@@ -511,9 +498,8 @@ final class TextSightCamera: NSObject {
     }
   }
 
-  /// Encodes neutral recognized lines into the self-describing per-frame map, byte-identical to
-  /// the shape the Android side emits over `com.lahaluhem.text_sight/captures`. Internal (not
-  /// `private`) so `RunnerTests` can exercise it via `@testable import`.
+  /// Encodes neutral lines into the self-describing per-frame map, byte-identical to what Android
+  /// emits. Internal for `RunnerTests`.
   static func encodeFrame(_ lines: [RecognizedLineData],
                           imageWidth: Double, imageHeight: Double,
                           quarterTurns: Int) -> [String: Any] {
@@ -539,17 +525,14 @@ final class TextSightCamera: NSObject {
     ]
   }
 
-  /// Maps the coordinator's clockwise-to-upright `angle` (degrees) to the preview quarter-turns
-  /// (clockwise, for Flutter's `RotatedBox`), the matching Vision orientation for the *unrotated*
-  /// buffer, and whether the axes swap. If the on-device preview comes out rotated the wrong way,
-  /// this single mapping (the angle↔orientation convention) is the knob to adjust. Internal (not
-  /// `private`) so `RunnerTests` can exercise it via `@testable import`.
+  /// Maps the coordinator's clockwise-to-upright `angle` to preview quarter-turns, the Vision
+  /// orientation for the unrotated buffer, and whether the axes swap. If the preview comes out
+  /// rotated wrong on a device, this mapping is the knob. Internal for `RunnerTests`.
   static func displayRotation(forCaptureAngle angle: CGFloat)
     -> (quarterTurns: Int, orientation: CGImagePropertyOrientation, isQuarterTurned: Bool) {
     switch (Int(angle.rounded()) % 360 + 360) % 360 {
-    // Back camera: a 90° clockwise-to-upright angle (portrait) is EXIF `.right`, and the opposite
-    // quarter-turn (270°) is `.left`. Swapping the two feeds Vision a 180°-rotated image, which
-    // wrecks recognition in portrait while landscape (`.up`/`.down`) still looks fine.
+    // Back camera: 90° clockwise-to-upright (portrait) is EXIF `.right`, 270° is `.left`. Swap them
+    // and Vision gets a 180°-rotated image, wrecking portrait while landscape still looks fine.
     case 90: return (1, .right, true)
     case 180: return (2, .down, false)
     case 270: return (3, .left, true)

@@ -91,16 +91,8 @@ class TextSightPlugin :
         return engine.run { activePermissions.request() }
     }
 
-    override fun setRegionOfInterest(roi: RegionOfInterestMessage?) {
-        camera?.setRegionOfInterest(roi)
-    }
-
-    override fun setRecognitionLevel(level: RecognitionLevelMessage) {
-        // No-op on Android: the ML Kit Latin recognizer exposes no accuracy/latency level.
-    }
-
-    override fun setLanguages(languages: List<String>) {
-        // No-op on Android: the ML Kit Latin recognizer is not language-selectable.
+    override fun setOptions(options: TextSightOptionsMessage) {
+        camera?.setOptions(options)
     }
 
     override fun setTorchEnabled(enabled: Boolean) {

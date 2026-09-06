@@ -1,11 +1,9 @@
 import 'dart:typed_data' show Uint8List;
-import 'dart:ui' show Locale, Rect;
 
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../capture/camera_permission_status.dart';
 import '../capture/capture_resolution.dart';
-import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
 import '../recognition/text_sight_readiness_state.dart';
@@ -66,17 +64,9 @@ abstract class TextSightPlatform extends PlatformInterface {
   Future<CameraPermissionStatus> requestCameraPermission() =>
       throw UnimplementedError('requestCameraPermission() has not been implemented.');
 
-  /// Restricts recognition to [roi], or clears it (whole frame) when `null`.
-  Future<void> updateRegionOfInterest(Rect? roi) =>
-      throw UnimplementedError('updateRegionOfInterest() has not been implemented.');
-
-  /// Switches the accuracy/latency [level] of the running recognizer.
-  Future<void> updateRecognitionLevel(RecognitionLevel level) =>
-      throw UnimplementedError('updateRecognitionLevel() has not been implemented.');
-
-  /// Updates the preferred recognition [languages] (mapped to BCP-47 tags natively).
-  Future<void> updateLanguages(Iterable<Locale> languages) =>
-      throw UnimplementedError('updateLanguages() has not been implemented.');
+  /// Replaces the recognizer settings on an open session.
+  Future<void> updateOptions(TextSightOptions options) =>
+      throw UnimplementedError('updateOptions() has not been implemented.');
 
   /// Turns the camera torch on or off when the device has one.
   Future<void> updateTorchEnabled({required bool enabled}) =>

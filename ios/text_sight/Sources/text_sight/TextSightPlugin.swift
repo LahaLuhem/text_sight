@@ -2,14 +2,10 @@ import Flutter
 
 /// The text_sight iOS plugin.
 ///
-/// Wires the Pigeon control channel (`TextSightHostApi`), the per-frame captures
-/// `EventChannel`, and the preview texture, delegating capture and recognition to
-/// `TextSightCamera`. No recognition library crosses into the Dart pubspec. The Apple side
-/// imports only system frameworks (Vision / AVFoundation), the no-bundling contract.
-///
-/// The control methods are `internal`: `TextSightHostApi` (Pigeon-generated) and its message
-/// types are themselves internal, so a `public` signature exposing them would not compile. Only
-/// the `FlutterPlugin` registration surface needs to be `public`.
+/// Wires up the Pigeon control channel, the captures `EventChannel` and the preview texture, then
+/// hands the real work to `TextSightCamera`. Imports stay system-only, which is the no-bundling
+/// contract. The control methods are `internal` because Pigeon's generated types are, so a `public`
+/// signature would not compile.
 public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
   private let camera: TextSightCamera
   private let modelReadiness: TextSightModelReadiness
@@ -34,15 +30,14 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     let readinessChannel = FlutterEventChannel(name: readinessChannelName, binaryMessenger: messenger)
     readinessChannel.setStreamHandler(modelReadiness)
 
-    // Anchor the plugin's lifetime to the registrar. The texture registry retains the camera, and
-    // the plugin retains the readiness handler. Publishing is also what earns us
-    // `detachFromEngine(for:)` below.
+    // Anchor the plugin to the registrar. The texture registry holds the camera, the plugin holds
+    // the readiness handler, and publishing is what earns us `detachFromEngine(for:)` below.
     registrar.publish(plugin)
   }
 
-  /// Engine teardown: releases the capture session and cancels in-flight recognition, which would
-  /// otherwise keep running until ARC happened to reclaim us. No `setUp(api: nil)` here on purpose,
-  /// since this fires from `FlutterEngine.dealloc` where the messenger is already gone.
+  /// Engine teardown: drops the session and cancels in-flight recognition, which would otherwise
+  /// run until ARC got round to us. No `setUp(api: nil)`, since this fires from
+  /// `FlutterEngine.dealloc` where the messenger is already gone.
   public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
     camera.detach()
   }
@@ -72,16 +67,8 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     await CameraPermission.request()
   }
 
-  func setRegionOfInterest(roi: RegionOfInterestMessage?) throws {
-    camera.setRegionOfInterest(roi: roi)
-  }
-
-  func setRecognitionLevel(level: RecognitionLevelMessage) throws {
-    camera.setRecognitionLevel(level: level)
-  }
-
-  func setLanguages(languages: [String]) throws {
-    camera.setLanguages(languages: languages)
+  func setOptions(options: TextSightOptionsMessage) throws {
+    camera.setOptions(options: options)
   }
 
   func setTorchEnabled(enabled: Bool) throws {
