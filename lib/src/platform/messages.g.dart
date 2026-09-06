@@ -166,16 +166,25 @@ class RegionOfInterestMessage {
 
 /// Transport twin of the public `TextSightOptions`.
 class TextSightOptionsMessage {
-  TextSightOptionsMessage({required this.level, required this.languages, this.roi});
+  TextSightOptionsMessage({
+    required this.level,
+    required this.languages,
+    required this.minimumTextHeight,
+    this.roi,
+  });
 
   RecognitionLevelMessage level;
 
   List<String> languages;
 
+  /// Smallest text to read, as a fraction of the scan box. Vision shrinks the image to suit, so 0
+  /// keeps every pixel. ML Kit has no such dial, so Android ignores it.
+  double minimumTextHeight;
+
   RegionOfInterestMessage? roi;
 
   List<Object?> _toList() {
-    return <Object?>[level, languages, roi];
+    return <Object?>[level, languages, minimumTextHeight, roi];
   }
 
   Object encode() {
@@ -187,7 +196,8 @@ class TextSightOptionsMessage {
     return TextSightOptionsMessage(
       level: result[0]! as RecognitionLevelMessage,
       languages: (result[1]! as List<Object?>).cast<String>(),
-      roi: result[2] as RegionOfInterestMessage?,
+      minimumTextHeight: result[2]! as double,
+      roi: result[3] as RegionOfInterestMessage?,
     );
   }
 
@@ -202,6 +212,7 @@ class TextSightOptionsMessage {
     }
     return _deepEquals(level, other.level) &&
         _deepEquals(languages, other.languages) &&
+        _deepEquals(minimumTextHeight, other.minimumTextHeight) &&
         _deepEquals(roi, other.roi);
   }
 
@@ -211,7 +222,7 @@ class TextSightOptionsMessage {
 
   @override
   String toString() {
-    return 'TextSightOptionsMessage(level: $level, languages: $languages, roi: $roi)';
+    return 'TextSightOptionsMessage(level: $level, languages: $languages, minimumTextHeight: $minimumTextHeight, roi: $roi)';
   }
 }
 

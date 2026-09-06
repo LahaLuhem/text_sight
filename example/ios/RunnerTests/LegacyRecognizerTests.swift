@@ -7,16 +7,17 @@ import XCTest
 
 @testable import text_sight
 
-/// End-to-end recognition on the legacy Vision backend. Unlike the mapping tests, this really runs
-/// `VNRecognizeTextRequest`: building `LegacyTextRecognizer` directly exercises the iOS 15-17 path on
-/// any runtime, so perform / continuation / Y-flip stay covered without a sub-18 simulator.
+/// End-to-end on the legacy Vision backend, where the mapping tests only build a request. Making a
+/// `LegacyTextRecognizer` directly runs the iOS 15-17 path on any runtime, so perform, the
+/// continuation and the Y-flip stay covered without a sub-18 simulator.
 final class LegacyTextRecognizerTests: XCTestCase {
   func testReadsRenderedText() async throws {
     let cgImage = try XCTUnwrap(Self.renderText("HELLO").cgImage)
 
     let lines = try await LegacyTextRecognizer().recognize(
       cgImage: cgImage, orientation: .up,
-      config: RecognitionConfig(level: .accurate, languages: [], roi: nil)
+      config: RecognitionConfig(level: .accurate, languages: [],
+                                minimumTextHeight: 0, roi: nil)
     )
 
     XCTAssertFalse(lines.isEmpty, "legacy recognizer returned no lines")
@@ -41,7 +42,8 @@ final class LegacyTextRecognizerTests: XCTestCase {
 
     let lines = try await LegacyTextRecognizer().recognize(
       pixelBuffer: try Self.makeYuvBuffer(from: cgImage), orientation: .up,
-      config: RecognitionConfig(level: .accurate, languages: [], roi: nil)
+      config: RecognitionConfig(level: .accurate, languages: [],
+                                minimumTextHeight: 0, roi: nil)
     )
 
     let joined = lines.map(\.text).joined().uppercased()

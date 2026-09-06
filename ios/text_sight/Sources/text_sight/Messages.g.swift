@@ -262,6 +262,9 @@ struct RegionOfInterestMessage: Hashable, CustomStringConvertible {
 struct TextSightOptionsMessage: Hashable, CustomStringConvertible {
   var level: RecognitionLevelMessage
   var languages: [String]
+  /// Smallest text to read, as a fraction of the scan box. Vision shrinks the image to suit, so 0
+  /// keeps every pixel. ML Kit has no such dial, so Android ignores it.
+  var minimumTextHeight: Double
   var roi: RegionOfInterestMessage? = nil
 
 
@@ -269,11 +272,13 @@ struct TextSightOptionsMessage: Hashable, CustomStringConvertible {
   static func fromList(_ pigeonVar_list: [Any?]) -> TextSightOptionsMessage? {
     let level = pigeonVar_list[0] as! RecognitionLevelMessage
     let languages = pigeonVar_list[1] as! [String]
-    let roi: RegionOfInterestMessage? = nilOrValue(pigeonVar_list[2])
+    let minimumTextHeight = pigeonVar_list[2] as! Double
+    let roi: RegionOfInterestMessage? = nilOrValue(pigeonVar_list[3])
 
     return TextSightOptionsMessage(
       level: level,
       languages: languages,
+      minimumTextHeight: minimumTextHeight,
       roi: roi
     )
   }
@@ -281,6 +286,7 @@ struct TextSightOptionsMessage: Hashable, CustomStringConvertible {
     return [
       level,
       languages,
+      minimumTextHeight,
       roi,
     ]
   }
@@ -288,18 +294,19 @@ struct TextSightOptionsMessage: Hashable, CustomStringConvertible {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return MessagesPigeonInternal.deepEquals(lhs.level, rhs.level) && MessagesPigeonInternal.deepEquals(lhs.languages, rhs.languages) && MessagesPigeonInternal.deepEquals(lhs.roi, rhs.roi)
+    return MessagesPigeonInternal.deepEquals(lhs.level, rhs.level) && MessagesPigeonInternal.deepEquals(lhs.languages, rhs.languages) && MessagesPigeonInternal.deepEquals(lhs.minimumTextHeight, rhs.minimumTextHeight) && MessagesPigeonInternal.deepEquals(lhs.roi, rhs.roi)
   }
 
   func hash(into hasher: inout Hasher) {
     hasher.combine("TextSightOptionsMessage")
     MessagesPigeonInternal.deepHash(value: level, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: languages, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: minimumTextHeight, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: roi, hasher: &hasher)
   }
 
   public var description: String {
-    return "TextSightOptionsMessage(level: \(String(describing: level)), languages: \(String(describing: languages)), roi: \(String(describing: roi)))"
+    return "TextSightOptionsMessage(level: \(String(describing: level)), languages: \(String(describing: languages)), minimumTextHeight: \(String(describing: minimumTextHeight)), roi: \(String(describing: roi)))"
   }
 }
 

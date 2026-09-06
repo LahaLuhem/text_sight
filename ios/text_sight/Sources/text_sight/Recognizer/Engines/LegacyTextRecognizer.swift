@@ -1,10 +1,9 @@
 import Vision
 
-/// Vision's legacy `VNRecognizeTextRequest` backend (iOS 15-17), the fallback below the modern
-/// API's iOS 18 floor, running the *same* Vision text engine. The request is reference-typed and
-/// the handler's `perform` is *synchronous*: it runs on a dedicated serial queue and is bridged to
-/// `async` via a continuation, so a blocking recognition never stalls a Swift-concurrency
-/// cooperative thread. The single-in-flight backpressure upstream keeps the queue from backing up.
+/// Vision's older `VNRecognizeTextRequest` backend for iOS 15-17, same text engine as the modern
+/// one. Its `perform` is synchronous, so it runs on its own serial queue and is bridged to `async`
+/// with a continuation. That keeps a slow recognition off Swift concurrency's shared threads, and
+/// the single-in-flight gate upstream stops the queue piling up.
 struct LegacyTextRecognizer: TextRecognizer {
   private let queue = DispatchQueue(label: "com.lahaluhem.text_sight.legacy-recognition")
 
@@ -39,7 +38,7 @@ struct LegacyTextRecognizer: TextRecognizer {
     request.usesLanguageCorrection = config.level == .accurate
     // Empty means no preference, so it goes through rather than being guarded away.
     request.recognitionLanguages = config.languages
-    request.minimumTextHeight = RecognitionConfig.minimumTextHeight
+    request.minimumTextHeight = config.minimumTextHeight
     // Vision's region is lower-left, so flip the top-left rect.
     request.regionOfInterest = config.roi.map {
       CGRect(x: $0.left, y: 1 - ($0.top + $0.height), width: $0.width, height: $0.height)

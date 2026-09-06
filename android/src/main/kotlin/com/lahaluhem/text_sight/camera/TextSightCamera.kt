@@ -74,8 +74,8 @@ internal class TextSightCamera(
         options: TextSightOptionsMessage,
         resolution: CaptureResolutionMessage,
     ): Long {
-        // Recognition level and languages have no ML Kit Latin equivalent (see the
-        // TextSightOptions docs). Only the region-of-interest is honoured here.
+        // Level, languages and the text-height floor have no ML Kit Latin equivalent. Only the
+        // region-of-interest is honoured here.
         regionOfInterest = options.roi
 
         return session.open(resolution)
@@ -125,11 +125,9 @@ internal class TextSightCamera(
     }
 
     /**
-     * Recognizes [bitmap], rotated upright by [rotationDegrees] (its EXIF orientation), with a
-     * transient pass over the shared recognizer. When [roi] is set, the upright bitmap is cropped
-     * to it first so ML Kit reads only that region: a true crop, unlike the live path's
-     * centre-containment filter. Returns the same per-frame map the live path emits, with quarterTurns
-     * 0, since a still is already upright.
+     * Recognizes [bitmap] with a transient pass over the shared recognizer, turned upright by
+     * [rotationDegrees] (its EXIF orientation) first. Emits the same per-frame map the live path
+     * does, with quarterTurns 0 since a still is already upright.
      */
     private suspend fun recognizeStill(
         bitmap: Bitmap,

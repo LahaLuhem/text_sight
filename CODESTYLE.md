@@ -568,6 +568,21 @@ Keep them to a line or two. Rationale that needs a paragraph belongs in
 Swift doc comments too, and to plain `//` comments. It's a default, not a ceiling: genuinely
 subtle code can earn more, it just shouldn't be the habit.
 
+**Trim what's already there when you touch a file.** Editing a file makes its existing comments
+yours to tidy, so cut the over-long ones in the same pass rather than leaving them for a sweep that
+never comes. This is deliberately wider than "only what you wrote": prose rots where nobody is
+looking, and a file you are already in is the cheapest place to fix it. Don't turn it into a
+repo-wide rewrite, though. Stay in the files the change touches.
+
+**What to cut.** Restatement of what the signature already says. Pointers with no anchor
+("see APPENDIX"). Preamble blocks explaining a file, where a line at the surprising call site would
+do. Emphasis markup on ordinary words. Arrows and other glyph shorthand (`native→Dart`) in place of
+words. Anything that reads as machine-written: em-dashes, semicolons in prose, marketing words
+(*leverage*, *robust*, *seamless*, *powerful*), and rule-of-three lists that exist for rhythm.
+
+**What to keep.** Invariants a reader can't recover from the code: threading rules, backpressure,
+coordinate spaces, the no-bundling contract. Short beats long, but wrong beats neither.
+
 ### `@docImport` for dartdoc-only references
 
 When a file needs a symbol *only* for `[Name]` references in dartdoc (not in code), do

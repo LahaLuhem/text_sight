@@ -1,14 +1,10 @@
-// Pigeon-specific syntax (mutable data fields,undocumented transport twins, etc) that is not shipped code
+// Pigeon-only syntax (mutable data fields, undocumented transport twins) that never ships
 // ignore_for_file: prefer-match-file-name
 // ignore_for_file: avoid_positional_boolean_parameters
 
-// Pigeon schema: the INTERNAL, dev-time transport for the typed control API.
-//
-// These message classes are Pigeon-private twins of the public types: per the
-// channel-topology decision, Pigeon stays an implementation detail and the
-// public API is hand-written, so `TextSightPlatform`'s concrete implementation
-// maps public <-> message types. Per-frame results do NOT ride Pigeon, they
-// stream over a plain EventChannel, so no @EventChannelApi appears here.
+// Pigeon schema: the dev-time transport behind the control API, never public. These message
+// classes are private twins of the public types, mapped by `TextSightPlatform`'s implementation.
+// Per-frame results ride a plain EventChannel instead, which is why no @EventChannelApi shows up.
 @ConfigurePigeon(
   PigeonOptions(
     dartPackageName: 'text_sight',
@@ -37,10 +33,14 @@ class RegionOfInterestMessage {
 
 /// Transport twin of the public `TextSightOptions`.
 class TextSightOptionsMessage {
-  new({required this.level, required this.languages, this.roi});
+  new({required this.level, required this.languages, required this.minimumTextHeight, this.roi});
 
   RecognitionLevelMessage level;
   List<String> languages;
+
+  /// Smallest text to read, as a fraction of the scan box. Vision shrinks the image to suit, so 0
+  /// keeps every pixel. ML Kit has no such dial, so Android ignores it.
+  double minimumTextHeight;
   RegionOfInterestMessage? roi;
 }
 
@@ -95,11 +95,8 @@ abstract class TextSightHostApi {
   /// Turns the camera torch on or off.
   void setTorchEnabled(bool enabled);
 
-  // Model readiness: mode-agnostic (both drivers recognize through the same model), so it
-  // rides this control API rather than either driver. Triggers a check-and-fetch of the
-  // on-device model and returns the terminal readiness map (decoded Dart-side, the same
-  // self-describing style as the recognize calls). Intermediate progress streams over a
-  // plain EventChannel (com.lahaluhem.text_sight/readiness), not this method.
+  // Readiness sits here because both drivers share the one model. Progress streams over
+  // com.lahaluhem.text_sight/readiness, so this call only hands back the final state.
 
   /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
   /// Google Play Services when needed) and returns the terminal readiness state.

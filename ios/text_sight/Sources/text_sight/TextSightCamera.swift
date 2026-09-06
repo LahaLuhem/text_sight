@@ -7,15 +7,12 @@ import ImageIO
 import UIKit
 
 /// Owns the `AVCaptureSession`, the Vision recognizer, and the preview texture for one live
-/// recognition session, the iOS twin of the Android `TextSightCamera`.
+/// session. The Android twin is its own `TextSightCamera`.
 ///
-/// Recognition runs off the platform main thread (Vision's own async executor, fed from the
-/// capture-delegate queue). Boxes are normalized to top-left `[0, 1]` here (Vision yields
-/// lower-left normalized rects) and marshalled back to main before reaching the captures
-/// `EventChannel` sink. Backpressure is the `FrameGate` plus `alwaysDiscardsLateVideoFrames`: a
-/// late frame is dropped, never queued. Only system frameworks are imported (here: AVFoundation /
-/// CoreMedia / CoreVideo / Flutter, with Vision behind the `TextRecognizer`), so the no-bundling
-/// contract holds structurally on the Apple side.
+/// Recognition runs off the main thread and results marshal back to it before reaching the captures
+/// sink. Boxes come out top-left normalized, since Vision hands back lower-left. Backpressure is
+/// the `FrameGate` plus `alwaysDiscardsLateVideoFrames`, so a late frame is dropped, never queued.
+/// Imports stay system-only, which is the no-bundling contract.
 final class TextSightCamera: NSObject {
   /// One open capture session: the graph, the camera behind it, and the texture the preview
   /// renders. Built as a unit, dropped as a unit.
@@ -68,6 +65,7 @@ final class TextSightCamera: NSObject {
   // `RecognitionConfig` per frame for the recognizer (which builds its own value-typed request).
   private var recognitionLevel: RecognitionLevelMessage = .fast
   private var recognitionLanguages: [String] = []
+  private var minimumTextHeight: Float = 0
   private var regionOfInterest: RegionOfInterestMessage?
 
   private var isRecognizing = false
@@ -102,10 +100,11 @@ final class TextSightCamera: NSObject {
 
   func initialize(options: TextSightOptionsMessage,
                   resolution: CaptureResolutionMessage) async throws -> Int64 {
-    // One lock hold for all four, so a frame never snapshots a half-applied update.
+    // One lock hold for all five, so a frame never snapshots a half-applied update.
     stateLock.withLock {
       recognitionLevel = options.level
       recognitionLanguages = options.languages
+      minimumTextHeight = Float(options.minimumTextHeight)
       regionOfInterest = options.roi
       captureResolution = resolution
     }
@@ -268,12 +267,11 @@ final class TextSightCamera: NSObject {
     return preferred.first(where: offered.contains) ?? kCVPixelFormatType_32BGRA
   }
 
-  /// Tracks the device→upright rotation via an `AVCaptureDevice.RotationCoordinator` (iOS 17+).
-  /// The buffer itself is delivered unrotated, which is cheaper and avoids relying on data-output
-  /// rotation. Instead the angle is reported to Dart as `quarterTurns` (so `TextSightView` rotates
-  /// the preview texture) and is used to orient Vision so recognition stays upright and boxes come
-  /// out display-oriented. Gated to 17+: on iOS 15-16 the angle stays `0`, a deliberate degraded
-  /// fallback (no live rotation), not a full pre-17 rotation path. See APPENDIX / the README note.
+  /// Tracks device-to-upright rotation with `AVCaptureDevice.RotationCoordinator` (iOS 17+).
+  ///
+  /// The buffer stays unrotated, which is cheaper. The angle goes to Dart as `quarterTurns` for the
+  /// preview and orients Vision so boxes come out upright. On iOS 15-16 it stays `0`, so live
+  /// rotation simply does not happen there.
   @available(iOS 17, *)
   private func startTrackingRotation(for device: AVCaptureDevice) {
     let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
@@ -393,7 +391,7 @@ final class TextSightCamera: NSObject {
   private func recognize(_ pixelBuffer: CVPixelBuffer) async {
     let (config, rotation) = stateLock.withLock {
       (RecognitionConfig(level: recognitionLevel, languages: recognitionLanguages,
-                         roi: regionOfInterest),
+                         minimumTextHeight: minimumTextHeight, roi: regionOfInterest),
        Self.displayRotation(forCaptureAngle: currentRotationAngle))
     }
 
@@ -460,6 +458,7 @@ final class TextSightCamera: NSObject {
   private func recognizeStill(_ source: CGImageSource,
                               options: TextSightOptionsMessage) async throws -> [String: Any?] {
     let config = RecognitionConfig(level: options.level, languages: options.languages,
+                                   minimumTextHeight: Float(options.minimumTextHeight),
                                    roi: options.roi)
 
     guard let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {

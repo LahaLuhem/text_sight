@@ -29,7 +29,7 @@ struct ModernTextRecognizer: TextRecognizer {
     request.usesLanguageCorrection = config.level == .accurate
     // Empty means no preference, so it goes through rather than being guarded away.
     request.recognitionLanguages = config.languages.map { Locale.Language(identifier: $0) }
-    request.minimumTextHeightFraction = RecognitionConfig.minimumTextHeight
+    request.minimumTextHeightFraction = config.minimumTextHeight
     // Vision's region is lower-left, so flip the top-left rect.
     request.regionOfInterest = config.roi.map {
       NormalizedRect(x: $0.left, y: 1 - ($0.top + $0.height), width: $0.width, height: $0.height)
