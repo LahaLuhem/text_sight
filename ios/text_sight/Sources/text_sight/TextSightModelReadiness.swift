@@ -1,10 +1,8 @@
 import Flutter
 
-/// Reports model readiness on iOS, where recognition is Apple Vision, a system framework that is
-/// always present. So readiness is constant: ready. This type exists only to satisfy the
-/// cross-platform `TextSightModel` contract. There is no model to download (unlike Android's
-/// unbundled ML Kit), so `ensureModelReady` resolves immediately and the readiness stream emits a
-/// single ready event on subscription. The map shape is identical to the Android side's.
+/// Readiness on iOS is always ready: Vision ships with the OS, so there is nothing to download.
+/// This exists to hold up the cross-platform `TextSightModel` contract, and emits the same map
+/// shape Android does.
 final class TextSightModelReadiness: NSObject {
   private var eventSink: FlutterEventSink?
 

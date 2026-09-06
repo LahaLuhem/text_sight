@@ -117,7 +117,7 @@ style.
   `getFoo()` / `setFoo()` *method* reads as a Java-ism. Sync, side-effect-free state is a
   getter (`foo`), or a setter (`set foo(…)`) if writable. A mutation that *can't* be a setter
   (async or side-effecting, since a setter can't be awaited nor surface an error) takes the verb
-  for what it does: `updateRegionOfInterest(roi)`, **not** `setRegionOfInterest(roi)`.
+  for what it does: `updateOptions(options)`, **not** `setOptions(options)`.
 - **A public *option* a platform silently ignores says so in its name.** Prefix it with the
   platform tree it actually applies to (`darwinRecognitionLevel`, not `level`). A dartdoc alone
   never reaches the consumer who sets `fast` on Android, gets `accurate` behaviour, and has no
@@ -142,11 +142,11 @@ style.
 
   ```dart
   // Prefer:
-  final recognitionLevel = controller.recognitionLevel;
+  final recognitionLevel = controller.options.level;
   final recognizedLines = capture.lines;
 
   // Over:
-  final level = controller.recognitionLevel;
+  final level = controller.options.level;
   final lines = capture.lines;
   ```
 
@@ -282,8 +282,8 @@ style.
   A `const` constructor's `assert` can use only constant expressions (no method calls), so the
   shared ROI predicate lives outside the `const` `TextSightOptions` constructor as the
   `NormalizedRoi` extension (`roi.isNormalizedRoi`). Its consumers validate: the live
-  `TextSightController` (constructor and `setRegionOfInterest`) and the static `TextSight`
-  one-shot, never the `const` options type itself.
+  `TextSightController` (constructor and `updateOptions`) and the static `TextSight` one-shot,
+  never the `const` options type itself.
 - **Value types override `toString`.** Immutable data classes (`TextSightCapture`,
   `RecognizedLine`, the options/ROI records) implement `toString()` returning
   `'ClassName(field1: value1, field2: value2)'`. The default `Instance of 'ClassName'`
@@ -363,10 +363,10 @@ set, or map literal (most often a parameter slot or assignment target) the expli
 
 ```dart
 // Prefer:
-controller.setLanguages({'en-US', if (alsoFrench) 'fr-FR'})
+TextSightOptions(languages: {enUS, if (alsoFrench) fr})
 
 // Over:
-controller.setLanguages(<String>{'en-US', if (alsoFrench) 'fr-FR'})
+TextSightOptions(languages: <Locale>{enUS, if (alsoFrench) fr})
 ```
 
 Keep `<Type>` when inference would otherwise fall back to `dynamic`:

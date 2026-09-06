@@ -28,7 +28,7 @@ void main() {
     final records = <Map<String, Object?>>[];
 
     for (final level in RecognitionLevel.values) {
-      await controller.updateRecognitionLevel(level);
+      await controller.updateOptions(TextSightOptions(level: level));
 
       for (var iteration = 0; iteration < _iterations; iteration++) {
         final arrivals = <int>[];

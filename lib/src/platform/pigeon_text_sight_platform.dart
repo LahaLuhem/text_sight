@@ -58,15 +58,7 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
       (await _hostApi.requestCameraPermission())._toPublic();
 
   @override
-  Future<void> updateRegionOfInterest(Rect? roi) => _hostApi.setRegionOfInterest(roi?._toMessage());
-
-  @override
-  Future<void> updateRecognitionLevel(RecognitionLevel level) =>
-      _hostApi.setRecognitionLevel(level._toMessage());
-
-  @override
-  Future<void> updateLanguages(Iterable<Locale> languages) =>
-      _hostApi.setLanguages(languages._toLanguageTags());
+  Future<void> updateOptions(TextSightOptions options) => _hostApi.setOptions(options._toMessage());
 
   @override
   Future<void> updateTorchEnabled({required bool enabled}) => _hostApi.setTorchEnabled(enabled);

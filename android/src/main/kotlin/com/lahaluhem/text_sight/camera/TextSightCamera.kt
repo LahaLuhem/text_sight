@@ -74,9 +74,7 @@ internal class TextSightCamera(
         options: TextSightOptionsMessage,
         resolution: CaptureResolutionMessage,
     ): Long {
-        // Level, languages and the text-height floor have no ML Kit Latin equivalent. Only the
-        // region-of-interest is honoured here.
-        regionOfInterest = options.roi
+        setOptions(options)
 
         return session.open(resolution)
     }
@@ -87,8 +85,10 @@ internal class TextSightCamera(
 
     suspend fun disposeSession() = session.release()
 
-    fun setRegionOfInterest(roi: RegionOfInterestMessage?) {
-        regionOfInterest = roi
+    fun setOptions(options: TextSightOptionsMessage) {
+        // Level, languages and the text-height floor have no ML Kit Latin equivalent, so the
+        // region-of-interest is the only one that lands anywhere.
+        regionOfInterest = options.roi
     }
 
     fun setTorchEnabled(enabled: Boolean) = session.setTorchEnabled(enabled)

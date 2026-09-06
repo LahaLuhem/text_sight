@@ -197,9 +197,8 @@ path.
 funnelled through one channel:
 
 - **Control + the one-shot recognize → typed codegen `@HostApi`.** The control surface
-  (`initialize` / `start` / `stop` / `setRegionOfInterest` / `setRecognitionLevel` /
-  `setLanguages` / `setTorchEnabled` / `checkCameraPermission` / `requestCameraPermission` /
-  `dispose`) is request/response and benefits from a generated, type-checked Dart↔native
+  (`initialize` / `start` / `stop` / `setOptions` / `setTorchEnabled` /
+  `checkCameraPermission` / `requestCameraPermission` / `dispose`) is request/response and benefits from a generated, type-checked Dart↔native
   boundary. The static one-shot (`recognizeImage` /
   `recognizePath`) is *also* request/response, so it rides the **same** `@HostApi` as two
   `@async` methods that return the same self-describing per-frame map the results stream uses

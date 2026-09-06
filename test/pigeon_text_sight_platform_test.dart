@@ -27,8 +27,8 @@ void main() {
   Bdd(control)
       .scenario('Recognition level is sent as its Pigeon twin')
       .given('a platform talking to a mocked host')
-      .when('updateRecognitionLevel is called with the <level> level')
-      .then('the host receives the <twin> message')
+      .when('updateOptions is called at the <level> level')
+      .then('the host receives options carrying the <twin> message')
       .example(val('level', RecognitionLevel.fast), val('twin', RecognitionLevelMessage.fast))
       .example(
         val('level', RecognitionLevel.accurate),
@@ -36,11 +36,13 @@ void main() {
       )
       .run((ctx) async {
         final platform = PigeonTextSightPlatform();
-        final call = _mockHostMethod(messenger, 'setRecognitionLevel');
+        final call = _mockHostMethod(messenger, 'setOptions');
 
-        await platform.updateRecognitionLevel(ctx.example.val('level') as RecognitionLevel);
+        await platform.updateOptions(
+          TextSightOptions(level: ctx.example.val('level') as RecognitionLevel),
+        );
 
-        check(call.payload).isA<Iterable<Object?>>().deepEquals(<Object?>[ctx.example.val('twin')]);
+        check(_sentOptions(call).level).equals(ctx.example.val('twin') as RecognitionLevelMessage);
       });
 
   Bdd(control)
@@ -63,7 +65,7 @@ void main() {
   Bdd(control)
       .scenario('Locales are mapped to BCP-47 tags, in preference order')
       .given('a platform talking to a mocked host')
-      .when('updateLanguages is called with <locales>')
+      .when('updateOptions is called with <locales>')
       .then('the host receives <tags>')
       .example(
         val('locales', const [
@@ -74,17 +76,20 @@ void main() {
       )
       .run((ctx) async {
         final platform = PigeonTextSightPlatform();
-        final call = _mockHostMethod(messenger, 'setLanguages');
+        final call = _mockHostMethod(messenger, 'setOptions');
 
-        await platform.updateLanguages(ctx.example.val('locales') as Iterable<Locale>);
+        await platform.updateOptions(
+          TextSightOptions(languages: ctx.example.val('locales') as Iterable<Locale>),
+        );
 
-        check(call.payload).isA<Iterable<Object?>>().deepEquals(<Object?>[ctx.example.val('tags')]);
+        check<Iterable<Object?>>(_sentOptions(call).languages)
+            .deepEquals(ctx.example.val('tags') as List<String>);
       });
 
   Bdd(control)
       .scenario('A region-of-interest rect is mapped to its twin')
       .given('a platform talking to a mocked host')
-      .when('updateRegionOfInterest is called with the rect <roi>')
+      .when('updateOptions is called with the rect <roi>')
       .then('the host receives a twin with <left>, <top>, <width>, <height>')
       .example(
         val('roi', const Rect.fromLTWH(0.1, 0.2, 0.3, 0.4)),
@@ -95,11 +100,11 @@ void main() {
       )
       .run((ctx) async {
         final platform = PigeonTextSightPlatform();
-        final call = _mockHostMethod(messenger, 'setRegionOfInterest');
+        final call = _mockHostMethod(messenger, 'setOptions');
 
-        await platform.updateRegionOfInterest(ctx.example.val('roi') as Rect);
+        await platform.updateOptions(TextSightOptions(roi: ctx.example.val('roi') as Rect));
 
-        final roi = (call.payload! as List<Object?>).single! as RegionOfInterestMessage;
+        final roi = _sentOptions(call).roi!;
         check(roi.left).isCloseTo(ctx.example.val('left') as double, _floatTolerance);
         check(roi.top).isCloseTo(ctx.example.val('top') as double, _floatTolerance);
         check(roi.width).isCloseTo(ctx.example.val('width') as double, _floatTolerance);
@@ -109,15 +114,15 @@ void main() {
   Bdd(control)
       .scenario('A null region-of-interest clears the scan box (whole frame)')
       .given('a platform talking to a mocked host')
-      .when('updateRegionOfInterest is called with null')
-      .then('the host receives null')
+      .when('updateOptions is called with no roi')
+      .then('the host receives a null roi')
       .run((_) async {
         final platform = PigeonTextSightPlatform();
-        final call = _mockHostMethod(messenger, 'setRegionOfInterest');
+        final call = _mockHostMethod(messenger, 'setOptions');
 
-        await platform.updateRegionOfInterest(null);
+        await platform.updateOptions(const TextSightOptions());
 
-        check(call.payload).isA<Iterable<Object?>>().deepEquals(<Object?>[null]);
+        check(_sentOptions(call).roi).isNull();
       });
 
   Bdd(control)
@@ -563,6 +568,10 @@ void main() {
 
 /// Records the decoded argument payload a mocked host method receives, and whether it was invoked
 /// at all (a no-argument method like `ensureModelReady` carries a `null` payload either way).
+/// The options twin a `setOptions` call carried.
+TextSightOptionsMessage _sentOptions(_HostCall call) =>
+    (call.payload! as List<Object?>).single! as TextSightOptionsMessage;
+
 final class _HostCall {
   Object? payload;
   var invoked = false;
