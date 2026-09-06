@@ -405,21 +405,28 @@ the enum via Dart 3's enhanced-enum syntax. Don't define parallel top-level
 `kDefault<Variant>Xxx` constants that the call site has to branch on.
 
 ```dart
-// Prefer: the per-value datum lives on the value it describes:
-enum RecognitionLevel {
-    fast(usesLanguageCorrection: false),
-    accurate(usesLanguageCorrection: true);
+// Prefer: the per-value datum lives on the value it describes.
+enum RetryPolicy {
+    none(attempts: 1),
+    standard(attempts: 3);
 
-    final bool usesLanguageCorrection;
-    const RecognitionLevel({required this.usesLanguageCorrection});
+    final int attempts;
+    const RetryPolicy({required this.attempts});
 }
 ```
 
 **Why.** Locality (the default lives on the variant, and adding a value forces the choice at
 compile time), discoverability (the IDE hovercard shows it), and call-site uniformity
-(every branch references the same `level.usesLanguageCorrection` expression).
+(every branch reads the same `policy.attempts` expression).
 **Don't force it**: a discriminator-only enum whose values carry no package-read config
 stays plain. Adding empty enum fields for symmetry is ceremony.
+
+**The harder test: could a caller want the datum without the variant?** If yes, it is its own
+field, and bundling it onto the enum is a guess about how people use the API rather than a fact
+about the type. `RecognitionLevel` carried `usesLanguageCorrection` on exactly that guess. Speed
+and lexicon correction turned out to be independent trade-offs (correction helps prose and hurts
+serial numbers, at either level), so the flag moved to `TextSightOptions` and the enum went plain.
+The tell was in the dartdoc: it had to explain what the level *also implied*.
 
 <a id="navigator-maybeof-over-of"></a>
 ### `Navigator.maybeOf` over `Navigator.of` for fire-and-forget pops

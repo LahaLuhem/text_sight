@@ -33,8 +33,7 @@ struct LegacyTextRecognizer: TextRecognizer {
   static func makeRequest(config: RecognitionConfig) -> VNRecognizeTextRequest {
     let request = VNRecognizeTextRequest()
     request.recognitionLevel = config.level == .accurate ? .accurate : .fast
-    // Mirror the Dart `RecognitionLevel` enhanced-enum contract: accurate corrects, fast does not.
-    request.usesLanguageCorrection = config.level == .accurate
+    request.usesLanguageCorrection = config.usesLanguageCorrection
     // Empty means no preference, so it goes through rather than being guarded away.
     request.recognitionLanguages = config.languages
     request.minimumTextHeight = config.minimumTextHeight

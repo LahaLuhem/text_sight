@@ -128,6 +128,7 @@ final class TextSightController extends ChangeNotifier {
 extension on TextSightOptions {
   TextSightOptions _stable() => TextSightOptions(
     level: level,
+    usesLanguageCorrection: usesLanguageCorrection,
     languages: languages.toSet().toList(growable: false),
     roi: roi,
   );

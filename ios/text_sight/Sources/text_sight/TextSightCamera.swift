@@ -61,6 +61,7 @@ final class TextSightCamera: NSObject {
   // Recognizer config, stored as the Pigeon transport types and snapshotted into a
   // `RecognitionConfig` per frame for the recognizer (which builds its own value-typed request).
   private var recognitionLevel: RecognitionLevelMessage = .fast
+  private var usesLanguageCorrection = true
   private var recognitionLanguages: [String] = []
   private var minimumTextHeight: Float = 0
   private var regionOfInterest: RegionOfInterestMessage?
@@ -150,6 +151,7 @@ final class TextSightCamera: NSObject {
   /// Caller holds `stateLock`.
   private func applyLocked(_ options: TextSightOptionsMessage) {
     recognitionLevel = options.level
+    usesLanguageCorrection = options.usesLanguageCorrection
     recognitionLanguages = options.languages
     minimumTextHeight = Float(options.minimumTextHeight)
     regionOfInterest = options.roi
@@ -379,7 +381,9 @@ final class TextSightCamera: NSObject {
   /// itself, and cancelling the gate cancels the Vision call in flight.
   private func recognize(_ pixelBuffer: CVPixelBuffer) async {
     let (config, rotation) = stateLock.withLock {
-      (RecognitionConfig(level: recognitionLevel, languages: recognitionLanguages,
+      (RecognitionConfig(level: recognitionLevel,
+                         usesLanguageCorrection: usesLanguageCorrection,
+                         languages: recognitionLanguages,
                          minimumTextHeight: minimumTextHeight, roi: regionOfInterest),
        Self.displayRotation(forCaptureAngle: currentRotationAngle))
     }
@@ -444,7 +448,9 @@ final class TextSightCamera: NSObject {
   /// live path does, `quarterTurns` 0 since a still is upright. No session or texture involved.
   private func recognizeStill(_ source: CGImageSource,
                               options: TextSightOptionsMessage) async throws -> [String: Any?] {
-    let config = RecognitionConfig(level: options.level, languages: options.languages,
+    let config = RecognitionConfig(level: options.level,
+                                   usesLanguageCorrection: options.usesLanguageCorrection,
+                                   languages: options.languages,
                                    minimumTextHeight: Float(options.minimumTextHeight),
                                    roi: options.roi)
 

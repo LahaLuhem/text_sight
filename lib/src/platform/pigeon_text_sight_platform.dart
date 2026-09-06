@@ -86,6 +86,7 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
 extension on TextSightOptions {
   TextSightOptionsMessage _toMessage() => TextSightOptionsMessage(
     level: level._toMessage(),
+    usesLanguageCorrection: usesLanguageCorrection,
     languages: languages._toLanguageTags(),
     // Pinned until the options type carries it: 0 keeps every pixel, so small print survives.
     minimumTextHeight: 0,

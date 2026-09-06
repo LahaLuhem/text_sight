@@ -25,8 +25,7 @@ struct ModernTextRecognizer: TextRecognizer {
   static func makeRequest(config: RecognitionConfig) -> RecognizeTextRequest {
     var request = RecognizeTextRequest()
     request.recognitionLevel = config.level == .accurate ? .accurate : .fast
-    // Mirror the Dart `RecognitionLevel` enhanced-enum contract: accurate corrects, fast does not.
-    request.usesLanguageCorrection = config.level == .accurate
+    request.usesLanguageCorrection = config.usesLanguageCorrection
     // Empty means no preference, so it goes through rather than being guarded away.
     request.recognitionLanguages = config.languages.map { Locale.Language(identifier: $0) }
     request.minimumTextHeightFraction = config.minimumTextHeight

@@ -2,17 +2,21 @@ import 'dart:ui' show Locale, Rect;
 
 import 'recognition_level.dart';
 
-/// The source-agnostic recognizer configuration shared by both drivers.
+/// What the recognizer needs, shared by the live driver and the one-shot.
 ///
-/// One config type, not a per-driver duplicate: the live `TextSightController` takes it,
-/// and (when it lands) the static one-shot accepts it per call. It holds only what the *recognizer*
-/// needs: recognition [level], the candidate [languages], and an optional [roi].
-/// Session-only concerns such as the torch deliberately live on the controller, not here:
-/// a still image has no such concept, so folding it in would be a category error.
+/// One config type rather than a per-driver duplicate. Session-only things like the torch live on
+/// the controller instead, since a still image has no such concept.
 final class TextSightOptions {
-  /// The accuracy/latency trade-off. Defaults to [RecognitionLevel.fast]. The static one-shot driver
-  /// overrides it to [RecognitionLevel.accurate], where there is no per-frame latency budget to protect.
+  /// The accuracy/latency trade-off. Defaults to [RecognitionLevel.fast]. The one-shot overrides it
+  /// to [RecognitionLevel.accurate], having no per-frame budget to protect.
   final RecognitionLevel level;
+
+  /// Whether the recognizer fixes likely misreads against a lexicon.
+  ///
+  /// Helps ordinary prose, hurts serials and part numbers, which it happily "corrects" into words.
+  /// Independent of [level], so turn it off explicitly when latency matters more. Apple Vision only,
+  /// the ML Kit Latin recognizer has no equivalent.
+  final bool usesLanguageCorrection;
 
   /// Preferred recognition languages, most-preferred first.
   ///
@@ -30,10 +34,13 @@ final class TextSightOptions {
   /// Creates recognizer options. Every field has a live-oriented default.
   const new({
     this.level = .fast,
+    this.usesLanguageCorrection = true,
     this.languages = const [Locale.fromSubtags(languageCode: 'en', countryCode: 'US')],
     this.roi,
   });
 
   @override
-  String toString() => 'TextSightOptions(level: $level, languages: $languages, roi: $roi)';
+  String toString() =>
+      'TextSightOptions(level: $level, usesLanguageCorrection: $usesLanguageCorrection, '
+      'languages: $languages, roi: $roi)';
 }

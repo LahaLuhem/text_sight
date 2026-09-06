@@ -46,6 +46,45 @@ void main() {
       });
 
   Bdd(control)
+      .scenario('Language correction is its own knob, not part of the level')
+      .given('a platform talking to a mocked host')
+      .when('updateOptions is called at the <level> level with correction <correction>')
+      .then('the host receives <correction>, whatever the level')
+      .example(val('level', RecognitionLevel.fast), val('correction', true))
+      .example(val('level', RecognitionLevel.fast), val('correction', false))
+      .example(val('level', RecognitionLevel.accurate), val('correction', false))
+      .run((ctx) async {
+        final platform = PigeonTextSightPlatform();
+        final call = _mockHostMethod(messenger, 'setOptions');
+        final correction = ctx.example.val('correction') as bool;
+
+        await platform.updateOptions(
+          TextSightOptions(
+            level: ctx.example.val('level') as RecognitionLevel,
+            usesLanguageCorrection: correction,
+          ),
+        );
+
+        check(_sentOptions(call).usesLanguageCorrection).equals(correction);
+      });
+
+  Bdd(control)
+      .scenario('The defaults ask for correction, at the fast level')
+      .given('a platform talking to a mocked host')
+      .when('updateOptions is called with default options')
+      .then('the host is asked to correct, and asked for fast')
+      .run((_) async {
+        final platform = PigeonTextSightPlatform();
+        final call = _mockHostMethod(messenger, 'setOptions');
+
+        await platform.updateOptions(const TextSightOptions());
+
+        final options = _sentOptions(call);
+        check(options.level).equals(RecognitionLevelMessage.fast);
+        check(options.usesLanguageCorrection).isTrue();
+      });
+
+  Bdd(control)
       .scenario('Torch state is forwarded to the host')
       .given('a platform talking to a mocked host')
       .when('updateTorchEnabled is called with <enabled>')
