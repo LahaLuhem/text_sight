@@ -67,22 +67,49 @@ def _platforms(records: list[dict[str, Any]]) -> list[str]:
 
 
 def _capture_line(records: list[dict[str, Any]]) -> str:
-    """The provenance line. A record off a phone carries a `platform`, a host one doesn't."""
-    head = records[0] if records else {}
+    """The provenance line, one per distinct capture.
+
+    Blended runs are normal here: a phone is not always to hand, so a report can carry one
+    platform's fresh numbers beside another's from weeks and several releases ago. Stamping them
+    all with the first record's date and sha would read as one sitting, so each gets its own line.
+    """
     iterations = max((record["iteration"] for record in records), default=-1) + 1
     platforms = _platforms(records)
+    captures: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+    for record in records:
+        key = (
+            str(record.get("platform", "")),
+            str(record.get("git_sha", "?")),
+            str(record.get("package_version", "?")),
+            str(record.get("started_at", "?"))[:10],
+        )
+        captures.setdefault(key, record)
 
     if platforms:
         where = f". Measured on {' and '.join(platforms)}, so your hardware will differ."
     else:
         where = " · per-machine, so your numbers will differ."
 
-    return (
-        f"Captured: SDK `{head.get('sdk_version', '?')}` · "
-        f"package `{head.get('package_version', '?')}` · "
-        f"git `{head.get('git_sha', '?')}` · N={iterations} · "
-        f"{head.get('started_at', '?')}{where}"
-    )
+    def stamp(record: dict[str, Any], label: str) -> str:
+        return (
+            f"Captured{label}: SDK `{record.get('sdk_version', '?')}` · "
+            f"package `{record.get('package_version', '?')}` · "
+            f"git `{record.get('git_sha', '?')}` · N={iterations} · "
+            f"{record.get('started_at', '?')}"
+        )
+
+    if len(captures) <= 1:
+        head = next(iter(captures.values()), {})
+        return f"{stamp(head, '')}{where}"
+
+    stamps = [
+        stamp(record, f" ({PLATFORM_NAMES.get(key[0], key[0] or 'host')})")
+        for key, record in sorted(captures.items())
+    ]
+
+    sentence = where.lstrip(" ·.")
+
+    return "\n".join([*stamps, "", sentence[:1].upper() + sentence[1:]])
 
 
 def _frame_budget_line(df: pl.DataFrame, records: list[dict[str, Any]]) -> list[str]:
@@ -242,15 +269,44 @@ _LIVE_SCOPE_NOTE = (
     "when comparing runs."
 )
 
+# A window this far off the run's median is the device boosting or stalling, not the candidate.
+_STEADY_LOW = 0.75
+_STEADY_HIGH = 1.5
+
 _LIVE_CAVEATS = (
     "- Only *recognized* frames are visible from Dart, so the drop ratio (camera frames delivered "
     "versus recognized) is not here. That needs native counters.\n"
     "- A gap at the camera's frame interval (about 33 ms at 30 fps) means recognition is keeping "
     "up and the camera is the limit, not the recognizer.\n"
     "- `level` is a no-op on Android, so its rows should match.\n"
+    "- **Your users will see better than this for a while.** A cold phone boosts hard: this "
+    "Sony held about 8 captures/s for the first minute of continuous scanning before settling "
+    "to the sustained figure below, so a short scan feels roughly twice as fast as a long one. "
+    "The run burns the device in first, so the table reports the floor rather than the peak.\n"
     "- **lines** is the median per capture. Zero means nothing readable was in frame, which makes "
     "the throughput number meaningless as a recognition measure."
 )
+
+
+def _steady_windows(rows: pl.DataFrame, panel: pl.DataFrame) -> pl.DataFrame:
+    """The windows measured at the device's steady rate, judged against the whole run.
+
+    A phone boosts hard when it is cool and stalls when it is not, so a window can read either far
+    above or far below what the app will actually sustain. Both are the device, not the candidate,
+    and with only a few windows each they pull a per-candidate median in opposite directions.
+    Judging each window against the run's own median catches both, and falls back to everything
+    when a run is too short or too noisy to have a steady rate at all.
+    """
+    reference = panel["captures_per_second"].median()
+    if reference is None or reference <= 0:
+        return rows
+
+    steady = rows.filter(
+        (pl.col("captures_per_second") >= reference * _STEADY_LOW)
+        & (pl.col("captures_per_second") <= reference * _STEADY_HIGH)
+    )
+
+    return steady if steady.height else rows
 
 
 def render_live_summary_markdown(
@@ -262,7 +318,8 @@ def render_live_summary_markdown(
     lines: list[str] = [
         "# Live recognition throughput",
         "",
-        "How many frames per second the live path actually recognizes, per recognition level.",
+        "What the live path *sustains*, per recognition level. Windows where the phone was "
+        "boosting or stalling are left out, so this is the rate an app actually holds.",
         "",
         _LIVE_SCOPE_NOTE,
         "",
@@ -270,7 +327,7 @@ def render_live_summary_markdown(
         "",
         _LIVE_CAVEATS,
         "",
-        "| Platform | Level | Captures/s | Gap p50 (ms) | Gap p95 (ms) | Lines | Window (s) |",
+        "| Platform | Level | Sustained cap/s | Gap p50 (ms) | Gap p95 (ms) | Lines | Window (s) |",
         "|---|---|--:|--:|--:|--:|--:|",
     ]
 
@@ -281,9 +338,10 @@ def render_live_summary_markdown(
             rows = panel.filter(pl.col("candidate") == level)
             if rows.height == 0:
                 continue
-            per_second = rows["captures_per_second"].median()
-            gap = rows["inter_arrival_microseconds"].median() / 1000.0
-            gap95 = rows["p95_inter_arrival_microseconds"].median() / 1000.0
+            steady = _steady_windows(rows, panel)
+            per_second = steady["captures_per_second"].median()
+            gap = steady["inter_arrival_microseconds"].median() / 1000.0
+            gap95 = steady["p95_inter_arrival_microseconds"].median() / 1000.0
             read = int(rows["lines_median"].median())
             window = rows["window_milliseconds"].median() / 1000.0
             flag = "" if read else " *(nothing readable)*"

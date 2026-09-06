@@ -155,6 +155,7 @@ def cmd_run_device(args: argparse.Namespace) -> int:
                 f"--dart-define=OUTPUT={out_file}",
                 f"--dart-define=GIT_SHA={_git_sha()}",
                 f"--dart-define=PKG_VERSION={_package_version()}",
+                f"--dart-define=REVERSE_SWEEP={str(getattr(args, 'reverse', False)).lower()}",
             ],
             cwd=APP_DIR,
             check=False,

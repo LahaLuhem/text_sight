@@ -6,7 +6,7 @@ from typing import Any
 
 import polars as pl
 
-from text_sight_bench import charts
+from text_sight_bench import charts, config
 from text_sight_bench.records import flatten
 
 
@@ -38,3 +38,17 @@ def test_sweep_charts_come_back_empty_without_a_sweep(
     profiles_only = flatten(sample_records).filter(pl.col("payload") != "sweep")
     assert charts.prepare_decode_vs_lines(profiles_only).is_empty()
     assert charts.prepare_wire_bytes_vs_lines(profiles_only).is_empty()
+
+
+def test_every_swept_candidate_has_an_order_and_a_colour() -> None:
+    """A candidate missing from LEVEL_ORDER is dropped from charts and tables with no error, so
+    the scenario's sweep and the config have to stay in step."""
+    swept = {
+        f"{level}{suffix}"
+        for level in ("fast", "accurate")
+        for suffix in ("", "+corrected")
+    }
+
+    assert swept <= set(config.LEVEL_ORDER)
+    assert swept <= set(config.LEVEL_COLORS)
+    assert set(config.LEVEL_ORDER) == set(config.LEVEL_COLORS)

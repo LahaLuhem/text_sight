@@ -2,7 +2,8 @@ import 'dart:io';
 import 'dart:ui' show Size;
 
 /// One record in `harness/result_writer.dart`'s shape, so device runs feed the same report layer.
-/// `candidate` is the level, `payload` the page profile. `platform` is additive.
+/// `candidate` is the level, suffixed `+corrected` when language correction is on. `payload` is
+/// the page profile. `platform` is additive.
 Map<String, Object?> buildLatencyRecord({
   required String benchmark,
   required String candidate,

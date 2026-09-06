@@ -6,9 +6,10 @@ import 'package:text_sight/text_sight.dart';
 import 'support/bench_record.dart';
 import 'support/text_page.dart';
 
-/// Round-trip latency of `TextSight.recognizeImage`, by page profile and level. One number covers
-/// decode, inference, native encode and the channel hop, so it is what a call costs an app, not
-/// inference time. `level` is a no-op on Android.
+/// Round-trip latency of `TextSight.recognizeImage`, by page profile, level and language
+/// correction. One number covers decode, inference, native encode and the channel hop, so it is
+/// what a call costs an app, not inference time. Both knobs are no-ops on Android, so its four
+/// series should land on top of each other.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -26,36 +27,43 @@ void main() {
       );
 
       for (final level in RecognitionLevel.values) {
-        final options = TextSightOptions(darwin: DarwinOptions(recognitionLevel: level));
-        // Warm up, so lazy first-call setup stays out of the samples.
-        await TextSight.recognizeImage(page.pngBytes, options: options);
+        // Correction rides its own axis now: it trades latency against accuracy independently of
+        // the level, and what it costs on `fast` is the open question.
+        for (final corrected in const [false, true]) {
+          final options = TextSightOptions(
+            darwin: DarwinOptions(recognitionLevel: level, usesLanguageCorrection: corrected),
+          );
+          final candidate = corrected ? '${level.name}+corrected' : level.name;
+          // Warm up, so lazy first-call setup stays out of the samples.
+          await TextSight.recognizeImage(page.pngBytes, options: options);
 
-        for (var iteration = 0; iteration < _iterations; iteration++) {
-          final latencies = <int>[];
-          var lines = 0;
+          for (var iteration = 0; iteration < _iterations; iteration++) {
+            final latencies = <int>[];
+            var lines = 0;
 
-          for (var call = 0; call < _callsPerRecord; call++) {
-            final stopwatch = Stopwatch()..start();
-            final capture = await TextSight.recognizeImage(page.pngBytes, options: options);
-            latencies.add(stopwatch.elapsedMicroseconds);
-            lines = capture.lines.length;
+            for (var call = 0; call < _callsPerRecord; call++) {
+              final stopwatch = Stopwatch()..start();
+              final capture = await TextSight.recognizeImage(page.pngBytes, options: options);
+              latencies.add(stopwatch.elapsedMicroseconds);
+              lines = capture.lines.length;
+            }
+
+            records.add(
+              buildLatencyRecord(
+                benchmark: 'one_shot_latency',
+                candidate: candidate,
+                payload: profile.name,
+                lineCount: page.lineCount,
+                iteration: iteration,
+                latencyMicros: latencies,
+                linesRecognized: lines,
+              ),
+            );
+            debugPrint(
+              'BENCH one_shot ${profile.name}/$candidate lines=$lines '
+              'p50=${percentile(latencies, 50)}us p95=${percentile(latencies, 95)}us',
+            );
           }
-
-          records.add(
-            buildLatencyRecord(
-              benchmark: 'one_shot_latency',
-              candidate: level.name,
-              payload: profile.name,
-              lineCount: page.lineCount,
-              iteration: iteration,
-              latencyMicros: latencies,
-              linesRecognized: lines,
-            ),
-          );
-          debugPrint(
-            'BENCH one_shot ${profile.name}/${level.name} lines=$lines '
-            'p50=${percentile(latencies, 50)}us p95=${percentile(latencies, 95)}us',
-          );
         }
       }
     }

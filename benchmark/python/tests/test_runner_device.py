@@ -43,13 +43,14 @@ def fake_run(monkeypatch: pytest.MonkeyPatch) -> _FakeRun:
     return fake
 
 
-def _args(scenario: str, out: Path) -> argparse.Namespace:
+def _args(scenario: str, out: Path, *, reverse: bool = False) -> argparse.Namespace:
     return argparse.Namespace(
         scenario=scenario,
         iterations=1,
         device=None,
         platform=None,
         include_virtual=True,
+        reverse=reverse,
         out=str(out),
     )
 
@@ -122,3 +123,22 @@ def test_a_cameraless_scenario_still_runs_on_a_simulator(
     assert len(fake_run.drives) == 1
     assert "--debug" in fake_run.drives[0]
     assert code == 0
+
+
+def test_reverse_reaches_the_scenario_as_a_dart_define(
+    monkeypatch: pytest.MonkeyPatch, fake_run: _FakeRun, tmp_path: Path
+) -> None:
+    """The sweep order is a scenario-side decision, so the flag has to cross as a define."""
+    _with_devices(monkeypatch, _IPHONE)
+    runner.cmd_run_device(_args("live_throughput", tmp_path, reverse=True))
+
+    assert "--dart-define=REVERSE_SWEEP=true" in fake_run.drives[0]
+
+
+def test_the_sweep_runs_forwards_by_default(
+    monkeypatch: pytest.MonkeyPatch, fake_run: _FakeRun, tmp_path: Path
+) -> None:
+    _with_devices(monkeypatch, _IPHONE)
+    runner.cmd_run_device(_args("live_throughput", tmp_path))
+
+    assert "--dart-define=REVERSE_SWEEP=false" in fake_run.drives[0]

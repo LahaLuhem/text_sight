@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from text_sight_bench import markdown
 from text_sight_bench.subcommands.report import cmd_report
 
 CHART_NAMES = ("decode_vs_lines.png", "wire_bytes_vs_lines.png", "profile_decode_bars.png")
@@ -46,3 +47,20 @@ def test_a_skipped_chart_says_so_in_the_summary(
     assert "- `decode_vs_lines.png` needs the sweep payload" in summary
     assert "- `wire_bytes_vs_lines.png` needs the sweep payload" in summary
     assert "![profile_decode_bars]" in summary
+
+
+def test_a_blended_report_stamps_each_capture_separately() -> None:
+    """A phone is not always to hand, so one report can carry runs from different days. Reporting
+    only the first record's date would hide that."""
+    records = [
+        {"platform": "android", "git_sha": "aaa", "package_version": "0.2.2",
+         "started_at": "2026-09-06T10:00:00Z", "sdk_version": "3.13.2", "iteration": 0},
+        {"platform": "ios", "git_sha": "bbb", "package_version": "0.2.0",
+         "started_at": "2026-09-03T10:00:00Z", "sdk_version": "3.13.0", "iteration": 0},
+    ]
+
+    line = markdown._capture_line(records)
+
+    assert "aaa" in line
+    assert "bbb" in line
+    assert line.count("Captured") == 2

@@ -5,6 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+import polars as pl
+
+from text_sight_bench import markdown
 from text_sight_bench.markdown import render_device_summary_markdown, render_summary_markdown
 from text_sight_bench.records import flatten, flatten_device
 
@@ -85,3 +88,29 @@ def test_host_summary_leaves_the_frame_budget_alone(
     """A laptop number cannot back a claim about what fits in a phone's frame."""
     out = render_summary_markdown(flatten(sample_records), [], sample_records, [])
     assert "fps frame" not in out
+
+
+def test_a_boosting_or_stalling_window_is_left_out_of_the_sustained_rate() -> None:
+    """A cool phone boosts and a hot one stalls. Both are the device, and with few windows each
+    they drag a per-candidate median in opposite directions."""
+    panel = pl.DataFrame(
+        {
+            "candidate": ["fast"] * 3 + ["accurate"] * 3,
+            "captures_per_second": [7.9, 7.6, 4.5, 3.0, 4.4, 4.6],
+            "inter_arrival_microseconds": [126000, 131000, 222000, 333000, 227000, 217000],
+            "p95_inter_arrival_microseconds": [130000, 135000, 240000, 545000, 240000, 230000],
+        }
+    )
+
+    boosted = markdown._steady_windows(panel.filter(pl.col("candidate") == "fast"), panel)
+    stalled = markdown._steady_windows(panel.filter(pl.col("candidate") == "accurate"), panel)
+
+    assert boosted["captures_per_second"].median() == 4.5
+    assert stalled["captures_per_second"].median() == 4.5
+
+
+def test_a_run_with_no_steady_window_keeps_them_all() -> None:
+    """Better a noisy number than an empty table."""
+    panel = pl.DataFrame({"candidate": ["fast"], "captures_per_second": [0.0]})
+
+    assert markdown._steady_windows(panel, panel).height == 1
