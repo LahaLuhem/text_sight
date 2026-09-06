@@ -85,11 +85,10 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
 /// Maps the public recognizer config to its Pigeon transport twin.
 extension on TextSightOptions {
   TextSightOptionsMessage _toMessage() => TextSightOptionsMessage(
-    level: level._toMessage(),
-    usesLanguageCorrection: usesLanguageCorrection,
-    languages: languages._toLanguageTags(),
-    // Pinned until the options type carries it: 0 keeps every pixel, so small print survives.
-    minimumTextHeight: 0,
+    level: darwin.recognitionLevel._toMessage(),
+    usesLanguageCorrection: darwin.usesLanguageCorrection,
+    languages: darwin.preferredLanguages._toLanguageTags(),
+    minimumTextHeight: darwin.minimumTextHeight,
     roi: roi?._toMessage(),
   );
 }

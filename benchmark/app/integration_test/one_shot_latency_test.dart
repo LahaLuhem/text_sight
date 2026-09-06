@@ -26,7 +26,7 @@ void main() {
       );
 
       for (final level in RecognitionLevel.values) {
-        final options = TextSightOptions(level: level);
+        final options = TextSightOptions(darwin: DarwinOptions(recognitionLevel: level));
         // Warm up, so lazy first-call setup stays out of the samples.
         await TextSight.recognizeImage(page.pngBytes, options: options);
 

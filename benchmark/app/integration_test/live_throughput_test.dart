@@ -28,7 +28,9 @@ void main() {
     final records = <Map<String, Object?>>[];
 
     for (final level in RecognitionLevel.values) {
-      await controller.updateOptions(TextSightOptions(level: level));
+      await controller.updateOptions(
+        TextSightOptions(darwin: DarwinOptions(recognitionLevel: level)),
+      );
 
       for (var iteration = 0; iteration < _iterations; iteration++) {
         final arrivals = <int>[];

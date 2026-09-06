@@ -136,6 +136,31 @@ struct RecognizerRequestTests {
     #expect(request.minimumTextHeight == Self.textHeightFloor)
   }
 
+  // The floor is frame-relative in public, but Vision measures it against the scan box, so a
+  // 0.4-tall box has to be asked for 2.5x the number or the same text stops being readable.
+  @available(iOS 18, *)
+  @Test("Modern: the text-height floor is scaled to the scan box")
+  func modernFloorScalesToRoi() {
+    let request = ModernTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, usesLanguageCorrection: true,
+                                languages: [], minimumTextHeight: Self.textHeightFloor,
+                                roi: Self.roi)
+    )
+
+    #expect(request.minimumTextHeightFraction == Self.textHeightFloor / Float(Self.roi.height))
+  }
+
+  @Test("Legacy: the text-height floor is scaled to the scan box")
+  func legacyFloorScalesToRoi() {
+    let request = LegacyTextRecognizer.makeRequest(
+      config: RecognitionConfig(level: .fast, usesLanguageCorrection: true,
+                                languages: [], minimumTextHeight: Self.textHeightFloor,
+                                roi: Self.roi)
+    )
+
+    #expect(request.minimumTextHeight == Self.textHeightFloor / Float(Self.roi.height))
+  }
+
   @available(iOS 18, *)
   @Test("Modern: a bare config still leaves nothing to Vision")
   func modernFillsEveryKnob() {

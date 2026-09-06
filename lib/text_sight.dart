@@ -11,6 +11,7 @@ export 'src/capture/capture_resolution.dart';
 export 'src/capture/text_sight.dart';
 export 'src/capture/text_sight_controller.dart';
 export 'src/capture/text_sight_model.dart';
+export 'src/recognition/darwin_options.dart';
 export 'src/recognition/recognition_level.dart';
 export 'src/recognition/recognized_element.dart';
 export 'src/recognition/recognized_line.dart';
