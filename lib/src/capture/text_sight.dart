@@ -1,6 +1,7 @@
 import 'dart:typed_data' show Uint8List;
 
 import '../platform/text_sight_platform.dart';
+import '../recognition/darwin_options.dart';
 import '../recognition/normalized_roi.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
@@ -23,7 +24,9 @@ abstract final class TextSight {
   /// Throws a `PlatformException` if [bytes] cannot be decoded as an image.
   static Future<TextSightCapture> recognizeImage(
     Uint8List bytes, {
-    TextSightOptions options = const TextSightOptions(level: .accurate),
+    TextSightOptions options = const TextSightOptions(
+      darwin: DarwinOptions(recognitionLevel: .accurate),
+    ),
   }) {
     assert(
       options.roi.isNormalizedRoi,
@@ -39,7 +42,9 @@ abstract final class TextSight {
   /// Throws a `PlatformException` if no readable image exists at [path].
   static Future<TextSightCapture> recognizePath(
     String path, {
-    TextSightOptions options = const TextSightOptions(level: .accurate),
+    TextSightOptions options = const TextSightOptions(
+      darwin: DarwinOptions(recognitionLevel: .accurate),
+    ),
   }) {
     assert(
       options.roi.isNormalizedRoi,

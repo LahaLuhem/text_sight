@@ -36,7 +36,7 @@ struct LegacyTextRecognizer: TextRecognizer {
     request.usesLanguageCorrection = config.usesLanguageCorrection
     // Empty means no preference, so it goes through rather than being guarded away.
     request.recognitionLanguages = config.languages
-    request.minimumTextHeight = config.minimumTextHeight
+    request.minimumTextHeight = config.visionTextHeightFraction
     // Vision's region is lower-left, so flip the top-left rect.
     request.regionOfInterest = config.roi.map {
       CGRect(x: $0.left, y: 1 - ($0.top + $0.height), width: $0.width, height: $0.height)

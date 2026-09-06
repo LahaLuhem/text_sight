@@ -62,7 +62,7 @@ own, so the conventions below are applied by hand, the way the [DCM rules](#dcm-
   into an external API that relies on `null` as a sentinel `T`, don't reach for the
   exception speculatively.
 - **Prefer type-pure representations over stringly- or primitively-typed ones.** Use a value's
-  richer domain type, even a built-in one. `languages` is `Iterable<Locale>`, not `List<String>`
+  richer domain type, even a built-in one. `preferredLanguages` is `Iterable<Locale>`, not `List<String>`
   of BCP-47 tags: `Locale` (from `dart:ui`) carries language/script/region and yields the tag via
   `toLanguageTag()` at the native boundary. Reach for a structured built-in, then a zero-cost
   `extension type`, before a bare primitive. **But don't force a *closed enum* onto an open,
@@ -72,7 +72,7 @@ own, so the conventions below are applied by hand, the way the [DCM rules](#dcm-
 - **Pick the narrowest collection type. `List` is the last resort, not the default.** `Set` for
   membership/uniqueness, `Iterable` for a sequence only walked (never indexed, added to, or
   re-materialized), `List` only when you genuinely index or need a materialized result. Inputs
-  lean `Iterable` (`languages` is walked once in priority order), and outputs consumers index and
+  lean `Iterable` (`preferredLanguages` is walked once in priority order), and outputs consumers index and
   count stay `List` (`TextSightCapture.lines`, `RecognizedLine.elements`). Exception: channel
   transport: the platform codec carries only `List`/`Map`, so Pigeon message fields stay `List`.
 - **No Java ceremony.** No getter-only abstract base classes, no `AbstractFooFactory`,
@@ -118,17 +118,25 @@ style.
   getter (`foo`), or a setter (`set foo(…)`) if writable. A mutation that *can't* be a setter
   (async or side-effecting, since a setter can't be awaited nor surface an error) takes the verb
   for what it does: `updateOptions(options)`, **not** `setOptions(options)`.
-- **A public *option* a platform silently ignores says so in its name.** Prefix it with the
-  platform tree it actually applies to (`darwinRecognitionLevel`, not `level`). A dartdoc alone
-  never reaches the consumer who sets `fast` on Android, gets `accurate` behaviour, and has no
-  indication why. Use `darwin` rather than `ios`, since the constraint is Apple Vision, which a
-  macOS target would share, and it matches the shared Apple source directory. Keep the dartdoc as
-  well: the name flags the asymmetry, the doc explains it.
+- **An option only one platform honours lives in that platform's group.** `TextSightOptions.darwin`
+  holds everything Apple Vision alone can do, so `darwin.recognitionLevel` cannot be reached without
+  naming the platform. A dartdoc alone never reaches the consumer who sets `fast` on Android, gets
+  `accurate` behaviour, and has no indication why. Keep the dartdoc as well: the group flags the
+  asymmetry, the doc explains it.
 
-  | Prefix it when                                                    | Leave it neutral when                                                                   |
+  **Group, don't prefix per field.** `darwin.recognitionLevel`, not `darwinRecognitionLevel`. The
+  platform is stated once, a new Vision knob is one field inside `DarwinOptions` rather than a change
+  to `TextSightOptions`, and no member repeats the prefix. Vision has six knobs with no ML Kit twin
+  against one genuinely shared option, so a flat scheme would leave the neutral field lost among
+  prefixed ones.
+
+  **`darwin`, not `ios`.** The constraint is Apple Vision, which a macOS target would share, and it
+  matches the shared Apple source directory.
+
+  | Group it when                                                     | Leave it neutral when                                                                   |
   |-------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
   | It is an **option**, so setting it promises behaviour that changes | It is an **observation**: `TextSightModel.ensureReady()` resolving instantly on iOS still did what it promised |
-  | The gap is **structural**: ML Kit's text API has no accuracy dial at any dependency (its Latin `TextRecognizerOptions.Builder` exposes only `setExecutor`) | The gap is **delivery**: `languages` becomes meaningful once the other ML Kit script recognizers land, so a prefix would force a second rename |
+  | The engine simply cannot do it, whatever the dependency            | The result differs but both platforms deliver it, e.g. `roi`, which Vision takes as a true region and Android delivers by cropping |
 
 - **Local-variable names carry a concise type-suffix.** Dart is strongly typed, but a
   reader without IDE inlay-hints can't see the inferred type, so the *name* has to do
@@ -142,11 +150,11 @@ style.
 
   ```dart
   // Prefer:
-  final recognitionLevel = controller.options.level;
+  final recognitionLevel = controller.options.darwin.recognitionLevel;
   final recognizedLines = capture.lines;
 
   // Over:
-  final level = controller.options.level;
+  final level = controller.options.darwin.recognitionLevel;
   final lines = capture.lines;
   ```
 
@@ -342,8 +350,8 @@ the leading type name in *all* of these positions, not just the obvious enum cas
 - **Constructor field defaults**: when the field's declared type pins the context, the
   default literal drops its prefix:
   ```dart
-  final RecognitionLevel level;
-  const TextSightOptions({this.level = .fast});   // not RecognitionLevel.fast
+  final RecognitionLevel recognitionLevel;
+  const DarwinOptions({this.recognitionLevel = .fast});   // not RecognitionLevel.fast
   ```
   Top-level / `static const` initializations are the exception, since without an explicit
   type annotation on the LHS, Dart infers the constant's type from the RHS, so the
@@ -363,10 +371,10 @@ set, or map literal (most often a parameter slot or assignment target) the expli
 
 ```dart
 // Prefer:
-TextSightOptions(languages: {enUS, if (alsoFrench) fr})
+DarwinOptions(preferredLanguages: {enUS, if (alsoFrench) fr})
 
 // Over:
-TextSightOptions(languages: <Locale>{enUS, if (alsoFrench) fr})
+DarwinOptions(preferredLanguages: <Locale>{enUS, if (alsoFrench) fr})
 ```
 
 Keep `<Type>` when inference would otherwise fall back to `dynamic`:
@@ -425,7 +433,8 @@ stays plain. Adding empty enum fields for symmetry is ceremony.
 field, and bundling it onto the enum is a guess about how people use the API rather than a fact
 about the type. `RecognitionLevel` carried `usesLanguageCorrection` on exactly that guess. Speed
 and lexicon correction turned out to be independent trade-offs (correction helps prose and hurts
-serial numbers, at either level), so the flag moved to `TextSightOptions` and the enum went plain.
+serial numbers, at either level), so the flag became its own `DarwinOptions` field and the enum
+went plain.
 The tell was in the dartdoc: it had to explain what the level *also implied*.
 
 <a id="navigator-maybeof-over-of"></a>

@@ -473,10 +473,11 @@ A running list of what v1 does *not* do well yet. The **active backlog is tracke
 (<https://github.com/LahaLuhem/text_sight/issues>). What stays *here* is the permanent rationale that
 isn't a backlog item:
 
-**Platform capability differences (inherent, not bugs).** `recognitionLevel` and `languages` apply on
-iOS (Vision) and are **no-ops on Android** (the ML Kit Latin recognizer exposes neither and reads
-Latin only). Per-line `confidence` is supplied by both, but the scales are **not comparable**. These
-are documented in the [README](./README.md), and they are engine properties, not defects.
+**Platform capability differences (inherent, not bugs).** Everything under `TextSightOptions.darwin`
+is Apple Vision only, and Android ignores it: the ML Kit Latin recognizer has no accuracy dial, no
+language correction, no language selection and no text-height floor. The group is the API saying so,
+rather than a dartdoc nobody reads. Per-line `confidence` is supplied by both, but the scales are
+**not comparable**. These are engine properties, not defects.
 
 **The two platforms capture different shapes, and cannot be matched.** Android runs 4:3, the
 sensor's own shape. iOS has no 4:3 HD preset, so it runs 16:9. Forcing Android to match would crop
@@ -544,7 +545,7 @@ if a partial export ever becomes necessary.
 ```
 PUBLIC   barrel re-exports: TextSightController · TextSightView · TextSight (one-shot)
          · TextSightCapture · RecognizedLine · RecognizedElement
-         · RecognitionLevel · TextSightOptions
+         · RecognitionLevel · TextSightOptions · DarwinOptions
    │  both drivers delegate down ↓
 SEAM     TextSightPlatform extends PlatformInterface   (federation boundary; one impl for now)
    │
@@ -609,12 +610,18 @@ seam shows in the tree. Each public type gets its own file (per
 
 **Configuration.** One config type, reused across both drivers:
 
-- **`TextSightOptions` is the one source-agnostic recognizer config**: `level` · `languages` ·
-  `roi`, accepted by *both* drivers. The live driver takes it on `TextSightController`, and the
-  static one-shot takes it per call, defaulting `level` to `.accurate` where the live default is
-  `.fast`. Not a per-driver duplicate. `languages` is `Iterable<Locale>`, not raw BCP-47 strings,
-  a closed enum would misstate a platform- and OS-version-dependent capability, so the type
-  stays structured-but-open and maps to tags via `Locale.toLanguageTag()` at the seam.
+- **`TextSightOptions` is the one source-agnostic recognizer config**: `roi` plus a `darwin` group,
+  accepted by *both* drivers. The live driver takes it on `TextSightController`, and the static
+  one-shot takes it per call, raising `darwin.recognitionLevel` to `.accurate` where the live
+  default is `.fast`. Not a per-driver duplicate.
+- **`DarwinOptions` holds what only Apple Vision can do**: `recognitionLevel`,
+  `usesLanguageCorrection`, `preferredLanguages`, `minimumTextHeight`. Grouping states the platform
+  once instead of prefixing each field, and a new Vision knob is a field here rather than a change
+  to `TextSightOptions`. `preferredLanguages` is `Iterable<Locale>`, not raw BCP-47 strings, since a
+  closed enum would misstate a platform- and OS-version-dependent capability, so the type stays
+  structured-but-open and maps to tags via `Locale.toLanguageTag()` at the seam. `minimumTextHeight`
+  is a fraction of the **frame**, divided by the scan-box height on the way to Vision (which
+  measures it against the region of interest), so narrowing the box never changes what is readable.
 - **`torchEnabled` is a controller-only parameter, deliberately *not* in `TextSightOptions`.**
   Torch is a live-session concern and a static image has none, so folding it into the shared
   recognizer config would be a category error. The seam, expressed in the type system:

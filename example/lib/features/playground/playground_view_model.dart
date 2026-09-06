@@ -45,8 +45,8 @@ final class PlaygroundViewModel extends ViewModel {
     try {
       final bytes = (await rootBundle.load(ConstMedia.sampleText.keyName)).buffer.asUint8List();
       final options = TextSightOptions(
-        level: _levelNotifier.value,
         roi: roiOf(_roiConfigNotifier.value),
+        darwin: DarwinOptions(recognitionLevel: _levelNotifier.value),
       );
       _resultNotifier.value = (
         capture: await TextSight.recognizeImage(bytes, options: options),

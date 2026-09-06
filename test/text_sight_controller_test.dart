@@ -62,10 +62,12 @@ void main() {
         var notifications = 0;
         controller.addListener(() => notifications++);
 
-        await controller.updateOptions(TextSightOptions(level: level));
+        await controller.updateOptions(
+          TextSightOptions(darwin: DarwinOptions(recognitionLevel: level)),
+        );
 
-        check(platform.lastOptions?.level).equals(level);
-        check(controller.options.level).equals(level);
+        check(platform.lastOptions?.darwin.recognitionLevel).equals(level);
+        check(controller.options.darwin.recognitionLevel).equals(level);
         check(notifications).equals(1);
       });
 
@@ -89,11 +91,13 @@ void main() {
         final kept = ctx.example.val('kept') as List<String>;
 
         await controller.updateOptions(
-          TextSightOptions(languages: ctx.example.val('given') as Iterable<Locale>),
+          TextSightOptions(
+            darwin: DarwinOptions(preferredLanguages: ctx.example.val('given') as Iterable<Locale>),
+          ),
         );
 
-        check(_tags(platform.lastOptions!.languages)).deepEquals(kept);
-        check(_tags(controller.options.languages)).deepEquals(kept);
+        check(_tags(platform.lastOptions!.darwin.preferredLanguages)).deepEquals(kept);
+        check(_tags(controller.options.darwin.preferredLanguages)).deepEquals(kept);
       });
 
   Bdd(lifecycle)
@@ -104,11 +108,13 @@ void main() {
       .run((ctx) {
         TextSightPlatform.instance = _RecordingPlatform();
         final languages = <Locale>[const Locale('en', 'US')];
-        final controller = TextSightController(options: TextSightOptions(languages: languages));
+        final controller = TextSightController(
+          options: TextSightOptions(darwin: DarwinOptions(preferredLanguages: languages)),
+        );
 
         languages.add(const Locale('fr'));
 
-        check<Iterable<Object?>>(controller.options.languages).length.equals(1);
+        check<Iterable<Object?>>(controller.options.darwin.preferredLanguages).length.equals(1);
       });
 
   Bdd(lifecycle)

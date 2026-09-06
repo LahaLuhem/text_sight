@@ -122,14 +122,14 @@ final class TextSightController extends ChangeNotifier {
   }
 }
 
-/// A stable copy. `languages` can arrive lazy or growable and is read more than once, and a repeat
-/// means nothing in a preference order, so drop repeats but keep the order given. A `const`
+/// A stable copy. `preferredLanguages` can arrive lazy or growable and is read more than once, and
+/// a repeat means nothing in a preference order, so drop repeats but keep the order given. A `const`
 /// constructor cannot do any of that itself.
 extension on TextSightOptions {
   TextSightOptions _stable() => TextSightOptions(
-    level: level,
-    usesLanguageCorrection: usesLanguageCorrection,
-    languages: languages.toSet().toList(growable: false),
     roi: roi,
+    darwin: darwin.copyWith(
+      preferredLanguages: darwin.preferredLanguages.toSet().toList(growable: false),
+    ),
   );
 }

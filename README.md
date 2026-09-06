@@ -121,10 +121,11 @@ One import gets you everything: `package:text_sight/text_sight.dart`.
 |-----------------------------------------|--------------------------------------------------------------|
 | `TextSightView` + `TextSightController` | the live camera path                                         |
 | `TextSight`                             | the static one-shot, on bytes or a file path                 |
-| `TextSightOptions`                      | level, languages, region of interest                         |
+| `TextSightOptions`                      | region of interest, plus a `darwin` group of Vision-only knobs |
 | `TextSightCapture` and `RecognizedLine` | results: text, normalized box, confidence                    |
 | `TextSightModel`                        | Android model readiness, `ensureReady()` plus a stream       |
-| `RecognitionLevel`                      | `fast` or `accurate` (iOS)                                   |
+| `DarwinOptions`                         | level, language correction, languages, text-height floor. iOS and macOS only |
+| `RecognitionLevel`                      | `fast` or `accurate`, inside `DarwinOptions`                 |
 | `CaptureResolution`                     | how many pixels the camera feeds the recognizer              |
 | `CameraPermissionStatus`                | granted, denied, permanently denied                          |
 | `RecognizedElement`                     | reserved. Always `null` in v1, word-level results come later |

@@ -39,7 +39,9 @@ void main() {
         final call = _mockHostMethod(messenger, 'setOptions');
 
         await platform.updateOptions(
-          TextSightOptions(level: ctx.example.val('level') as RecognitionLevel),
+          TextSightOptions(
+            darwin: DarwinOptions(recognitionLevel: ctx.example.val('level') as RecognitionLevel),
+          ),
         );
 
         check(_sentOptions(call).level).equals(ctx.example.val('twin') as RecognitionLevelMessage);
@@ -60,8 +62,10 @@ void main() {
 
         await platform.updateOptions(
           TextSightOptions(
-            level: ctx.example.val('level') as RecognitionLevel,
-            usesLanguageCorrection: correction,
+            darwin: DarwinOptions(
+              recognitionLevel: ctx.example.val('level') as RecognitionLevel,
+              usesLanguageCorrection: correction,
+            ),
           ),
         );
 
@@ -118,7 +122,11 @@ void main() {
         final call = _mockHostMethod(messenger, 'setOptions');
 
         await platform.updateOptions(
-          TextSightOptions(languages: ctx.example.val('locales') as Iterable<Locale>),
+          TextSightOptions(
+            darwin: DarwinOptions(
+              preferredLanguages: ctx.example.val('locales') as Iterable<Locale>,
+            ),
+          ),
         );
 
         check<Iterable<Object?>>(_sentOptions(call).languages)
@@ -191,8 +199,10 @@ void main() {
 
         final returned = await platform.initialize(
           TextSightOptions(
-            level: ctx.example.val('level') as RecognitionLevel,
-            languages: ctx.example.val('locales') as Iterable<Locale>,
+            darwin: DarwinOptions(
+              recognitionLevel: ctx.example.val('level') as RecognitionLevel,
+              preferredLanguages: ctx.example.val('locales') as Iterable<Locale>,
+            ),
           ),
           CaptureResolution.high,
         );
@@ -399,7 +409,9 @@ void main() {
 
         final capture = await platform.recognizeImage(
           bytes,
-          TextSightOptions(level: ctx.example.val('level') as RecognitionLevel),
+          TextSightOptions(
+            darwin: DarwinOptions(recognitionLevel: ctx.example.val('level') as RecognitionLevel),
+          ),
         );
 
         final payload = call.payload! as List<Object?>;
@@ -432,7 +444,9 @@ void main() {
 
         final capture = await platform.recognizePath(
           path,
-          const TextSightOptions(level: RecognitionLevel.accurate),
+          const TextSightOptions(
+            darwin: DarwinOptions(recognitionLevel: RecognitionLevel.accurate),
+          ),
         );
 
         final payload = call.payload! as List<Object?>;
