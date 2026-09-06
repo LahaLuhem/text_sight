@@ -86,8 +86,8 @@ internal class TextSightCamera(
     suspend fun disposeSession() = session.release()
 
     fun setOptions(options: TextSightOptionsMessage) {
-        // Level, languages and the text-height floor have no ML Kit Latin equivalent, so the
-        // region-of-interest is the only one that lands anywhere.
+        // Level, language correction, languages and the text-height floor have no ML Kit Latin
+        // equivalent, so the region-of-interest is the only one that lands anywhere.
         regionOfInterest = options.roi
     }
 

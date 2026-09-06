@@ -33,9 +33,18 @@ class RegionOfInterestMessage {
 
 /// Transport twin of the public `TextSightOptions`.
 class TextSightOptionsMessage {
-  new({required this.level, required this.languages, required this.minimumTextHeight, this.roi});
+  new({
+    required this.level,
+    required this.usesLanguageCorrection,
+    required this.languages,
+    required this.minimumTextHeight,
+    this.roi,
+  });
 
   RecognitionLevelMessage level;
+
+  /// Whether the recognizer fixes likely misreads against a lexicon. Vision only.
+  bool usesLanguageCorrection;
   List<String> languages;
 
   /// Smallest text to read, as a fraction of the scan box. Vision shrinks the image to suit, so 0

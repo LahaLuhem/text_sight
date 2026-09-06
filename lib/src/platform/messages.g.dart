@@ -168,12 +168,16 @@ class RegionOfInterestMessage {
 class TextSightOptionsMessage {
   TextSightOptionsMessage({
     required this.level,
+    required this.usesLanguageCorrection,
     required this.languages,
     required this.minimumTextHeight,
     this.roi,
   });
 
   RecognitionLevelMessage level;
+
+  /// Whether the recognizer fixes likely misreads against a lexicon. Vision only.
+  bool usesLanguageCorrection;
 
   List<String> languages;
 
@@ -184,7 +188,7 @@ class TextSightOptionsMessage {
   RegionOfInterestMessage? roi;
 
   List<Object?> _toList() {
-    return <Object?>[level, languages, minimumTextHeight, roi];
+    return <Object?>[level, usesLanguageCorrection, languages, minimumTextHeight, roi];
   }
 
   Object encode() {
@@ -195,9 +199,10 @@ class TextSightOptionsMessage {
     result as List<Object?>;
     return TextSightOptionsMessage(
       level: result[0]! as RecognitionLevelMessage,
-      languages: (result[1]! as List<Object?>).cast<String>(),
-      minimumTextHeight: result[2]! as double,
-      roi: result[3] as RegionOfInterestMessage?,
+      usesLanguageCorrection: result[1]! as bool,
+      languages: (result[2]! as List<Object?>).cast<String>(),
+      minimumTextHeight: result[3]! as double,
+      roi: result[4] as RegionOfInterestMessage?,
     );
   }
 
@@ -211,6 +216,7 @@ class TextSightOptionsMessage {
       return true;
     }
     return _deepEquals(level, other.level) &&
+        _deepEquals(usesLanguageCorrection, other.usesLanguageCorrection) &&
         _deepEquals(languages, other.languages) &&
         _deepEquals(minimumTextHeight, other.minimumTextHeight) &&
         _deepEquals(roi, other.roi);
@@ -222,7 +228,7 @@ class TextSightOptionsMessage {
 
   @override
   String toString() {
-    return 'TextSightOptionsMessage(level: $level, languages: $languages, minimumTextHeight: $minimumTextHeight, roi: $roi)';
+    return 'TextSightOptionsMessage(level: $level, usesLanguageCorrection: $usesLanguageCorrection, languages: $languages, minimumTextHeight: $minimumTextHeight, roi: $roi)';
   }
 }
 

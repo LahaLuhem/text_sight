@@ -296,6 +296,8 @@ data class RegionOfInterestMessage (
  */
 data class TextSightOptionsMessage (
   val level: RecognitionLevelMessage,
+  /** Whether the recognizer fixes likely misreads against a lexicon. Vision only. */
+  val usesLanguageCorrection: Boolean,
   val languages: List<String>,
   /**
    * Smallest text to read, as a fraction of the scan box. Vision shrinks the image to suit, so 0
@@ -308,15 +310,17 @@ data class TextSightOptionsMessage (
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): TextSightOptionsMessage {
       val level = pigeonVar_list[0] as RecognitionLevelMessage
-      val languages = pigeonVar_list[1] as List<String>
-      val minimumTextHeight = pigeonVar_list[2] as Double
-      val roi = pigeonVar_list[3] as RegionOfInterestMessage?
-      return TextSightOptionsMessage(level, languages, minimumTextHeight, roi)
+      val usesLanguageCorrection = pigeonVar_list[1] as Boolean
+      val languages = pigeonVar_list[2] as List<String>
+      val minimumTextHeight = pigeonVar_list[3] as Double
+      val roi = pigeonVar_list[4] as RegionOfInterestMessage?
+      return TextSightOptionsMessage(level, usesLanguageCorrection, languages, minimumTextHeight, roi)
     }
   }
   fun toList(): List<Any?> {
     return listOf(
       level,
+      usesLanguageCorrection,
       languages,
       minimumTextHeight,
       roi,
@@ -330,19 +334,20 @@ data class TextSightOptionsMessage (
       return true
     }
     val other = other as TextSightOptionsMessage
-    return MessagesPigeonUtils.deepEquals(this.level, other.level) && MessagesPigeonUtils.deepEquals(this.languages, other.languages) && MessagesPigeonUtils.deepEquals(this.minimumTextHeight, other.minimumTextHeight) && MessagesPigeonUtils.deepEquals(this.roi, other.roi)
+    return MessagesPigeonUtils.deepEquals(this.level, other.level) && MessagesPigeonUtils.deepEquals(this.usesLanguageCorrection, other.usesLanguageCorrection) && MessagesPigeonUtils.deepEquals(this.languages, other.languages) && MessagesPigeonUtils.deepEquals(this.minimumTextHeight, other.minimumTextHeight) && MessagesPigeonUtils.deepEquals(this.roi, other.roi)
   }
 
   override fun hashCode(): Int {
     var result = javaClass.hashCode()
     result = 31 * result + MessagesPigeonUtils.deepHash(this.level)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.usesLanguageCorrection)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.languages)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.minimumTextHeight)
     result = 31 * result + MessagesPigeonUtils.deepHash(this.roi)
     return result
   }
   override fun toString(): String {
-    return "TextSightOptionsMessage(level=$level, languages=$languages, minimumTextHeight=$minimumTextHeight, roi=$roi)"
+    return "TextSightOptionsMessage(level=$level, usesLanguageCorrection=$usesLanguageCorrection, languages=$languages, minimumTextHeight=$minimumTextHeight, roi=$roi)"
   }
 }
 private open class MessagesPigeonCodec : StandardMessageCodec() {

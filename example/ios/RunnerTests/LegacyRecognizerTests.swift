@@ -16,8 +16,8 @@ final class LegacyTextRecognizerTests: XCTestCase {
 
     let lines = try await LegacyTextRecognizer().recognize(
       cgImage: cgImage, orientation: .up,
-      config: RecognitionConfig(level: .accurate, languages: [],
-                                minimumTextHeight: 0, roi: nil)
+      config: RecognitionConfig(level: .accurate, usesLanguageCorrection: true,
+                                languages: [], minimumTextHeight: 0, roi: nil)
     )
 
     XCTAssertFalse(lines.isEmpty, "legacy recognizer returned no lines")
@@ -42,8 +42,8 @@ final class LegacyTextRecognizerTests: XCTestCase {
 
     let lines = try await LegacyTextRecognizer().recognize(
       pixelBuffer: try Self.makeYuvBuffer(from: cgImage), orientation: .up,
-      config: RecognitionConfig(level: .accurate, languages: [],
-                                minimumTextHeight: 0, roi: nil)
+      config: RecognitionConfig(level: .accurate, usesLanguageCorrection: true,
+                                languages: [], minimumTextHeight: 0, roi: nil)
     )
 
     let joined = lines.map(\.text).joined().uppercased()

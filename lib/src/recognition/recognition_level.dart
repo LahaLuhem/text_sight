@@ -1,22 +1,12 @@
-/// How aggressively text is recognized, trading latency for accuracy.
+/// How hard the recognizer works per frame, trading speed for accuracy.
 ///
-/// The two drivers default differently on purpose: live capture uses [fast] so
-/// per-frame latency stays low and the preview keeps up, while one-shot still
-/// recognition uses [accurate], where there is no frame budget to protect.
+/// Live capture defaults to [fast] so the preview keeps up. The one-shot uses [accurate], which has
+/// no frame budget to protect. Apple Vision only: the ML Kit Latin recognizer has no accuracy dial,
+/// so on Android both values read the same.
 enum RecognitionLevel {
-  /// Lowest latency, lower accuracy, the default for the live camera driver.
-  fast(usesLanguageCorrection: false),
+  /// Quicker, reads less.
+  fast,
 
-  /// Highest accuracy at the cost of latency, the default for one-shot stills.
-  accurate(usesLanguageCorrection: true);
-
-  /// Whether the native recognizer applies language correction at this level.
-  ///
-  /// Carried on the value so the choice lives where it is described and every
-  /// call site reads the same `level.usesLanguageCorrection`. The native side
-  /// maps it (Apple Vision's `usesLanguageCorrection`). Disabling it trims
-  /// latency, which is why [fast] leaves it off.
-  final bool usesLanguageCorrection;
-
-  new({required this.usesLanguageCorrection});
+  /// Reads more, takes longer.
+  accurate,
 }

@@ -25,8 +25,8 @@ struct TextHeightFloorTests {
     let page = try Self.renderPage()
     let lines = try await recognizer.recognize(
       cgImage: page, orientation: .up,
-      config: RecognitionConfig(level: .fast, languages: [],
-                                minimumTextHeight: 0, roi: nil)
+      config: RecognitionConfig(level: .fast, usesLanguageCorrection: true,
+                                languages: [], minimumTextHeight: 0, roi: nil)
     )
 
     #expect(lines.count == Self.lineCount)

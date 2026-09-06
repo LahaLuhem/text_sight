@@ -10,8 +10,8 @@ import XCTest
 /// outcomes of the continuation bridge: it resolves, and it throws instead of hanging. A hung
 /// continuation is what the async conversion risks, and XCTest's own timeout is what catches it.
 final class ControlSurfaceTests: XCTestCase {
-  private let options = TextSightOptionsMessage(level: .accurate, languages: [],
-                                                minimumTextHeight: 0, roi: nil)
+  private let options = TextSightOptionsMessage(level: .accurate, usesLanguageCorrection: true,
+                                                languages: [], minimumTextHeight: 0, roi: nil)
 
   func testRecognizeImageResolvesForRenderedText() async throws {
     let png = try XCTUnwrap(LegacyTextRecognizerTests.renderText("HELLO").pngData())
