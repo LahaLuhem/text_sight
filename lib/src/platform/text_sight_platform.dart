@@ -4,6 +4,7 @@ import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../capture/camera_permission_status.dart';
 import '../capture/capture_resolution.dart';
+import '../capture/text_sight_session_state.dart';
 import '../recognition/confidence_scale.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
@@ -81,6 +82,10 @@ abstract class TextSightPlatform extends PlatformInterface {
   /// The live per-frame results stream, backed by a plain `EventChannel`.
   Stream<TextSightCapture> get captures =>
       throw UnimplementedError('captures has not been implemented.');
+
+  /// Session-state changes pushed by native, one per actual transition.
+  Stream<TextSightSessionState> get sessionStates =>
+      throw UnimplementedError('sessionStates has not been implemented.');
 
   // Model readiness, mode-agnostic and shared by both drivers. Decoupled from the camera
   // session: a still image and a live preview both need the model, neither needs the other.

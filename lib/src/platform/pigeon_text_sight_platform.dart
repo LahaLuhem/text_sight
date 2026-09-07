@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:ui' show Locale, Rect, Size;
 
 import 'package:flutter/services.dart';
 
 import '../capture/camera_permission_status.dart';
 import '../capture/capture_resolution.dart';
+import '../capture/text_sight_session_state.dart';
 import '../recognition/confidence_scale.dart';
 import '../recognition/recognition_level.dart';
 import '../recognition/recognized_line.dart';
@@ -13,12 +15,18 @@ import '../recognition/text_sight_readiness_state.dart';
 import 'messages.g.dart';
 import 'text_sight_platform.dart';
 
-/// The default [TextSightPlatform]: Pigeon for control calls, a plain `EventChannel` for the
-/// per-frame results.
+/// The default [TextSightPlatform]: Pigeon for control calls and session-state pushes, a plain
+/// `EventChannel` for the per-frame results.
 ///
 /// The one place public types meet their transport twins. Frames arrive as self-describing maps
 /// and are decoded into [TextSightCapture]s here. A federated platform package could replace it.
-final class PigeonTextSightPlatform extends TextSightPlatform {
+final class PigeonTextSightPlatform extends TextSightPlatform implements TextSightFlutterApi {
+  /// Registers as the FlutterApi handler. A handler registration only, no platform call, so
+  /// constructing one in a test needs no mock.
+  new() {
+    TextSightFlutterApi.setUp(this);
+  }
+
   /// Per-frame results coming up from native. The name is mirrored verbatim by
   /// the native `EventChannel` registration on each platform.
   static const _capturesChannel = EventChannel('com.lahaluhem.text_sight/captures');
@@ -36,6 +44,9 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
   late final Stream<TextSightReadinessState> _readiness = _readinessChannel
       .receiveBroadcastStream()
       .map(_decodeReadiness);
+
+  // Never closed: it lives as long as the platform does, like the EventChannel streams above.
+  final _sessionStates = StreamController<TextSightSessionState>.broadcast();
 
   @override
   Future<int> initialize(TextSightOptions options, CaptureResolution resolution) =>
@@ -74,6 +85,12 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
 
   @override
   Stream<TextSightCapture> get captures => _captures;
+
+  @override
+  Stream<TextSightSessionState> get sessionStates => _sessionStates.stream;
+
+  @override
+  void onSessionStateChanged(SessionStateMessage state) => _sessionStates.add(state._toPublic());
 
   @override
   Future<TextSightReadinessState> ensureModelReady() async =>
@@ -122,6 +139,26 @@ extension on ConfidenceScaleMessage {
     .visionGraded => .visionGraded,
     .visionCoarse => .visionCoarse,
     .mlKit => .mlKit,
+  };
+}
+
+/// Maps a session-state twin back to its public case.
+extension on SessionStateMessage {
+  TextSightSessionState _toPublic() => switch (this) {
+    SessionIdleMessage() => const SessionIdle(),
+    SessionActiveMessage() => const SessionActive(),
+    SessionPausedMessage(:final reason, :final details) => SessionPaused(
+      reason: reason._toPublic(),
+      details: details,
+    ),
+    SessionFailedMessage(:final details) => SessionFailed(details: details),
+  };
+}
+
+extension on SessionPauseReasonMessage {
+  SessionPauseReason _toPublic() => switch (this) {
+    .appBackgrounded => .appBackgrounded,
+    .interrupted => .interrupted,
   };
 }
 
