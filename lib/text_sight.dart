@@ -12,6 +12,7 @@ export 'src/capture/text_sight.dart';
 export 'src/capture/text_sight_controller.dart';
 export 'src/capture/text_sight_engine.dart';
 export 'src/capture/text_sight_model.dart';
+export 'src/capture/text_sight_session_state.dart';
 export 'src/recognition/confidence_scale.dart';
 export 'src/recognition/darwin_options.dart';
 export 'src/recognition/recognition_level.dart';
