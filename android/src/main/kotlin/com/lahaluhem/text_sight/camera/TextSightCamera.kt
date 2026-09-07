@@ -81,7 +81,7 @@ internal class TextSightCamera(
 
     fun start() = session.startAnalysis()
 
-    fun stop() = session.stopAnalysis()
+    fun pauseRecognition() = session.stopAnalysis()
 
     suspend fun disposeSession() = session.release()
 

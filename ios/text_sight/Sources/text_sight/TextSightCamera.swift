@@ -125,8 +125,8 @@ final class TextSightCamera: NSObject {
     stateLock.withLock { isRecognizing = true }
   }
 
-  /// Synchronous, same as `start`.
-  func stop() {
+  /// Synchronous, same as `start`. The session stays up, only the recognition flag drops.
+  func pauseRecognition() {
     stateLock.withLock { isRecognizing = false }
   }
 

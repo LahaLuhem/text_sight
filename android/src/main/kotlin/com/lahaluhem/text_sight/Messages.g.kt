@@ -452,7 +452,7 @@ interface TextSightHostApi {
    */
   fun start()
   /** Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start]. */
-  fun stop()
+  fun pauseRecognition()
   /** Releases the camera and texture. Idempotent, so calling it with nothing open is fine. */
   suspend fun dispose()
   /** Reports the current camera-permission status without prompting. */
@@ -527,11 +527,11 @@ interface TextSightHostApi {
         }
       }
       run {
-        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.stop$separatedMessageChannelSuffix", codec)
+        val channel = BasicMessageChannel<Any?>(binaryMessenger, "dev.flutter.pigeon.text_sight.TextSightHostApi.pauseRecognition$separatedMessageChannelSuffix", codec)
         if (api != null) {
           channel.setMessageHandler { _, reply ->
             val wrapped: List<Any?> = try {
-              api.stop()
+              api.pauseRecognition()
               listOf(null)
             } catch (exception: Throwable) {
               MessagesPigeonUtils.wrapError(exception)

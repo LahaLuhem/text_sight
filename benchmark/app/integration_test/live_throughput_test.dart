@@ -40,7 +40,7 @@ void main() {
     // the cliff, not just the first cold frames.
     await controller.start();
     await Future<void>.delayed(_warmUpWindow);
-    await controller.stop();
+    await controller.pauseRecognition();
 
     // With that burned off, a gap that survives here is the candidate. `--reverse` re-runs the
     // sweep backwards, which is how to confirm that.
@@ -80,7 +80,7 @@ void main() {
         elapsed.start();
         await Future<void>.delayed(_measureWindow);
         elapsed.stop();
-        await controller.stop();
+        await controller.pauseRecognition();
         await subscription.cancel();
 
         records.add(

@@ -416,7 +416,7 @@ protocol TextSightHostApi {
   /// Dart signature is `Future<void>` either way.
   func start() throws
   /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
-  func stop() throws
+  func pauseRecognition() throws
   /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
   func dispose() async throws
   /// Reports the current camera-permission status without prompting.
@@ -485,18 +485,18 @@ class TextSightHostApiSetup {
       startChannel.setMessageHandler(nil)
     }
     /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
-    let stopChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.stop\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
+    let pauseRecognitionChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.pauseRecognition\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
-      stopChannel.setMessageHandler { _, reply in
+      pauseRecognitionChannel.setMessageHandler { _, reply in
         do {
-          try api.stop()
+          try api.pauseRecognition()
           reply(wrapResult(nil))
         } catch {
           reply(wrapError(error))
         }
       }
     } else {
-      stopChannel.setMessageHandler(nil)
+      pauseRecognitionChannel.setMessageHandler(nil)
     }
     /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
     let disposeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.dispose\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)

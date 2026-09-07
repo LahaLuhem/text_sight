@@ -79,7 +79,7 @@ abstract class TextSightHostApi {
   void start();
 
   /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
-  void stop();
+  void pauseRecognition();
 
   /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
   @async

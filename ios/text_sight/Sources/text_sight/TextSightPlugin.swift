@@ -51,8 +51,8 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     camera.start()
   }
 
-  func stop() throws {
-    camera.stop()
+  func pauseRecognition() throws {
+    camera.pauseRecognition()
   }
 
   func dispose() async throws {
