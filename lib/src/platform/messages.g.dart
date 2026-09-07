@@ -354,9 +354,9 @@ class TextSightHostApi {
   }
 
   /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
-  Future<void> stop() async {
+  Future<void> pauseRecognition() async {
     final pigeonVar_channelName =
-        'dev.flutter.pigeon.text_sight.TextSightHostApi.stop$pigeonVar_messageChannelSuffix';
+        'dev.flutter.pigeon.text_sight.TextSightHostApi.pauseRecognition$pigeonVar_messageChannelSuffix';
     final pigeonVar_channel = BasicMessageChannel<Object?>(
       pigeonVar_channelName,
       pigeonChannelCodec,

@@ -50,8 +50,9 @@ abstract class TextSightPlatform extends PlatformInterface {
   /// Begins delivering frames to the recognizer and emitting on [captures].
   Future<void> start() => throw UnimplementedError('start() has not been implemented.');
 
-  /// Stops recognition but keeps the session open for a later [start].
-  Future<void> stop() => throw UnimplementedError('stop() has not been implemented.');
+  /// Pauses recognition but keeps the session open for a later [start].
+  Future<void> pauseRecognition() =>
+      throw UnimplementedError('pauseRecognition() has not been implemented.');
 
   /// Tears the session down and releases the camera and texture. Idempotent, so calling it with
   /// nothing open is fine.

@@ -67,10 +67,10 @@ class TextSightPlugin :
         activeCamera.start()
     }
 
-    override fun stop() {
+    override fun pauseRecognition() {
         val activeCamera = camera ?: throw detachedError()
 
-        activeCamera.stop()
+        activeCamera.pauseRecognition()
     }
 
     override suspend fun dispose() {

@@ -45,7 +45,7 @@ final class PigeonTextSightPlatform extends TextSightPlatform {
   Future<void> start() => _hostApi.start();
 
   @override
-  Future<void> stop() => _hostApi.stop();
+  Future<void> pauseRecognition() => _hostApi.pauseRecognition();
 
   @override
   Future<void> dispose() => _hostApi.dispose();

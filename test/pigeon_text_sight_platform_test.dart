@@ -241,18 +241,18 @@ void main() {
       });
 
   Bdd(control)
-      .scenario('Start, stop, and dispose complete against the host')
-      .given('a platform with mocked start, stop, and dispose')
+      .scenario('Start, pauseRecognition, and dispose complete against the host')
+      .given('a platform with mocked start, pauseRecognition, and dispose')
       .when('each lifecycle call is awaited')
       .then('every future completes without error')
       .run((_) async {
         final platform = PigeonTextSightPlatform();
         _mockHostMethod(messenger, 'start');
-        _mockHostMethod(messenger, 'stop');
+        _mockHostMethod(messenger, 'pauseRecognition');
         _mockHostMethod(messenger, 'dispose');
 
         await check(platform.start()).completes();
-        await check(platform.stop()).completes();
+        await check(platform.pauseRecognition()).completes();
         await check(platform.dispose()).completes();
       });
 

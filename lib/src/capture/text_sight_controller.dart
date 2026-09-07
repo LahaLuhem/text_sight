@@ -20,7 +20,7 @@ import 'capture_resolution.dart';
 final class TextSightController extends ChangeNotifier {
   TextSightOptions _options;
   bool _isTorchEnabled;
-  var _isRunning = false;
+  var _isRecognizing = false;
   int? _textureId;
 
   /// Creates a controller from [options], a [resolution] and an initial torch state. Nothing opens
@@ -45,8 +45,9 @@ final class TextSightController extends ChangeNotifier {
   /// Whether the torch is currently requested on.
   bool get isTorchEnabled => _isTorchEnabled;
 
-  /// Whether a session is started and delivering [captures].
-  bool get isRunning => _isRunning;
+  /// Whether recognition is requested on. Intent, not a readback: it flips with [start] and
+  /// [pauseRecognition] and nothing else, so it says what was asked for, not what the camera is doing.
+  bool get isRecognizing => _isRecognizing;
 
   /// The preview texture id, or `null` before [start] has acquired one.
   /// Read by `TextSightView` to mount the camera preview.
@@ -57,18 +58,18 @@ final class TextSightController extends ChangeNotifier {
   Stream<TextSightCapture> get captures => TextSightPlatform.instance.captures;
 
   /// Opens the camera if needed and begins recognition. Idempotent on the texture:
-  /// a session acquired once is reused across stop/start.
+  /// a session acquired once is reused across [pauseRecognition] and [start].
   Future<void> start() async {
     _textureId ??= await TextSightPlatform.instance.initialize(_options, resolution);
     await TextSightPlatform.instance.start();
-    _isRunning = true;
+    _isRecognizing = true;
     notifyListeners();
   }
 
-  /// Pauses recognition while keeping the session (and texture) alive.
-  Future<void> stop() async {
-    await TextSightPlatform.instance.stop();
-    _isRunning = false;
+  /// Pauses recognition while keeping the session (and texture) alive. [start] resumes it.
+  Future<void> pauseRecognition() async {
+    await TextSightPlatform.instance.pauseRecognition();
+    _isRecognizing = false;
     notifyListeners();
   }
 

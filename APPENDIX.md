@@ -197,7 +197,7 @@ path.
 funnelled through one channel:
 
 - **Control + the one-shot recognize → typed codegen `@HostApi`.** The control surface
-  (`initialize` / `start` / `stop` / `setOptions` / `setTorchEnabled` /
+  (`initialize` / `start` / `pauseRecognition` / `setOptions` / `setTorchEnabled` /
   `checkCameraPermission` / `requestCameraPermission` / `dispose`) is request/response and benefits from a generated, type-checked Dart↔native
   boundary. The static one-shot (`recognizeImage` /
   `recognizePath`) is *also* request/response, so it rides the **same** `@HostApi` as two
