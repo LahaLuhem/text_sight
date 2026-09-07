@@ -23,6 +23,7 @@ void main() {
   final captures = BddFeature('TextSight captures stream');
   final oneShot = BddFeature('TextSight one-shot recognition');
   final readiness = BddFeature('TextSight model readiness');
+  final sessionStates = BddFeature('TextSight session states');
 
   Bdd(control)
       .scenario('Recognition level is sent as its Pigeon twin')
@@ -639,6 +640,78 @@ void main() {
 
         check(call.invoked).isTrue();
       });
+
+  Bdd(sessionStates)
+      .scenario('A pushed state message decodes into its public state')
+      .given('a platform registered as the FlutterApi handler')
+      .when('native pushes <message>')
+      .then('sessionStates emits <state>')
+      .example(val('message', SessionIdleMessage()), val('state', const SessionIdle()))
+      .example(val('message', SessionActiveMessage()), val('state', const SessionActive()))
+      .example(
+        val('message', SessionPausedMessage(reason: SessionPauseReasonMessage.appBackgrounded)),
+        val('state', const SessionPaused(reason: SessionPauseReason.appBackgrounded)),
+      )
+      .example(
+        val(
+          'message',
+          SessionPausedMessage(
+            reason: SessionPauseReasonMessage.interrupted,
+            details: 'phone call',
+          ),
+        ),
+        val(
+          'state',
+          const SessionPaused(reason: SessionPauseReason.interrupted, details: 'phone call'),
+        ),
+      )
+      .example(
+        val('message', SessionFailedMessage(details: 'camera died')),
+        val('state', const SessionFailed(details: 'camera died')),
+      )
+      .example(val('message', SessionFailedMessage()), val('state', const SessionFailed()))
+      .run((ctx) async {
+        final platform = PigeonTextSightPlatform();
+        final first = platform.sessionStates.first;
+
+        await _pushState(messenger, ctx.example.val('message') as SessionStateMessage);
+
+        check(await first).equals(ctx.example.val('state') as TextSightSessionState);
+      });
+
+  Bdd(sessionStates)
+      .scenario('States reach every listener in push order')
+      .given('two listeners on sessionStates')
+      .when('native pushes active, paused and active again')
+      .then('both listeners see the three states in that order')
+      .run((_) async {
+        final platform = PigeonTextSightPlatform();
+        final first = <TextSightSessionState>[];
+        final second = <TextSightSessionState>[];
+        final subscriptions = [
+          platform.sessionStates.listen(first.add),
+          platform.sessionStates.listen(second.add),
+        ];
+
+        await _pushState(messenger, SessionActiveMessage());
+        await _pushState(
+          messenger,
+          SessionPausedMessage(reason: SessionPauseReasonMessage.appBackgrounded),
+        );
+        await _pushState(messenger, SessionActiveMessage());
+        await pumpEventQueue();
+
+        const expected = <TextSightSessionState>[
+          SessionActive(),
+          SessionPaused(reason: SessionPauseReason.appBackgrounded),
+          SessionActive(),
+        ];
+        check(first).deepEquals(expected);
+        check(second).deepEquals(expected);
+        for (final subscription in subscriptions) {
+          await subscription.cancel();
+        }
+      });
 }
 
 /// Records the decoded argument payload a mocked host method receives, and whether it was invoked
@@ -703,6 +776,14 @@ void _mockReadiness(TestDefaultBinaryMessenger messenger, List<Object?> states) 
     ),
   );
   addTearDown(() => messenger.setMockStreamHandler(channel, null));
+}
+
+/// Pushes one FlutterApi state message into the platform, the way native does.
+Future<void> _pushState(TestDefaultBinaryMessenger messenger, SessionStateMessage message) {
+  const channel = 'dev.flutter.pigeon.text_sight.TextSightFlutterApi.onSessionStateChanged';
+  final bytes = TextSightFlutterApi.pigeonChannelCodec.encodeMessage(<Object?>[message]);
+
+  return messenger.handlePlatformMessage(channel, bytes, null);
 }
 
 /// Builds one per-frame wire-line map from a `lines` table [row].
