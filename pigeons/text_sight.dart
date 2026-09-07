@@ -62,6 +62,34 @@ enum CaptureResolutionMessage { low, medium, high }
 /// Transport twin of the public `CameraPermissionStatus`.
 enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
 
+/// Transport twin of the public `SessionPauseReason`.
+enum SessionPauseReasonMessage { appBackgrounded, interrupted }
+
+/// Transport twin of the public sealed `TextSightSessionState`, one case per state. Pigeon needs
+/// the parent empty.
+sealed class SessionStateMessage;
+
+/// Twin of `SessionIdle`.
+class SessionIdleMessage extends SessionStateMessage;
+
+/// Twin of `SessionActive`.
+class SessionActiveMessage extends SessionStateMessage;
+
+/// Twin of `SessionPaused`.
+class SessionPausedMessage extends SessionStateMessage {
+  new({required this.reason, this.details});
+
+  SessionPauseReasonMessage reason;
+  String? details;
+}
+
+/// Twin of `SessionFailed`.
+class SessionFailedMessage extends SessionStateMessage {
+  new({this.details});
+
+  String? details;
+}
+
 /// The typed control channel. Per-frame results stream over a plain
 /// EventChannel and the preview is a texture. Neither rides this API.
 @HostApi()
@@ -126,4 +154,11 @@ abstract class TextSightHostApi {
   /// Recognizes text in the image at file [path], honouring [options].
   @async
   Map<String, Object?> recognizePath(String path, TextSightOptionsMessage options);
+}
+
+/// Native-to-Dart notifications: rare and typed, so they ride Pigeon rather than an EventChannel.
+@FlutterApi()
+abstract class TextSightFlutterApi {
+  /// Fired on every actual session transition native makes or observes.
+  void onSessionStateChanged(SessionStateMessage state);
 }

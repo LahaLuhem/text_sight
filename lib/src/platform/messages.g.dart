@@ -34,6 +34,16 @@ Object? _extractReplyValueOrThrow(
   return replyList.firstOrNull;
 }
 
+List<Object?> wrapResponse({Object? result, PlatformException? error, bool empty = false}) {
+  if (empty) {
+    return <Object?>[];
+  }
+  if (error == null) {
+    return <Object?>[result];
+  }
+  return <Object?>[error.code, error.message, error.details];
+}
+
 bool _deepEquals(Object? a, Object? b) {
   if (identical(a, b)) {
     return true;
@@ -106,6 +116,9 @@ enum CaptureResolutionMessage { low, medium, high }
 
 /// Transport twin of the public `CameraPermissionStatus`.
 enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
+
+/// Transport twin of the public `SessionPauseReason`.
+enum SessionPauseReasonMessage { appBackgrounded, interrupted }
 
 /// Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
 class RegionOfInterestMessage {
@@ -235,6 +248,169 @@ class TextSightOptionsMessage {
   }
 }
 
+/// Transport twin of the public sealed `TextSightSessionState`, one case per state. Pigeon needs
+/// the parent empty.
+sealed class SessionStateMessage {}
+
+/// Twin of `SessionIdle`.
+class SessionIdleMessage extends SessionStateMessage {
+  SessionIdleMessage();
+
+  List<Object?> _toList() {
+    return <Object?>[];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static SessionIdleMessage decode(Object result) {
+    result as List<Object?>;
+    return SessionIdleMessage();
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! SessionIdleMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    return true;
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'SessionIdleMessage()';
+  }
+}
+
+/// Twin of `SessionActive`.
+class SessionActiveMessage extends SessionStateMessage {
+  SessionActiveMessage();
+
+  List<Object?> _toList() {
+    return <Object?>[];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static SessionActiveMessage decode(Object result) {
+    result as List<Object?>;
+    return SessionActiveMessage();
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! SessionActiveMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    return true;
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'SessionActiveMessage()';
+  }
+}
+
+/// Twin of `SessionPaused`.
+class SessionPausedMessage extends SessionStateMessage {
+  SessionPausedMessage({required this.reason, this.details});
+
+  SessionPauseReasonMessage reason;
+
+  String? details;
+
+  List<Object?> _toList() {
+    return <Object?>[reason, details];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static SessionPausedMessage decode(Object result) {
+    result as List<Object?>;
+    return SessionPausedMessage(
+      reason: result[0]! as SessionPauseReasonMessage,
+      details: result[1] as String?,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! SessionPausedMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(reason, other.reason) && _deepEquals(details, other.details);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'SessionPausedMessage(reason: $reason, details: $details)';
+  }
+}
+
+/// Twin of `SessionFailed`.
+class SessionFailedMessage extends SessionStateMessage {
+  SessionFailedMessage({this.details});
+
+  String? details;
+
+  List<Object?> _toList() {
+    return <Object?>[details];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static SessionFailedMessage decode(Object result) {
+    result as List<Object?>;
+    return SessionFailedMessage(details: result[0] as String?);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! SessionFailedMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(details, other.details);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'SessionFailedMessage(details: $details)';
+  }
+}
+
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -254,11 +430,26 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is CameraPermissionStatusMessage) {
       buffer.putUint8(132);
       writeValue(buffer, value.index);
-    } else if (value is RegionOfInterestMessage) {
+    } else if (value is SessionPauseReasonMessage) {
       buffer.putUint8(133);
+      writeValue(buffer, value.index);
+    } else if (value is RegionOfInterestMessage) {
+      buffer.putUint8(134);
       writeValue(buffer, value.encode());
     } else if (value is TextSightOptionsMessage) {
-      buffer.putUint8(134);
+      buffer.putUint8(135);
+      writeValue(buffer, value.encode());
+    } else if (value is SessionIdleMessage) {
+      buffer.putUint8(136);
+      writeValue(buffer, value.encode());
+    } else if (value is SessionActiveMessage) {
+      buffer.putUint8(137);
+      writeValue(buffer, value.encode());
+    } else if (value is SessionPausedMessage) {
+      buffer.putUint8(138);
+      writeValue(buffer, value.encode());
+    } else if (value is SessionFailedMessage) {
+      buffer.putUint8(139);
       writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
@@ -281,9 +472,20 @@ class _PigeonCodec extends StandardMessageCodec {
         final value = readValue(buffer) as int?;
         return value == null ? null : CameraPermissionStatusMessage.values[value];
       case 133:
-        return RegionOfInterestMessage.decode(readValue(buffer)!);
+        final value = readValue(buffer) as int?;
+        return value == null ? null : SessionPauseReasonMessage.values[value];
       case 134:
+        return RegionOfInterestMessage.decode(readValue(buffer)!);
+      case 135:
         return TextSightOptionsMessage.decode(readValue(buffer)!);
+      case 136:
+        return SessionIdleMessage.decode(readValue(buffer)!);
+      case 137:
+        return SessionActiveMessage.decode(readValue(buffer)!);
+      case 138:
+        return SessionPausedMessage.decode(readValue(buffer)!);
+      case 139:
+        return SessionFailedMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -537,5 +739,46 @@ class TextSightHostApi {
       isNullValid: false,
     );
     return (pigeonVar_replyValue! as Map<Object?, Object?>).cast<String, Object?>();
+  }
+}
+
+/// Native-to-Dart notifications: rare and typed, so they ride Pigeon rather than an EventChannel.
+abstract class TextSightFlutterApi {
+  static const MessageCodec<Object?> pigeonChannelCodec = _PigeonCodec();
+
+  /// Fired on every actual session transition native makes or observes.
+  void onSessionStateChanged(SessionStateMessage state);
+
+  static void setUp(
+    TextSightFlutterApi? api, {
+    BinaryMessenger? binaryMessenger,
+    String messageChannelSuffix = '',
+  }) {
+    messageChannelSuffix = messageChannelSuffix.isNotEmpty ? '.$messageChannelSuffix' : '';
+    {
+      final pigeonVar_channel = BasicMessageChannel<Object?>(
+        'dev.flutter.pigeon.text_sight.TextSightFlutterApi.onSessionStateChanged$messageChannelSuffix',
+        pigeonChannelCodec,
+        binaryMessenger: binaryMessenger,
+      );
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          final List<Object?> args = message! as List<Object?>;
+          final SessionStateMessage arg_state = args[0]! as SessionStateMessage;
+          try {
+            api.onSessionStateChanged(arg_state);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          } catch (e) {
+            return wrapResponse(
+              error: PlatformException(code: 'error', message: e.toString()),
+            );
+          }
+        });
+      }
+    }
   }
 }
