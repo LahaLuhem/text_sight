@@ -55,6 +55,10 @@ private func wrapError(_ error: Any) -> [Any?] {
   ]
 }
 
+private func createConnectionError(withChannelName channelName: String) -> PigeonError {
+  return PigeonError(code: "channel-error", message: "Unable to establish connection on channel: '\(channelName)'.", details: "")
+}
+
 enum MessagesPigeonInternal {
   static func isNullish(_ value: Any?) -> Bool {
     guard let innerValue = value else {
@@ -211,6 +215,12 @@ enum CameraPermissionStatusMessage: Int, CaseIterable {
   case permanentlyDenied = 2
 }
 
+/// Transport twin of the public `SessionPauseReason`.
+enum SessionPauseReasonMessage: Int, CaseIterable {
+  case appBackgrounded = 0
+  case interrupted = 1
+}
+
 /// Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
 ///
 /// Generated class from Pigeon that represents data sent in messages.
@@ -323,6 +333,158 @@ struct TextSightOptionsMessage: Hashable, CustomStringConvertible {
   }
 }
 
+/// Transport twin of the public sealed `TextSightSessionState`, one case per state. Pigeon needs
+/// the parent empty.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+/// This protocol should not be extended by any user class outside of the generated file.
+protocol SessionStateMessage {
+
+}
+
+/// Twin of `SessionIdle`.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct SessionIdleMessage: SessionStateMessage {
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> SessionIdleMessage? {
+
+    return SessionIdleMessage(
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+    ]
+  }
+  static func == (lhs: SessionIdleMessage, rhs: SessionIdleMessage) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return true
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("SessionIdleMessage")
+  }
+
+  public var description: String {
+    return "SessionIdleMessage()"
+  }
+}
+
+/// Twin of `SessionActive`.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct SessionActiveMessage: SessionStateMessage {
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> SessionActiveMessage? {
+
+    return SessionActiveMessage(
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+    ]
+  }
+  static func == (lhs: SessionActiveMessage, rhs: SessionActiveMessage) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return true
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("SessionActiveMessage")
+  }
+
+  public var description: String {
+    return "SessionActiveMessage()"
+  }
+}
+
+/// Twin of `SessionPaused`.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct SessionPausedMessage: SessionStateMessage {
+  var reason: SessionPauseReasonMessage
+  var details: String? = nil
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> SessionPausedMessage? {
+    let reason = pigeonVar_list[0] as! SessionPauseReasonMessage
+    let details: String? = nilOrValue(pigeonVar_list[1])
+
+    return SessionPausedMessage(
+      reason: reason,
+      details: details
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      reason,
+      details,
+    ]
+  }
+  static func == (lhs: SessionPausedMessage, rhs: SessionPausedMessage) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return MessagesPigeonInternal.deepEquals(lhs.reason, rhs.reason) && MessagesPigeonInternal.deepEquals(lhs.details, rhs.details)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("SessionPausedMessage")
+    MessagesPigeonInternal.deepHash(value: reason, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: details, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "SessionPausedMessage(reason: \(String(describing: reason)), details: \(String(describing: details)))"
+  }
+}
+
+/// Twin of `SessionFailed`.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct SessionFailedMessage: SessionStateMessage {
+  var details: String? = nil
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> SessionFailedMessage? {
+    let details: String? = nilOrValue(pigeonVar_list[0])
+
+    return SessionFailedMessage(
+      details: details
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      details
+    ]
+  }
+  static func == (lhs: SessionFailedMessage, rhs: SessionFailedMessage) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return MessagesPigeonInternal.deepEquals(lhs.details, rhs.details)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("SessionFailedMessage")
+    MessagesPigeonInternal.deepHash(value: details, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "SessionFailedMessage(details: \(String(describing: details)))"
+  }
+}
+
 private class MessagesPigeonCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
@@ -351,9 +513,23 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
       }
       return nil
     case 133:
-      return RegionOfInterestMessage.fromList(self.readValue() as! [Any?])
+      let enumResultAsInt: Int? = nilOrValue(self.readValue() as! Int?)
+      if let enumResultAsInt = enumResultAsInt {
+        return SessionPauseReasonMessage(rawValue: enumResultAsInt)
+      }
+      return nil
     case 134:
+      return RegionOfInterestMessage.fromList(self.readValue() as! [Any?])
+    case 135:
       return TextSightOptionsMessage.fromList(self.readValue() as! [Any?])
+    case 136:
+      return SessionIdleMessage.fromList(self.readValue() as! [Any?])
+    case 137:
+      return SessionActiveMessage.fromList(self.readValue() as! [Any?])
+    case 138:
+      return SessionPausedMessage.fromList(self.readValue() as! [Any?])
+    case 139:
+      return SessionFailedMessage.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
     }
@@ -374,11 +550,26 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
     } else if let value = value as? CameraPermissionStatusMessage {
       super.writeByte(132)
       super.writeValue(value.rawValue)
-    } else if let value = value as? RegionOfInterestMessage {
+    } else if let value = value as? SessionPauseReasonMessage {
       super.writeByte(133)
+      super.writeValue(value.rawValue)
+    } else if let value = value as? RegionOfInterestMessage {
+      super.writeByte(134)
       super.writeValue(value.toList())
     } else if let value = value as? TextSightOptionsMessage {
-      super.writeByte(134)
+      super.writeByte(135)
+      super.writeValue(value.toList())
+    } else if let value = value as? SessionIdleMessage {
+      super.writeByte(136)
+      super.writeValue(value.toList())
+    } else if let value = value as? SessionActiveMessage {
+      super.writeByte(137)
+      super.writeValue(value.toList())
+    } else if let value = value as? SessionPausedMessage {
+      super.writeByte(138)
+      super.writeValue(value.toList())
+    } else if let value = value as? SessionFailedMessage {
+      super.writeByte(139)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -646,6 +837,46 @@ class TextSightHostApiSetup {
       }
     } else {
       recognizePathChannel.setMessageHandler(nil)
+    }
+  }
+}
+
+/// Native-to-Dart notifications: rare and typed, so they ride Pigeon rather than an EventChannel.
+///
+/// Generated protocol from Pigeon that represents Flutter messages that can be called from Swift.
+protocol TextSightFlutterApiProtocol {
+  /// Fired on every actual session transition native makes or observes.
+  func onSessionStateChanged(state stateArg: SessionStateMessage) async throws
+}
+class TextSightFlutterApi: TextSightFlutterApiProtocol {
+  private let binaryMessenger: FlutterBinaryMessenger
+  private let messageChannelSuffix: String
+  init(binaryMessenger: FlutterBinaryMessenger, messageChannelSuffix: String = "") {
+    self.binaryMessenger = binaryMessenger
+    self.messageChannelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
+  }
+  var codec: MessagesPigeonCodec {
+    return MessagesPigeonCodec.shared
+  }
+  /// Fired on every actual session transition native makes or observes.
+  func onSessionStateChanged(state stateArg: SessionStateMessage) async throws {
+    return try await withCheckedThrowingContinuation { continuation in
+      let channelName: String = "dev.flutter.pigeon.text_sight.TextSightFlutterApi.onSessionStateChanged\(messageChannelSuffix)"
+      let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+      channel.sendMessage([stateArg] as [Any?]) { response in
+        guard let listResponse = response as? [Any?] else {
+          continuation.resume(throwing: createConnectionError(withChannelName: channelName))
+          return
+        }
+        if listResponse.count > 1 {
+          let code: String = listResponse[0] as! String
+          let message: String? = nilOrValue(listResponse[1])
+          let details: String? = nilOrValue(listResponse[2])
+          continuation.resume(throwing: PigeonError(code: code, message: message, details: details))
+        } else {
+          continuation.resume()
+        }
+      }
     }
   }
 }

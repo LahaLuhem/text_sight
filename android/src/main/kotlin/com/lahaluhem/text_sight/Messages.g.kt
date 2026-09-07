@@ -21,6 +21,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 private object MessagesPigeonUtils {
 
+  fun createConnectionError(channelName: String): FlutterError {
+    return FlutterError("channel-error",  "Unable to establish connection on channel: '$channelName'.", "")  }
+
   fun wrapResult(result: Any?): List<Any?> {
     return listOf(result)
   }
@@ -249,6 +252,18 @@ enum class CameraPermissionStatusMessage(val raw: Int) {
   }
 }
 
+/** Transport twin of the public `SessionPauseReason`. */
+enum class SessionPauseReasonMessage(val raw: Int) {
+  APP_BACKGROUNDED(0),
+  INTERRUPTED(1);
+
+  companion object {
+    fun ofRaw(raw: Int): SessionPauseReasonMessage? {
+      return values().firstOrNull { it.raw == raw }
+    }
+  }
+}
+
 /**
  * Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
  *
@@ -363,6 +378,168 @@ data class TextSightOptionsMessage (
     return "TextSightOptionsMessage(level=$level, usesLanguageCorrection=$usesLanguageCorrection, languages=$languages, minimumTextHeight=$minimumTextHeight, roi=$roi)"
   }
 }
+
+/**
+ * Transport twin of the public sealed `TextSightSessionState`, one case per state. Pigeon needs
+ * the parent empty.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ * This class should not be extended by any user class outside of the generated file.
+ */
+sealed class SessionStateMessage 
+/**
+ * Twin of `SessionIdle`.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+class SessionIdleMessage  : SessionStateMessage() {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): SessionIdleMessage {
+      return SessionIdleMessage()
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    return result
+  }
+  override fun toString(): String {
+    return "SessionIdleMessage()"
+  }
+}
+
+/**
+ * Twin of `SessionActive`.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+class SessionActiveMessage  : SessionStateMessage() {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): SessionActiveMessage {
+      return SessionActiveMessage()
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    return result
+  }
+  override fun toString(): String {
+    return "SessionActiveMessage()"
+  }
+}
+
+/**
+ * Twin of `SessionPaused`.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class SessionPausedMessage (
+  val reason: SessionPauseReasonMessage,
+  val details: String? = null
+) : SessionStateMessage()
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): SessionPausedMessage {
+      val reason = pigeonVar_list[0] as SessionPauseReasonMessage
+      val details = pigeonVar_list[1] as String?
+      return SessionPausedMessage(reason, details)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      reason,
+      details,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as SessionPausedMessage
+    return MessagesPigeonUtils.deepEquals(this.reason, other.reason) && MessagesPigeonUtils.deepEquals(this.details, other.details)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.reason)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.details)
+    return result
+  }
+  override fun toString(): String {
+    return "SessionPausedMessage(reason=$reason, details=$details)"
+  }
+}
+
+/**
+ * Twin of `SessionFailed`.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class SessionFailedMessage (
+  val details: String? = null
+) : SessionStateMessage()
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): SessionFailedMessage {
+      val details = pigeonVar_list[0] as String?
+      return SessionFailedMessage(details)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      details,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as SessionFailedMessage
+    return MessagesPigeonUtils.deepEquals(this.details, other.details)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.details)
+    return result
+  }
+  override fun toString(): String {
+    return "SessionFailedMessage(details=$details)"
+  }
+}
 private open class MessagesPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -387,13 +564,38 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         }
       }
       133.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
-          RegionOfInterestMessage.fromList(it)
+        return (readValue(buffer) as Long?)?.let {
+          SessionPauseReasonMessage.ofRaw(it.toInt())
         }
       }
       134.toByte() -> {
         return (readValue(buffer) as? List<Any?>)?.let {
+          RegionOfInterestMessage.fromList(it)
+        }
+      }
+      135.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
           TextSightOptionsMessage.fromList(it)
+        }
+      }
+      136.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          SessionIdleMessage.fromList(it)
+        }
+      }
+      137.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          SessionActiveMessage.fromList(it)
+        }
+      }
+      138.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          SessionPausedMessage.fromList(it)
+        }
+      }
+      139.toByte() -> {
+        return (readValue(buffer) as? List<Any?>)?.let {
+          SessionFailedMessage.fromList(it)
         }
       }
       else -> super.readValueOfType(type, buffer)
@@ -417,12 +619,32 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
         stream.write(132)
         writeValue(stream, value.raw.toLong())
       }
-      is RegionOfInterestMessage -> {
+      is SessionPauseReasonMessage -> {
         stream.write(133)
+        writeValue(stream, value.raw.toLong())
+      }
+      is RegionOfInterestMessage -> {
+        stream.write(134)
         writeValue(stream, value.toList())
       }
       is TextSightOptionsMessage -> {
-        stream.write(134)
+        stream.write(135)
+        writeValue(stream, value.toList())
+      }
+      is SessionIdleMessage -> {
+        stream.write(136)
+        writeValue(stream, value.toList())
+      }
+      is SessionActiveMessage -> {
+        stream.write(137)
+        writeValue(stream, value.toList())
+      }
+      is SessionPausedMessage -> {
+        stream.write(138)
+        writeValue(stream, value.toList())
+      }
+      is SessionFailedMessage -> {
+        stream.write(139)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -699,6 +921,39 @@ interface TextSightHostApi {
         } else {
           channel.setMessageHandler(null)
         }
+      }
+    }
+  }
+}
+/**
+ * Native-to-Dart notifications: rare and typed, so they ride Pigeon rather than an EventChannel.
+ *
+ * Generated class from Pigeon that represents Flutter messages that can be called from Kotlin.
+ */
+class TextSightFlutterApi(private val binaryMessenger: BinaryMessenger, private val messageChannelSuffix: String = "") {
+  companion object {
+    /** The codec used by TextSightFlutterApi. */
+    val codec: MessageCodec<Any?> by lazy {
+      MessagesPigeonCodec()
+    }
+  }
+  /** Fired on every actual session transition native makes or observes. */
+  suspend fun onSessionStateChanged(stateArg: SessionStateMessage)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    return suspendCancellableCoroutine { continuation ->
+      val channelName = "dev.flutter.pigeon.text_sight.TextSightFlutterApi.onSessionStateChanged$separatedMessageChannelSuffix"
+      val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+      channel.send(listOf(stateArg)) {
+        if (it is List<*>) {
+          if (it.size > 1) {
+            continuation.resumeWithException(FlutterError(it[0] as String, it[1] as String, it[2] as String?))
+          } else {
+            continuation.resume(Unit)
+          }
+        } else {
+          continuation.resumeWithException(MessagesPigeonUtils.createConnectionError(channelName))
+        } 
       }
     }
   }
