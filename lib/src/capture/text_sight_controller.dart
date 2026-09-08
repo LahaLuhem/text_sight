@@ -61,11 +61,12 @@ final class TextSightController extends ChangeNotifier {
   TextSightSessionState get sessionState => _sessionState;
 
   /// The live per-frame results stream. Subscribers must cancel their own subscription.
-  /// The controller does not own it.
+  /// The controller does not own it. Frames are recognized only while this has a listener.
   Stream<TextSightCapture> get captures => TextSightPlatform.instance.captures;
 
   /// Opens the camera if needed and begins recognition. Idempotent on the texture:
-  /// a session acquired once is reused across [pauseRecognition] and [start].
+  /// a session acquired once is reused across [pauseRecognition] and [start]. Also the way back
+  /// from [SessionFailed].
   Future<void> start() async {
     // Before initialize, so the first state of this session is never missed.
     _stateSubscription ??= TextSightPlatform.instance.sessionStates.listen(_onSessionState);

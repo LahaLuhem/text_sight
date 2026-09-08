@@ -21,6 +21,19 @@ final class LiveFramePathTests: XCTestCase {
     await fulfillment(of: [recognizer.cancelled], timeout: 5)
   }
 
+  func testAFrameWithNoCapturesListenerNeverReachesTheRecognizer() async throws {
+    let recognizer = ParkedRecognizer()
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), recognizer: recognizer)
+    camera.start()
+    // Inverted: nothing listens to `captures`, so the gate has to stay shut.
+    recognizer.started.isInverted = true
+
+    camera.handle(try makeTestPixelBuffer())
+
+    await fulfillment(of: [recognizer.started], timeout: 0.5)
+    try await camera.dispose()
+  }
+
   func testAFrameIsDroppedWhileAnotherIsStillRunning() async throws {
     let recognizer = ParkedRecognizer()
     let camera = TextSightCamera(textureRegistry: StubTextureRegistry(), recognizer: recognizer)

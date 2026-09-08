@@ -4,6 +4,7 @@
 - [Dependabot automerges the boring tier, behind four aggregate checks](#dependabot-automerge)
 - [No-bundling: native dependencies never touch the Dart `pubspec.yaml`](#no-bundling-native-dependencies-never-touch-the-dart-pubspecyaml)
 - [Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview](#channel-topology-pigeon-control-api--eventchannel-results--texture-preview)
+- [Session state: a value on the controller, pushed by native](#session-state)
 - [Coordinate normalization: top-left `[0,1]` in native code](#coordinate-normalization-top-left-01-in-native-code)
 - [iOS capture & recognition strategy: roll-your-own AVCapture + Swift Vision](#ios-capture-strategy)
 - [Model readiness and the bundled / unbundled axis (Android)](#model-readiness)
@@ -213,11 +214,15 @@ funnelled through one channel:
 - **Camera preview → a `Texture`** via the texture registry. Pixels are not a codegen concern
   at all: the native side renders frames into a `FlutterTexture` and hands Dart only the
   integer texture id, which `TextSightView` mounts in a `Texture` widget.
+- **Session state → a Pigeon `@FlutterApi`.** Rare, typed, request grain: one method carrying a
+  sealed `SessionStateMessage` that mirrors the public type case for case, leaving the frame wire
+  untouched. See [#session-state](#session-state).
 
 **Why split at all.** Each transport matches the *shape* of its traffic: typed
 request/response for control, an unbounded push-stream for results, a raw pixel surface for
-preview. Collapsing them (frames as `@HostApi` return values, or pixels over a method channel)
-means fighting the wrong tool on the hot path. The split also keeps the two drivers honest:
+preview, a typed callback for the rare state change. Collapsing them (frames as `@HostApi`
+return values, or pixels over a method channel) means fighting the wrong tool on the hot path. The
+split also keeps the two drivers honest:
 live and static **share** the `@HostApi` recognizer surface and the result models, but only the
 *live* driver needs the `EventChannel` and the `Texture`, see
 [#public-api-via-single-export-file](#public-api-via-single-export-file).
@@ -275,6 +280,54 @@ The `dart format` pass is deterministic and mechanical, not a hand-edit, so it d
 never-patch rule, and a freshness check (regenerate-and-diff) must run the same format step before
 comparing. The bounding-box geometry these channels carry is specified in
 [#coordinate-normalization](#coordinate-normalization).
+
+---
+
+<a id="session-state"></a>
+## Session state: a value on the controller, pushed by native
+
+**Decision.** The capture session's state is a sealed `TextSightSessionState` value on the
+controller, fed by native over a Pigeon `@FlutterApi` and deduped once in Dart. The plugin pauses
+and resumes the session on its own, and the OS interrupts, revokes and fails cameras. Nothing in
+the contract carried that back.
+
+**A value, not events.** Broadcast `EventChannel`s replay nothing, so a late subscriber learns
+nothing until the next change. The controller folds the pushes into `sessionState`, subscribing on
+its first `start()`, before `initialize`, so it misses nothing of its own session. Construction
+stays platform-free, which keeps consumer tests that only construct one working.
+
+**A `@FlutterApi`, not the captures channel.** Tagging every frame to carry a signal that fires a
+few times per session taxed the hot path and forced a three-end wire re-contract. The FlutterApi
+leaves the frame wire byte-identical and types the state by codegen. The message is sealed, not
+flat: about 100 more generated lines per end on Pigeon 28, nothing hand-written, and invalid
+combinations become unrepresentable.
+
+**Ordering.** Frames and states both hop to main before emission, so the engine delivers them in
+emission order. Engine behaviour, not a contract. Capture-causal order is not promised: an
+in-flight recognition may land after a pause.
+
+| State | iOS | Android |
+|---|---|---|
+| active | `startRunning` succeeded | `CameraState.OPEN` |
+| paused, `appBackgrounded` | the sync stopped the session for the background | the owner reached `CREATED`, where CameraX closes the camera. `onPause` without `onStop` is not a pause |
+| paused, `interrupted` | `wasInterrupted`, any reason but the background one | a recoverable `CameraState` error, or `PENDING_OPEN` |
+| failed | `runtimeError` | a critical `CameraState` error |
+| idle | a real session released | a bound camera released |
+
+**Failure parks the session, `start()` unparks it.** iOS keeps a `hasFailed` input on its policy
+(`shouldRun = wanted && foreground && !failed`), Android parks the lifecycle owner. Neither retries
+on its own.
+
+**The recognition gate stays.** Both natives skip recognition while nothing listens to `captures`.
+`pauseRecognition()` is the explicit verb for a listener that wants no work.
+
+**Android's camera state is blind while capped.** A `LiveData` observed through the owner delivers
+nothing at `CREATED` and only the latest value on return (unit-tested), so the cap reports the
+pause and the camera's own `OPEN` reports the return.
+
+**Deferred.** A native pull for the current state. A typed reason on `SessionFailed`. A `stop()`
+that releases the camera. Bounded auto-heal after `mediaServicesWereReset`. State handling in
+`TextSightView`. Native dedupe. Aggregated diagnostics as more `@FlutterApi` methods.
 
 ---
 
@@ -500,7 +553,8 @@ sensor's own shape. iOS has no 4:3 HD preset, so it runs 16:9. Forcing Android t
 away page for nothing. `CaptureResolution` picks the size, the shape stays the platform's.
 
 **Background auto-pause (both platforms).** The live session stops itself when the app leaves the
-foreground and restarts on return, torch intent re-asserted. Rationale: both OSes forcibly gate the
+foreground and restarts on return, torch intent re-asserted, and `sessionState` reports it
+([#session-state](#session-state)). Rationale: both OSes forcibly gate the
 camera for backgrounded apps anyway (iOS interrupts the session, Android revokes the camera from
 idle UIDs), so leaning on that meant inheriting OS-owned recovery timing and a torch that silently
 stayed off after return. Android derives the headless session owner's state from
@@ -561,11 +615,11 @@ if a partial export ever becomes necessary.
 ```
 PUBLIC   barrel re-exports: TextSightController · TextSightView · TextSight (one-shot)
          · TextSightCapture · RecognizedLine · RecognizedElement
-         · RecognitionLevel · TextSightOptions · DarwinOptions
+         · RecognitionLevel · TextSightOptions · DarwinOptions · TextSightSessionState
    │  both drivers delegate down ↓
 SEAM     TextSightPlatform extends PlatformInterface   (federation boundary; one impl for now)
    │
-IMPL     codegen @HostApi  +  EventChannel  +  TextureRegistry      (lands with native code)
+IMPL     codegen @HostApi + @FlutterApi  +  EventChannel  +  TextureRegistry
 ```
 
 The platform-interface seam is drawn now even though federation is deferred
@@ -588,6 +642,7 @@ lib/
     │   └── text_sight_options.dart
     ├── capture/                       the two DRIVERS over the one recognizer
     │   ├── text_sight_controller.dart    live-camera driver (v1)
+    │   ├── text_sight_session_state.dart the camera session's state, as native reports it
     │   └── text_sight.dart               TextSight one-shot static driver
     ├── view/
     │   └── text_sight_view.dart          Texture-backed widget (+ overlay painter later)
