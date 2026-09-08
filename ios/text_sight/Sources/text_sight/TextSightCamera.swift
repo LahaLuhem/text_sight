@@ -53,8 +53,12 @@ final class TextSightCamera: NSObject {
   private var isForeground = true
   private var hasFailed = false
 
-  /// Background/foreground observer tokens, registered in `init`, removed in `deinit`.
-  private var appLifecycleObservers: [NSObjectProtocol] = []
+  /// Where session transitions go: production forwards to the FlutterApi, tests record.
+  private let onSessionState: (SessionStateMessage) -> Void
+
+  /// Observer tokens for the app lifecycle and capture session notifications, registered in `init`,
+  /// removed in `deinit`.
+  private var notificationObservers: [NSObjectProtocol] = []
   // Type-erased: the concrete `AVCaptureDevice.RotationCoordinator` is iOS 17+, but this class
   // deploys to 15. Held only to keep the coordinator alive for its KVO, and stays nil on iOS 15-16.
   private var rotationCoordinator: Any?
@@ -82,23 +86,26 @@ final class TextSightCamera: NSObject {
   /// session behind teardown's back.
   private var isDetached = false
 
-  /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 15-17), and
-  /// `makeSession` to a plain session per open. Tests pass a stub and a counting session instead.
+  /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 15-17),
+  /// `makeSession` to a plain session per open, and `onSessionState` to nothing. Tests pass a stub,
+  /// a counting session and a recorder instead.
   init(textureRegistry: FlutterTextureRegistry,
        recognizer: any TextRecognizer = TextRecognizerFactory.make(),
-       makeSession: @escaping () -> AVCaptureSession = { AVCaptureSession() }) {
+       makeSession: @escaping () -> AVCaptureSession = { AVCaptureSession() },
+       onSessionState: @escaping (SessionStateMessage) -> Void = { _ in }) {
     self.textureRegistry = textureRegistry
     self.recognizer = recognizer
     self.makeSession = makeSession
+    self.onSessionState = onSessionState
     super.init()
-    observeAppLifecycle()
+    observeNotifications()
     gate.onFrame = { [weak self] pixelBuffer in await self?.recognize(pixelBuffer) }
   }
 
   deinit {
     // Insurance for the path where neither dispose nor detach ran and ARC just reclaimed us.
     gate.stop()
-    appLifecycleObservers.forEach { NotificationCenter.default.removeObserver($0) }
+    notificationObservers.forEach { NotificationCenter.default.removeObserver($0) }
   }
 
   // MARK: Control channel (delegated from TextSightPlugin's TextSightHostApi conformance)
@@ -301,30 +308,114 @@ final class TextSightCamera: NSObject {
     stateLock.withLock { currentRotationAngle = angle }
   }
 
-  /// Feeds the foreground flag. Stopping explicitly on background hands the camera back rather than
-  /// riding the system interruption.
-  private func observeAppLifecycle() {
+  /// App lifecycle feeds the foreground flag (stopping explicitly on background hands the camera
+  /// back rather than riding the system interruption). The session notifications are observed with
+  /// `object: nil` so a rebuilt session needs no re-registration, and filtered per handler.
+  private func observeNotifications() {
     let center = NotificationCenter.default
-    let onBackground = center.addObserver(
-      forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil
-    ) { [weak self] _ in
-      self?.setForeground(false)
-    }
-    let onForeground = center.addObserver(
-      forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil
-    ) { [weak self] _ in
-      self?.setForeground(true)
-    }
-    appLifecycleObservers = [onBackground, onForeground]
+    notificationObservers = [
+      center.addObserver(
+        forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil
+      ) { [weak self] _ in self?.setForeground(false) },
+      center.addObserver(
+        forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil
+      ) { [weak self] _ in self?.setForeground(true) },
+      center.addObserver(
+        forName: AVCaptureSession.wasInterruptedNotification, object: nil, queue: nil
+      ) { [weak self] note in self?.onSessionQueue { $0.sessionWasInterrupted(note) } },
+      center.addObserver(
+        forName: AVCaptureSession.interruptionEndedNotification, object: nil, queue: nil
+      ) { [weak self] note in self?.onSessionQueue { $0.sessionInterruptionEnded(note) } },
+      center.addObserver(
+        forName: AVCaptureSession.runtimeErrorNotification, object: nil, queue: nil
+      ) { [weak self] note in self?.onSessionQueue { $0.sessionRuntimeError(note) } },
+    ]
   }
 
   private func setForeground(_ isForeground: Bool) {
+    onSessionQueue { camera in
+      camera.isForeground = isForeground
+      camera.syncSession()
+    }
+  }
+
+  /// Fire-and-forget twin of the throwing `onSessionQueue`, weak so a torn-down camera skips it.
+  private func onSessionQueue(_ work: @escaping (TextSightCamera) -> Void) {
     sessionQueue.async { [weak self] in
       guard let self else { return }
 
-      self.isForeground = isForeground
-      self.syncSession()
+      work(self)
     }
+  }
+
+  /// Runs on `sessionQueue`. The notification observers use `object: nil`, so a session the host
+  /// app owns has to be dropped here.
+  private func activeSession(matching object: Any?) -> ActiveSession? {
+    guard let active = stateLock.withLock({ activeSession }), object as AnyObject === active.session
+    else { return nil }
+
+    return active
+  }
+
+  /// Runs on `sessionQueue`.
+  private func sessionWasInterrupted(_ note: Notification) {
+    guard activeSession(matching: note.object) != nil else { return }
+
+    let reason = (note.userInfo?[AVCaptureSessionInterruptionReasonKey] as? Int)
+      .flatMap(AVCaptureSession.InterruptionReason.init(rawValue:))
+    emitState(Self.state(forInterruption: reason))
+  }
+
+  /// Runs on `sessionQueue`. AVFoundation resumes the session itself, so only confirm that it did.
+  private func sessionInterruptionEnded(_ note: Notification) {
+    guard let active = activeSession(matching: note.object), active.session.isRunning
+    else { return }
+
+    emitState(SessionActiveMessage())
+  }
+
+  /// Runs on `sessionQueue`. Parks the session: only `start()` tries again.
+  private func sessionRuntimeError(_ note: Notification) {
+    guard activeSession(matching: note.object) != nil else { return }
+
+    hasFailed = true
+    emitState(Self.state(forRuntimeError: note.userInfo?[AVCaptureSessionErrorKey] as? Error))
+  }
+
+  /// Losing the camera to the background is the plugin's own pause, anything else is the OS taking
+  /// it. Internal for `RunnerTests`.
+  static func state(forInterruption reason: AVCaptureSession.InterruptionReason?)
+    -> SessionPausedMessage {
+    switch reason {
+    case .videoDeviceNotAvailableInBackground: SessionPausedMessage(reason: .appBackgrounded)
+    case let .some(other): SessionPausedMessage(reason: .interrupted, details: Self.name(of: other))
+    case .none: SessionPausedMessage(reason: .interrupted)
+    }
+  }
+
+  /// The imported enum prints no case names, so spell them out for the logs.
+  private static func name(of reason: AVCaptureSession.InterruptionReason) -> String {
+    switch reason {
+    case .videoDeviceNotAvailableInBackground: "videoDeviceNotAvailableInBackground"
+    case .audioDeviceInUseByAnotherClient: "audioDeviceInUseByAnotherClient"
+    case .videoDeviceInUseByAnotherClient: "videoDeviceInUseByAnotherClient"
+    case .videoDeviceNotAvailableWithMultipleForegroundApps:
+      "videoDeviceNotAvailableWithMultipleForegroundApps"
+    case .videoDeviceNotAvailableDueToSystemPressure: "videoDeviceNotAvailableDueToSystemPressure"
+    @unknown default: "interruptionReason(\(reason.rawValue))"
+    }
+  }
+
+  /// Internal for `RunnerTests`.
+  static func state(forRuntimeError error: Error?) -> SessionFailedMessage {
+    SessionFailedMessage(details: error?.localizedDescription)
+  }
+
+  /// Runs on `sessionQueue`. Reports a transition unless the engine is gone.
+  private func emitState(_ state: SessionStateMessage) {
+    guard !stateLock.withLock({ isDetached }) else { return }
+
+    onSessionState(state)
   }
 
   /// Whether the session should be running: wanted, app in the foreground, and not parked by a
@@ -343,8 +434,11 @@ final class TextSightCamera: NSObject {
     if shouldRun, !active.session.isRunning {
       active.session.startRunning()
       applyTorch(torchEnabled)
+      // A start that fails posts a runtime error instead, so report only what actually happened.
+      if active.session.isRunning { emitState(SessionActiveMessage()) }
     } else if !shouldRun, active.session.isRunning {
       active.session.stopRunning()
+      if !isForeground { emitState(SessionPausedMessage(reason: .appBackgrounded)) }
     }
   }
 
@@ -386,6 +480,7 @@ final class TextSightCamera: NSObject {
     // Dropping the session takes its inputs and outputs with it, so stopping is the whole teardown.
     if released.session.isRunning { released.session.stopRunning() }
     textureRegistry.unregisterTexture(released.textureId)
+    emitState(SessionIdleMessage())
   }
 
   // MARK: Recognition
