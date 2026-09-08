@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
@@ -18,6 +19,11 @@ internal class EngineScope(dispatcher: CoroutineDispatcher = Dispatchers.Main.im
 
     /** Runs [work] as a child of this scope. */
     suspend fun <T> run(work: suspend () -> T): T = withContext(scope.coroutineContext) { work() }
+
+    /** Fire-and-forget twin of [run]. Nothing runs once [cancel] has been called. */
+    fun launch(work: suspend () -> Unit) {
+        scope.launch { work() }
+    }
 
     /** Cancels whatever is in flight. Nothing runs on this scope afterwards. */
     fun cancel() = scope.cancel()

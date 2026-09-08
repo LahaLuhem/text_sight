@@ -9,6 +9,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -56,5 +57,21 @@ class EngineScopeTest {
 
         assertFailsWith<CancellationException> { engine.run { ran = true } }
         assertFalse(ran)
+    }
+
+    @Test
+    fun `launch runs the work, and not after cancel`() = runTest {
+        val engine = EngineScope(StandardTestDispatcher(testScheduler))
+        var before = false
+        var after = false
+
+        engine.launch { before = true }
+        advanceUntilIdle()
+        engine.cancel()
+        engine.launch { after = true }
+        advanceUntilIdle()
+
+        assertTrue(before)
+        assertFalse(after)
     }
 }
