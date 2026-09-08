@@ -1,6 +1,7 @@
 // Tests
 // ignore_for_file: prefer-match-file-name
 
+import 'dart:async';
 import 'dart:ui' show Locale;
 
 import 'package:bdd_framework/bdd_framework.dart';
@@ -11,6 +12,7 @@ import 'package:text_sight/text_sight.dart';
 
 void main() {
   final lifecycle = BddFeature('TextSightController lifecycle');
+  final sessionState = BddFeature('TextSightController session state');
 
   Bdd(lifecycle)
       .scenario('Disposing releases the native session after a failed start')
@@ -45,6 +47,28 @@ void main() {
         await TextSightController(resolution: resolution).start();
 
         check(platform.lastResolution).equals(resolution);
+      });
+
+  Bdd(lifecycle)
+      .scenario('pauseRecognition flips the recognizing intent and reaches the platform')
+      .given('a started controller')
+      .when('pauseRecognition is called')
+      .then('isRecognizing drops, the platform is told, and listeners hear both changes')
+      .run((_) async {
+        final platform = _RecordingPlatform();
+        TextSightPlatform.instance = platform;
+        final controller = TextSightController();
+        var notifications = 0;
+        controller.addListener(() => notifications++);
+
+        await controller.start();
+        check(controller.isRecognizing).isTrue();
+
+        await controller.pauseRecognition();
+
+        check(controller.isRecognizing).isFalse();
+        check(platform.log).contains('pauseRecognition');
+        check(notifications).equals(2);
       });
 
   Bdd(lifecycle)
@@ -130,6 +154,92 @@ void main() {
 
         check(platform.disposeCalls).equals(1);
       });
+
+  Bdd(sessionState)
+      .scenario('Starting subscribes to session states before opening the camera')
+      .given('a controller on a recording platform')
+      .when('it is started')
+      .then('the platform saw the listen before initialize, and start after')
+      .run((_) async {
+        final platform = _RecordingPlatform();
+        TextSightPlatform.instance = platform;
+
+        await TextSightController().start();
+
+        check(platform.log).deepEquals(['listen', 'initialize', 'start']);
+      });
+
+  Bdd(sessionState)
+      .scenario('A reported state becomes the current value and notifies once')
+      .given('a started controller, idle until native reports')
+      .when('native reports <state>')
+      .then('sessionState is <state> and listeners were told once')
+      .example(val('state', const SessionActive()))
+      .example(
+        val('state', const SessionPaused(reason: SessionPauseReason.interrupted, details: 'call')),
+      )
+      .example(val('state', const SessionFailed(details: 'camera died')))
+      .run((ctx) async {
+        final platform = _RecordingPlatform();
+        TextSightPlatform.instance = platform;
+        final controller = TextSightController();
+        await controller.start();
+        check(controller.sessionState).equals(const SessionIdle());
+        var notifications = 0;
+        controller.addListener(() => notifications++);
+        final state = ctx.example.val('state') as TextSightSessionState;
+
+        await platform.report(state);
+
+        check(controller.sessionState).equals(state);
+        check(notifications).equals(1);
+      });
+
+  Bdd(sessionState)
+      .scenario('An equal report is dropped, a different one is not')
+      .given('a started controller that native has reported active')
+      .when('native reports active again, then paused')
+      .then('listeners hear the paused change only')
+      .run((_) async {
+        final platform = _RecordingPlatform();
+        TextSightPlatform.instance = platform;
+        final controller = TextSightController();
+        await controller.start();
+        await platform.report(const SessionActive());
+        var notifications = 0;
+        controller.addListener(() => notifications++);
+
+        await platform.report(const SessionActive());
+        check(notifications).equals(0);
+
+        await platform.report(const SessionPaused(reason: SessionPauseReason.appBackgrounded));
+        check(notifications).equals(1);
+        check(controller.sessionState)
+            .equals(const SessionPaused(reason: SessionPauseReason.appBackgrounded));
+      });
+
+  Bdd(sessionState)
+      .scenario('Disposing returns to idle and stops listening')
+      .given('a started controller that native has reported active')
+      .when('it is disposed and native reports again')
+      .then('sessionState is idle and no listener is notified')
+      .run((_) async {
+        final platform = _RecordingPlatform();
+        TextSightPlatform.instance = platform;
+        final controller = TextSightController();
+        await controller.start();
+        await platform.report(const SessionActive());
+        var notifications = 0;
+        controller
+          ..addListener(() => notifications++)
+          ..dispose();
+
+        await platform.report(const SessionFailed());
+
+        check(controller.sessionState).equals(const SessionIdle());
+        check(notifications).equals(0);
+        check(platform.states.hasListener).isFalse();
+      });
 }
 
 /// The BCP-47 tags [locales] carry, in order.
@@ -137,17 +247,30 @@ List<String> _tags(Iterable<Locale> locales) => [
   for (final locale in locales) locale.toLanguageTag(),
 ];
 
-/// Counts the teardown calls the controller makes, and can fail [initialize] on demand.
+/// Logs the controller's calls in order, can fail [initialize] on demand, and lets a test play
+/// native by reporting session states.
 final class _RecordingPlatform extends TextSightPlatform {
   new({this.failsToInitialize = false});
 
   final bool failsToInitialize;
+  final log = <String>[];
+  late final states = StreamController<TextSightSessionState>.broadcast(
+    onListen: () => log.add('listen'),
+  );
   var disposeCalls = 0;
   CaptureResolution? lastResolution;
   TextSightOptions? lastOptions;
 
+  /// Reports [state] the way native would, and lets it reach the controller.
+  Future<void> report(TextSightSessionState state) {
+    states.add(state);
+
+    return pumpEventQueue();
+  }
+
   @override
   Future<int> initialize(TextSightOptions options, CaptureResolution resolution) async {
+    log.add('initialize');
     if (failsToInitialize) throw StateError('no camera here');
     lastResolution = resolution;
 
@@ -155,13 +278,17 @@ final class _RecordingPlatform extends TextSightPlatform {
   }
 
   @override
-  // No-op
-  // ignore: no-empty-block
-  Future<void> start() async {}
+  Future<void> start() async => log.add('start');
+
+  @override
+  Future<void> pauseRecognition() async => log.add('pauseRecognition');
 
   @override
   Future<void> updateOptions(TextSightOptions options) async => lastOptions = options;
 
   @override
   Future<void> dispose() async => disposeCalls++;
+
+  @override
+  Stream<TextSightSessionState> get sessionStates => states.stream;
 }

@@ -9,6 +9,7 @@ import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
 import 'camera_permission_status.dart';
 import 'capture_resolution.dart';
+import 'text_sight_session_state.dart';
 
 /// Configures and drives a live camera recognition session.
 ///
@@ -22,6 +23,8 @@ final class TextSightController extends ChangeNotifier {
   bool _isTorchEnabled;
   var _isRecognizing = false;
   int? _textureId;
+  TextSightSessionState _sessionState = const SessionIdle();
+  StreamSubscription<TextSightSessionState>? _stateSubscription;
 
   /// Creates a controller from [options], a [resolution] and an initial torch state. Nothing opens
   /// the camera until [start]. [resolution] cannot change after, it rebuilds the capture graph.
@@ -53,6 +56,10 @@ final class TextSightController extends ChangeNotifier {
   /// Read by `TextSightView` to mount the camera preview.
   int? get textureId => _textureId;
 
+  /// The capture session's state as native last reported it: [SessionIdle] until [start] and
+  /// again after [dispose]. Listeners are notified on change only.
+  TextSightSessionState get sessionState => _sessionState;
+
   /// The live per-frame results stream. Subscribers must cancel their own subscription.
   /// The controller does not own it.
   Stream<TextSightCapture> get captures => TextSightPlatform.instance.captures;
@@ -60,6 +67,8 @@ final class TextSightController extends ChangeNotifier {
   /// Opens the camera if needed and begins recognition. Idempotent on the texture:
   /// a session acquired once is reused across [pauseRecognition] and [start].
   Future<void> start() async {
+    // Before initialize, so the first state of this session is never missed.
+    _stateSubscription ??= TextSightPlatform.instance.sessionStates.listen(_onSessionState);
     _textureId ??= await TextSightPlatform.instance.initialize(_options, resolution);
     await TextSightPlatform.instance.start();
     _isRecognizing = true;
@@ -116,11 +125,20 @@ final class TextSightController extends ChangeNotifier {
   /// succeeded, since a hot restart can leave a session running that this controller never saw.
   @override
   void dispose() {
+    _stateSubscription?.cancel().ignore();
+    _sessionState = const SessionIdle();
     // Unconditional: native can be holding a session this controller never learned about, which is
     // what a hot restart leaves behind. Its dispose is idempotent, so an extra call costs nothing.
     unawaited(TextSightPlatform.instance.dispose());
 
     super.dispose();
+  }
+
+  /// The only dedupe in the system: natives report every transition, equal reports are dropped here.
+  void _onSessionState(TextSightSessionState state) {
+    if (state == _sessionState) return;
+    _sessionState = state;
+    notifyListeners();
   }
 }
 
