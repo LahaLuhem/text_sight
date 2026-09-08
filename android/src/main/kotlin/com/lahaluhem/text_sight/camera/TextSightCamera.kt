@@ -17,6 +17,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.lahaluhem.text_sight.CaptureResolutionMessage
 import com.lahaluhem.text_sight.FlutterError
 import com.lahaluhem.text_sight.RegionOfInterestMessage
+import com.lahaluhem.text_sight.SessionStateMessage
 import com.lahaluhem.text_sight.TextSightOptionsMessage
 import com.lahaluhem.text_sight.await
 import com.lahaluhem.text_sight.recognition.encodeFrame
@@ -42,6 +43,7 @@ internal class TextSightCamera(
     context: Context,
     textureRegistry: TextureRegistry,
     capturesChannel: EventChannel,
+    onSessionState: (SessionStateMessage) -> Unit,
 ) : EventChannel.StreamHandler {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val analysisExecutor = Executors.newSingleThreadExecutor()
@@ -53,6 +55,7 @@ internal class TextSightCamera(
         textureRegistry,
         analysisExecutor,
         ImageAnalysis.Analyzer(::analyze),
+        onSessionState = onSessionState,
     )
 
     private var eventSink: EventChannel.EventSink? = null

@@ -17,6 +17,9 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.lahaluhem.text_sight.CaptureResolutionMessage
 import com.lahaluhem.text_sight.FlutterError
+import com.lahaluhem.text_sight.SessionFailedMessage
+import com.lahaluhem.text_sight.SessionIdleMessage
+import com.lahaluhem.text_sight.SessionStateMessage
 import com.lahaluhem.text_sight.await
 import io.flutter.view.TextureRegistry
 import java.util.concurrent.Executor
@@ -31,6 +34,9 @@ import kotlinx.coroutines.withContext
  * reject other threads. The suspending entry points establish that once via [mainDispatcher], so no
  * call site re-establishes it. The synchronous ones must already be on main, which every Flutter
  * lifecycle callback is. Recognition lives in [TextSightCamera].
+ *
+ * Every session transition goes out through [onSessionState], derived on main from the owner's
+ * status and CameraX's camera state ([deriveSessionState]).
  */
 internal class CameraSession(
     private val context: Context,
@@ -39,13 +45,14 @@ internal class CameraSession(
     private val analyzer: ImageAnalysis.Analyzer,
     private val mainExecutor: Executor = ContextCompat.getMainExecutor(context),
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
+    private val onSessionState: (SessionStateMessage) -> Unit = {},
 ) {
     // Resumes the provider future on whatever thread CameraX completed it on. mainDispatcher is
     // what puts the LiveData work back on main, so this deliberately does not hop.
     private val directExecutor = Executor(Runnable::run)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
-    private val lifecycleOwner = SessionLifecycleOwner()
+    private val lifecycleOwner = SessionLifecycleOwner(onStatusChanged = ::onOwnerStatus)
 
     private var surfaceProducer: TextureRegistry.SurfaceProducer? = null
     private var cameraProvider: ProcessCameraProvider? = null
@@ -123,6 +130,11 @@ internal class CameraSession(
 
     fun startAnalysis() {
         isRecognizing = true
+        // A failure parked the owner, and CameraX reopens nothing on its own, so start() rebinds.
+        if (lifecycleOwner.status == SessionLifecycleOwner.Status.PARKED && cameraProvider != null) {
+            lifecycleOwner.resume()
+            bindUseCases()
+        }
         imageAnalysis?.setAnalyzer(analysisExecutor, analyzer)
     }
 
@@ -147,16 +159,32 @@ internal class CameraSession(
     }
 
     private fun releaseNow() {
+        val hadCamera = camera != null
         imageAnalysis?.clearAnalyzer()
+        // Observers go before the unbind, so the closing camera reports nothing on the way out.
         camera?.cameraInfo?.cameraState?.removeObservers(lifecycleOwner)
         cameraProvider?.unbindAll()
         surfaceProducer?.release()
+        lifecycleOwner.park()
 
         isRecognizing = false
         camera = null
         imageAnalysis = null
         cameraProvider = null
         surfaceProducer = null
+        if (hadCamera) onSessionState(SessionIdleMessage())
+    }
+
+    private fun onOwnerStatus(status: SessionLifecycleOwner.Status) {
+        // Only the pause is reported from here. Coming back, the camera's own OPEN says active.
+        deriveSessionState(status, camera = null)?.let(onSessionState)
+    }
+
+    private fun onCameraState(state: CameraState) {
+        val message = deriveSessionState(lifecycleOwner.status, state) ?: return
+        // A critical error parks the session. CameraX will not reopen it, start() is the way back.
+        if (message is SessionFailedMessage) lifecycleOwner.park()
+        onSessionState(message)
     }
 
     /** The live display rotation as a `Surface.ROTATION_*`, driving [ImageAnalysis]'s target. */
@@ -202,6 +230,7 @@ internal class CameraSession(
             if (state.type == CameraState.Type.OPEN && torchEnabled) {
                 bound.cameraControl.enableTorch(true)
             }
+            onCameraState(state)
         }
 
         if (isRecognizing) {

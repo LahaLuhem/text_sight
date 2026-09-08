@@ -3,6 +3,8 @@ package com.lahaluhem.text_sight.camera
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.MutableLiveData
+import com.lahaluhem.text_sight.camera.SessionLifecycleOwner.Status
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -102,6 +104,84 @@ class SessionLifecycleOwnerTest {
         process.registry.currentState = Lifecycle.State.RESUMED
 
         assertEquals(Lifecycle.State.DESTROYED, owner.lifecycle.currentState)
+    }
+
+    // endregion
+
+    // region status reporting
+
+    private val statuses = mutableListOf<Status>()
+    private val reporting = SessionLifecycleOwner(process.registry) { statuses += it }
+
+    @Test
+    fun `parked until resumed, then every real change is reported once`() {
+        assertEquals(Status.PARKED, reporting.status)
+
+        reporting.resume()
+        process.registry.currentState = Lifecycle.State.CREATED
+        process.registry.currentState = Lifecycle.State.STARTED
+        process.registry.currentState = Lifecycle.State.RESUMED
+
+        assertEquals(listOf(Status.ACTIVE, Status.CAPPED, Status.ACTIVE), statuses)
+    }
+
+    @Test
+    fun `an onPause without an onStop is not a cap`() {
+        reporting.resume()
+
+        process.registry.currentState = Lifecycle.State.STARTED
+
+        assertEquals(Status.ACTIVE, reporting.status)
+        assertEquals(listOf(Status.ACTIVE), statuses)
+    }
+
+    @Test
+    fun `park reports PARKED, and resume brings ACTIVE back`() {
+        reporting.resume()
+
+        reporting.park()
+        reporting.resume()
+
+        assertEquals(listOf(Status.ACTIVE, Status.PARKED, Status.ACTIVE), statuses)
+    }
+
+    @Test
+    fun `a parked owner ignores the foreground`() {
+        reporting.resume()
+        reporting.park()
+
+        process.registry.currentState = Lifecycle.State.CREATED
+        process.registry.currentState = Lifecycle.State.RESUMED
+
+        assertEquals(listOf(Status.ACTIVE, Status.PARKED), statuses)
+    }
+
+    @Test
+    fun `destroy reports nothing`() {
+        reporting.resume()
+
+        reporting.destroy()
+
+        assertEquals(listOf(Status.ACTIVE), statuses)
+    }
+
+    // A LiveData observed through the owner is what CameraX's camera state rides, so while the
+    // owner is capped that input is blind, and the cap has to be the one that reports the pause.
+    @Test
+    fun `an observed LiveData is silent while capped and catches up with the latest value`() {
+        val seen = mutableListOf<Int>()
+        val live = MutableLiveData<Int>()
+        owner.resume()
+        live.observe(owner) { seen += it }
+        live.value = 1
+
+        process.registry.currentState = Lifecycle.State.CREATED
+        live.value = 2
+        live.value = 3
+        assertEquals(listOf(1), seen)
+
+        process.registry.currentState = Lifecycle.State.STARTED
+        assertEquals(listOf(1, 3), seen)
     }
 
     // endregion

@@ -33,8 +33,17 @@ class TextSightPlugin :
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         TextSightHostApi.setUp(binding.binaryMessenger, this)
 
+        val stateApi = TextSightFlutterApi(binding.binaryMessenger)
         val capturesChannel = EventChannel(binding.binaryMessenger, CAPTURES_CHANNEL_NAME)
-        camera = TextSightCamera(binding.applicationContext, binding.textureRegistry, capturesChannel)
+        camera = TextSightCamera(binding.applicationContext, binding.textureRegistry, capturesChannel) { state ->
+            engine.launch {
+                try {
+                    stateApi.onSessionStateChanged(state)
+                } catch (ignored: FlutterError) {
+                    // No Dart handler attached (hot restart in progress, or detached).
+                }
+            }
+        }
 
         val readinessChannel = EventChannel(binding.binaryMessenger, READINESS_CHANNEL_NAME)
         modelReadiness = TextSightModelReadiness(binding.applicationContext, readinessChannel)
@@ -44,6 +53,7 @@ class TextSightPlugin :
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         TextSightHostApi.setUp(binding.binaryMessenger, null)
+        // Cancel before the release below: it reports idle, and a cancelled scope drops the send.
         engine.cancel()
 
         camera?.dispose()
