@@ -43,9 +43,16 @@ final class TextSightCamera: NSObject {
   /// The open session, or `nil` when idle. Only `sessionQueue` ever writes it.
   private var activeSession: ActiveSession?
 
-  /// Torch intent, re-asserted on foreground return: the hardware drops the torch with the
+  /// Torch intent, re-asserted whenever the session starts: the hardware drops the torch with the
   /// camera. Touched only on `sessionQueue`.
   private var torchEnabled = false
+
+  // Policy inputs for `syncSession()`, touched only on `sessionQueue`. `isForeground` starts true
+  // because a plugin registers from a foregrounded app, and the notifications correct it from there.
+  private var wantsSession = false
+  private var isForeground = true
+  private var hasFailed = false
+
   /// Background/foreground observer tokens, registered in `init`, removed in `deinit`.
   private var appLifecycleObservers: [NSObjectProtocol] = []
   // Type-erased: the concrete `AVCaptureDevice.RotationCoordinator` is iOS 17+, but this class
@@ -120,9 +127,16 @@ final class TextSightCamera: NSObject {
     }
   }
 
-  /// Synchronous: it only flips a flag under the lock, so it needs no queue hop.
+  /// Flips the recognition flag now, then makes sure the session runs: the recovery verb after a
+  /// runtime error parked it.
   func start() {
     stateLock.withLock { isRecognizing = true }
+    sessionQueue.async { [weak self] in
+      guard let self else { return }
+
+      self.hasFailed = false
+      self.syncSession()
+    }
   }
 
   /// Synchronous, same as `start`. The session stays up, only the recognition flag drops.
@@ -197,7 +211,8 @@ final class TextSightCamera: NSObject {
       activeSession = ActiveSession(session: built.session, device: built.device, textureId: id)
     }
 
-    built.session.startRunning()
+    wantsSession = true
+    syncSession()
 
     return id
   }
@@ -286,42 +301,51 @@ final class TextSightCamera: NSObject {
     stateLock.withLock { currentRotationAngle = angle }
   }
 
-  /// Stops capture while backgrounded and restarts on return. Stopping explicitly hands the camera
-  /// back rather than riding the system interruption, and the restart re-asserts the torch.
+  /// Feeds the foreground flag. Stopping explicitly on background hands the camera back rather than
+  /// riding the system interruption.
   private func observeAppLifecycle() {
     let center = NotificationCenter.default
     let onBackground = center.addObserver(
       forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: nil
     ) { [weak self] _ in
-      guard let self else { return }
-
-      self.sessionQueue.async { self.suspendSession() }
+      self?.setForeground(false)
     }
     let onForeground = center.addObserver(
       forName: UIApplication.willEnterForegroundNotification, object: nil, queue: nil
     ) { [weak self] _ in
-      guard let self else { return }
-
-      self.sessionQueue.async { self.resumeSession() }
+      self?.setForeground(true)
     }
     appLifecycleObservers = [onBackground, onForeground]
   }
 
-  /// Runs on `sessionQueue`.
-  private func suspendSession() {
-    guard let active = stateLock.withLock({ activeSession }), active.session.isRunning
-    else { return }
+  private func setForeground(_ isForeground: Bool) {
+    sessionQueue.async { [weak self] in
+      guard let self else { return }
 
-    active.session.stopRunning()
+      self.isForeground = isForeground
+      self.syncSession()
+    }
   }
 
-  /// Runs on `sessionQueue`. Restarts only a configured session, then re-asserts the dropped torch.
-  private func resumeSession() {
-    guard let active = stateLock.withLock({ activeSession }), !active.session.isRunning
-    else { return }
+  /// Whether the session should be running: wanted, app in the foreground, and not parked by a
+  /// runtime error. Internal for `RunnerTests`.
+  static func shouldRun(wantsSession: Bool, isForeground: Bool, hasFailed: Bool) -> Bool {
+    wantsSession && isForeground && !hasFailed
+  }
 
-    active.session.startRunning()
-    applyTorch(torchEnabled)
+  /// Runs on `sessionQueue`. Starts or stops the open session to match `shouldRun`, so every input
+  /// change funnels through here.
+  private func syncSession() {
+    guard let active = stateLock.withLock({ activeSession }) else { return }
+
+    let shouldRun = Self.shouldRun(wantsSession: wantsSession, isForeground: isForeground,
+                                   hasFailed: hasFailed)
+    if shouldRun, !active.session.isRunning {
+      active.session.startRunning()
+      applyTorch(torchEnabled)
+    } else if !shouldRun, active.session.isRunning {
+      active.session.stopRunning()
+    }
   }
 
   /// Runs on `sessionQueue`.
@@ -352,6 +376,8 @@ final class TextSightCamera: NSObject {
 
       return claimed
     }
+    wantsSession = false
+    hasFailed = false
 
     gate.stop()
 
