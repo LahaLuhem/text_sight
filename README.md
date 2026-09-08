@@ -20,6 +20,7 @@
     * [Live camera](#live-camera)
     * [A single image](#a-single-image)
     * [Tweak it mid-session](#tweak-it-mid-session)
+    * [Know what the camera is doing](#know-what-the-camera-is-doing)
     * [The example app](#the-example-app)
 - [API at a glance](#api-at-a-glance)
 - [Platform support](#platform-support)
@@ -32,6 +33,7 @@
     * [Show the download](#show-the-download)
     * [Or just bundle it](#or-just-bundle-it)
 - [Performance](#performance)
+- [Upgrading from 0.2](#upgrading-from-02)
 - [Going deeper](#going-deeper)
 
 <!-- TOC end -->
@@ -95,7 +97,30 @@ Scanning small print? Turn the camera up. Set once, unlike the knobs above.
 TextSightController(resolution: CaptureResolution.high);
 ```
 
-Backgrounding the app pauses the session on its own and picks it back up when you return.
+### Know what the camera is doing
+
+The plugin pauses the session when the app backgrounds and resumes it on return, and the OS can
+take the camera away or fail it. None of that shows in the frame stream, so `sessionState` does:
+
+```dart
+ListenableBuilder(
+  listenable: controller,
+  builder: (context, _) => switch (controller.sessionState) {
+    SessionIdle() => const Text('Not started'),
+    SessionActive() => const Text('Scanning'),
+    SessionPaused(:final reason) => Text('Paused: ${reason.name}'),
+    SessionFailed(:final details) => Text('Camera failed: $details'),
+  },
+);
+```
+
+- Your own calls throw at the call site. Whatever happens to the session afterwards arrives as a
+  state, and `SessionFailed` stays parked until you call `start()` again.
+- Active means the camera runs. Frames are recognized only while `isRecognizing` is on and
+  something listens to `captures`. Camera up but no work? `pauseRecognition()`.
+- One live controller at a time.
+- A backgrounded app may only see `SessionPaused` once it's back, and after a hot restart the
+  controller says `SessionIdle` until you `start()`. Render from the value and neither shows.
 
 One Android thing worth knowing up front: the model downloads on first use, so [give it a head
 start](#the-recognition-model) when the user opens your scanner, or that first scan comes back
@@ -123,6 +148,7 @@ One import gets you everything: `package:text_sight/text_sight.dart`.
 | `TextSight`                             | the static one-shot, on bytes or a file path                 |
 | `TextSightOptions`                      | region of interest, plus a `darwin` group of Vision-only knobs |
 | `TextSightCapture` and `RecognizedLine` | results: text, normalized box, confidence                    |
+| `TextSightSessionState`                 | what the camera session is doing: idle, active, paused, failed |
 | `TextSightEngine`                       | what this device's engine is like, e.g. `confidenceScale`    |
 | `ConfidenceScale`                       | what a confidence number means here, and whether it ranks    |
 | `TextSightModel`                        | Android model readiness, `ensureReady()` plus a stream       |
@@ -301,7 +327,18 @@ Those three are host-measured, for the finer sweep a phone run does not produce.
 win big in *percent* and stay tiny in absolute microseconds, which is why the self-describing map
 stays.
 
+## Upgrading from 0.2
+
+| 0.2                    | 0.3                                                                  |
+|------------------------|----------------------------------------------------------------------|
+| `controller.stop()`    | `controller.pauseRecognition()`                                      |
+| `controller.isRunning` | `controller.isRecognizing`                                           |
+|                        | `controller.sessionState`, [above](#know-what-the-camera-is-doing)   |
+
+`captures` is unchanged. A test fake of `TextSightPlatform` needs `sessionStates` once it starts a
+controller.
+
 ## Going deeper
 
-Coordinate handling, the per-line confidence contract, how region-of-interest differs across
-platforms, and what's next: all in [APPENDIX.md](APPENDIX.md).
+Coordinate handling, the per-line confidence contract, the session state model, how
+region-of-interest differs across platforms, and what's next: all in [APPENDIX.md](APPENDIX.md).

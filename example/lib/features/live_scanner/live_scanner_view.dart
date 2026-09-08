@@ -81,6 +81,17 @@ class LiveScannerView extends StatelessWidget {
               actionLabel: 'Retry',
               onAction: viewModel.onRetryPressed,
             ),
+            // Swapping the scanner out also drops the stale overlay the view would keep painting.
+            .paused => _MessageView(
+              icon: Icon(
+                context.platformIcon(
+                  material: Icons.pause_circle_outline,
+                  cupertino: CupertinoIcons.pause_circle,
+                ),
+                size: 48,
+              ),
+              message: viewModel.pauseMessage,
+            ),
             .ready => _ScannerView(viewModel: viewModel),
           },
         ),
@@ -113,18 +124,44 @@ class _ScannerView extends StatelessWidget {
       Positioned(
         top: 16,
         right: 16,
-        child: ValueListenableBuilder(
-          valueListenable: viewModel.shouldEnableTorchListenable,
-          builder: (context, isTorchOn, _) => PlatformButton.icon(
-            onPressed: viewModel.onTorchToggled,
-            icon: Icon(
-              context.platformIcon(
-                material: isTorchOn ? Icons.flash_on : Icons.flash_off,
-                cupertino: isTorchOn ? CupertinoIcons.bolt_fill : CupertinoIcons.bolt_slash_fill,
+        child: Row(
+          spacing: 8,
+          children: [
+            ListenableBuilder(
+              listenable: viewModel.controller,
+              builder: (context, _) {
+                final isRecognizing = viewModel.controller.isRecognizing;
+
+                return PlatformButton.icon(
+                  onPressed: viewModel.onRecognitionToggled,
+                  icon: Icon(
+                    context.platformIcon(
+                      material: isRecognizing ? Icons.pause : Icons.play_arrow,
+                      cupertino: isRecognizing
+                          ? CupertinoIcons.pause_fill
+                          : CupertinoIcons.play_fill,
+                    ),
+                  ),
+                  label: Text(isRecognizing ? 'Pause' : 'Resume'),
+                );
+              },
+            ),
+            ValueListenableBuilder(
+              valueListenable: viewModel.shouldEnableTorchListenable,
+              builder: (context, isTorchOn, _) => PlatformButton.icon(
+                onPressed: viewModel.onTorchToggled,
+                icon: Icon(
+                  context.platformIcon(
+                    material: isTorchOn ? Icons.flash_on : Icons.flash_off,
+                    cupertino: isTorchOn
+                        ? CupertinoIcons.bolt_fill
+                        : CupertinoIcons.bolt_slash_fill,
+                  ),
+                ),
+                label: Text(isTorchOn ? 'On' : 'Off'),
               ),
             ),
-            label: Text(isTorchOn ? 'On' : 'Off'),
-          ),
+          ],
         ),
       ),
       Positioned(
@@ -221,33 +258,33 @@ class _PreparingModel extends StatelessWidget {
   );
 }
 
-/// A centered icon + message + action button for the permission/error states.
+/// A centered icon + message, with an action button for the states the user can do something about.
 class _MessageView extends StatelessWidget {
   final Widget icon;
   final String message;
-  final String actionLabel;
-  final VoidCallback onAction;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
-  const new({
-    required this.icon,
-    required this.message,
-    required this.actionLabel,
-    required this.onAction,
-  });
+  const new({required this.icon, required this.message, this.actionLabel, this.onAction});
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const .all(24),
-      child: Column(
-        mainAxisSize: .min,
-        spacing: 16,
-        children: [
-          icon,
-          Text(message, textAlign: .center),
-          PlatformButton(onPressed: onAction, child: Text(actionLabel)),
-        ],
+  Widget build(BuildContext context) {
+    final (actionLabel, onAction) = (this.actionLabel, this.onAction);
+
+    return Center(
+      child: Padding(
+        padding: const .all(24),
+        child: Column(
+          mainAxisSize: .min,
+          spacing: 16,
+          children: [
+            icon,
+            Text(message, textAlign: .center),
+            if (actionLabel != null && onAction != null)
+              PlatformButton(onPressed: onAction, child: Text(actionLabel)),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

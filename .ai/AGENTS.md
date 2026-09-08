@@ -54,8 +54,8 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 - **Channel topology** ([`APPENDIX.md#channel-topology`](../APPENDIX.md#channel-topology)):
   the typed **control API** (initialize / start / pause-recognition / set-options / toggle-torch /
   dispose) is **Pigeon** codegen (`@HostApi`). **Per-frame results** stream over a plain
-  **`EventChannel`**, and the **camera preview** is a `Texture`. Pigeon is a dev dependency, so it
-  costs consumers nothing at runtime.
+  **`EventChannel`**, the **camera preview** is a `Texture`, and **session state** comes back over a
+  Pigeon `@FlutterApi`. Pigeon is a dev dependency, so it costs consumers nothing at runtime.
 - **Two generators, one freshness gate.** Pigeon writes the wire types, `copy_with_extension_gen`
   writes `copyWith` for the public value types. Both outputs are committed, and CI's
   `codegen-freshness` job regenerates and fails if anything differs, so neither can drift from its
@@ -213,8 +213,8 @@ Three test layers, three runners. Each covers only the **pure, platform-independ
 the device-bound capture/recognition pipeline (CameraX + ML Kit, AVCaptureSession + Vision) is
 not unit-tested.
 
-- **Dart** (`test/`): `flutter test`. Pigeon control-channel + captures-stream decode against a
-  mocked host.
+- **Dart** (`test/`): `flutter test`. Pigeon control-channel, captures-stream and session-state
+  decode against a mocked host.
 - **Android native** (`android/src/test/`):
   `example/android/gradlew :text_sight:testDebugUnitTest`. Robolectric supplies a real
   `android.graphics.Rect` so the box-geometry helpers test in place (no arithmetic extraction),
