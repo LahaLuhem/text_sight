@@ -8,6 +8,7 @@
 - \[#59\] TextSightController.updateOptions replaces updateRecognitionLevel, updateLanguages and updateRegionOfInterest, and a single options getter replaces the three read-backs. It sets everything at once, so read options first when you only mean to change one thing.
 - \[#59\] RecognitionLevel is now just fast or accurate, with language correction split out into DarwinOptions.usesLanguageCorrection. So fast can correct and accurate can skip it, and the live path now corrects by default where fast used to leave it off.
 - \[#59\] RecognizedLine.confidence is a required non-null double. Both engines always send a value, so there is no null to guard, but a number only means something next to the scale that produced it.
+- \[#45\] Surface the capture session's state as controller.sessionState, with stop() renamed pauseRecognition() and isRunning renamed isRecognizing
 
 ### Fixed
 - \[#59\] Android no longer takes recognition settings it silently drops. setRecognitionLevel and setLanguages were empty no-ops that reported success, and the controller read them straight back as if they had landed. The Vision-only settings now sit behind darwin, so there is nothing left to accept and discard.
