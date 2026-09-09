@@ -1,9 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
+import 'features/core/data/fake_camera_platform.dart';
 import 'features/core/views/home_view.dart';
 
-void main() => runApp(const TextSightExampleApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  FakeCameraPlatform.installWhenSimulated();
+  runApp(const TextSightExampleApp());
+}
 
 /// Showcase app for `text_sight`: a landing hub onto each feature demo.
 class TextSightExampleApp extends StatelessWidget {
