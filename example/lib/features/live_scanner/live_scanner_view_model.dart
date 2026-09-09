@@ -4,9 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:pmvvm/pmvvm.dart';
 import 'package:text_sight/text_sight.dart';
 
+import '/features/core/data/fake_camera_platform.dart';
 import 'data/enums/session_status.dart';
 
 final class LiveScannerViewModel extends ViewModel {
+  /// The stand-in camera on the iOS Simulator, `null` against real hardware.
+  final _fakeCamera = FakeCameraPlatform.installed;
+
   final _controller = TextSightController();
 
   final _sessionStatusNotifier = ValueNotifier(SessionStatus.preparingModel);
@@ -28,6 +32,9 @@ final class LiveScannerViewModel extends ViewModel {
 
   ValueListenable<bool> get shouldEnableTorchListenable => _shouldEnableTorchNotifier;
 
+  /// The stand-in camera's current frame, `null` when a real camera is driving the session.
+  ValueListenable<SimulatedFrame?>? get simulatedFrames => _fakeCamera?.frameListenable;
+
   /// The failure message, meaningful only while the status is [SessionStatus.failed].
   String get failure => _failure ?? 'Could not start the camera.';
 
@@ -39,6 +46,10 @@ final class LiveScannerViewModel extends ViewModel {
   };
 
   Future<void> onRetryPressed() => _start();
+
+  void onInterruptPressed() => _fakeCamera?.simulateInterruption();
+
+  void onFailPressed() => _fakeCamera?.simulateFailure();
 
   Future<void> onTorchToggled() async {
     final next = !_shouldEnableTorchNotifier.value;

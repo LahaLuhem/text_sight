@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
@@ -6,6 +7,7 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 import 'package:text_sight/text_sight.dart';
 
 import '/features/core/data/constants/core_constants.dart';
+import '/features/core/data/fake_camera_platform.dart';
 import '/features/core/widgets/core_widgets.dart';
 import 'live_scanner_view_model.dart';
 
@@ -110,6 +112,15 @@ class _ScannerView extends StatelessWidget {
   Widget build(BuildContext context) => Stack(
     fit: .expand,
     children: [
+      // The Simulator registers no preview texture, so paint the frame the boxes were found in.
+      // `.fill` on purpose: the overlay's boxes are normalized to the whole preview area.
+      if (viewModel.simulatedFrames case final frames?)
+        ValueListenableBuilder(
+          valueListenable: frames,
+          builder: (context, frame, _) => frame == null
+              ? const SizedBox.shrink()
+              : Image.memory(frame.jpeg, fit: .fill, gaplessPlayback: true),
+        ),
       TextSightView(
         controller: viewModel.controller,
         overlayBuilder: (context, capture, constraints) => CustomPaint(
@@ -168,12 +179,51 @@ class _ScannerView extends StatelessWidget {
         left: 8,
         right: 8,
         bottom: 8,
-        child: StreamBuilder(
-          stream: viewModel.controller.captures,
-          builder: (context, snapshot) => _RecognizedTextPanel(capture: snapshot.data),
+        child: Column(
+          mainAxisSize: .min,
+          crossAxisAlignment: .start,
+          spacing: 8,
+          children: [
+            if (viewModel.simulatedFrames case final frames?)
+              _SimulatedCameraControls(viewModel: viewModel, frames: frames),
+            StreamBuilder(
+              stream: viewModel.controller.captures,
+              builder: (context, snapshot) => _RecognizedTextPanel(capture: snapshot.data),
+            ),
+          ],
         ),
       ),
     ],
+  );
+}
+
+/// Names where the frames come from, and fires the two session events that need real hardware.
+class _SimulatedCameraControls extends StatelessWidget {
+  final LiveScannerViewModel viewModel;
+  final ValueListenable<SimulatedFrame?> frames;
+
+  const new({required this.viewModel, required this.frames});
+
+  @override
+  Widget build(BuildContext context) => PlatformCard(
+    child: Padding(
+      padding: const .all(8),
+      child: Row(
+        spacing: 8,
+        children: [
+          ValueListenableBuilder(
+            valueListenable: frames,
+            builder: (context, frame, _) => Text(switch (frame?.isBridged) {
+              true => 'Mac camera',
+              false => 'Sample image',
+              null => 'Starting…',
+            }),
+          ),
+          PlatformButton(onPressed: viewModel.onInterruptPressed, child: const Text('Interrupt')),
+          PlatformButton(onPressed: viewModel.onFailPressed, child: const Text('Fail')),
+        ],
+      ),
+    ),
   );
 }
 
