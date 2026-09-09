@@ -125,10 +125,10 @@ packages:
     dependency: "direct dev"
     description:
       name: checks
-      sha256: "016871c84732c1ac9856b8940236d5a5802ba638b3bd3e0ea7027b51a35f7aa7"
+      sha256: "9c360a078576950976c9045fe28392dfb5f3b0b648ae897e8c1fe307a6ffbed2"
       url: "https://pub.dev"
     source: hosted
-    version: "0.3.1"
+    version: "0.3.2"
   clock:
     dependency: transitive
     description:
