@@ -2,6 +2,7 @@
 ### Added
 - \[#59\] TextSightEngine.confidenceScale reports what a confidence number means on this device: visionGraded, visionCoarse or mlKit. Branch on its isRankable flag to know whether sorting lines inside one capture tells you anything.
 - \[#59\] DarwinOptions.minimumTextHeight sets the smallest text Vision will read, as a fraction of the frame height. A higher floor is faster and blind to small print, and it stays frame-relative even when roi narrows the scan box.
+- example: run the live scanner on the iOS Simulator with a stand-in camera
 
 ### Changed
 - \[#59\] Vision-only settings moved under TextSightOptions.darwin: recognitionLevel, usesLanguageCorrection, preferredLanguages (was languages) and minimumTextHeight. Only roi stays top-level, since it is the one setting both platforms honour.
