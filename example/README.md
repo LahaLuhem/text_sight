@@ -1,21 +1,3 @@
-# example
-
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
 ## Running on a physical iOS device
 
 The iOS Simulator needs no code signing, and `flutter run` works as-is. It has no camera, so the app
@@ -63,22 +45,32 @@ are not tied to a particular tool.
 
 The corner card names the source, so you can tell at a glance whether the bridge took:
 
-| Card says | Meaning |
-|---|---|
-| Mac camera | Frames are arriving from the bridge |
-| Sample image | Nothing is listening on 8765, so the bundled sample is replayed |
+| Card says    | Meaning                                                                           |
+|--------------|-----------------------------------------------------------------------------------|
+| Mac camera   | Frames are arriving from the bridge                                               |
+| Sample image | Nothing is listening on 8765, so the bundled sample is used, drifting (see below) |
 
 The stand-in retries the connection forever, so starting the bridge after the app is fine, and
 so is never starting it at all.
+
+### The sample drifts on purpose
+
+With no bridge running, the fallback would be a conveniently fixed scene, and fixed boxes over a
+fixed image prove nothing about live tracking. So the sample is redrawn every tick with a small
+drift and tilt, the way the Android emulator's virtual scene sways, and each redrawn frame is
+recognized on its own. The boxes you see are then genuinely chasing a moving image.
+
+The motion lives in `SwayingFrames`, tuned by four constants in one place. Composing and encoding a
+frame measures about 8 ms, so the recognizer is what limits the rate, not the drawing.
 
 ### Faking the states that need hardware
 
 The same card drives the two session states you otherwise cannot reach:
 
-| Button | What it does |
-|---|---|
-| Interrupt | Pauses as if the OS took the camera, then hands it back after six seconds |
-| Fail | Reports a capture failure and parks the session, so **Retry** is the only way back |
+| Button    | What it does                                                                       |
+|-----------|------------------------------------------------------------------------------------|
+| Interrupt | Pauses as if the OS took the camera, then hands it back after six seconds          |
+| Fail      | Reports a capture failure and parks the session, so **Retry** is the only way back |
 
 Backgrounding the app (`Cmd+Shift+H`) pauses it the same way the real plugin does.
 

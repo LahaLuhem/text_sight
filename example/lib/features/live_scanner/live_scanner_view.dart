@@ -119,7 +119,7 @@ class _ScannerView extends StatelessWidget {
           valueListenable: frames,
           builder: (context, frame, _) => frame == null
               ? const SizedBox.shrink()
-              : Image.memory(frame.jpeg, fit: .fill, gaplessPlayback: true),
+              : Image.memory(frame.bytes, fit: .fill, gaplessPlayback: true),
         ),
       TextSightView(
         controller: viewModel.controller,

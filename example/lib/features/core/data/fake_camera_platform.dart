@@ -11,25 +11,27 @@ import 'package:text_sight/src/platform/text_sight_platform.dart';
 import 'package:text_sight/text_sight.dart';
 
 import 'constants/assets/assets.gen.dart';
+import 'swaying_frames.dart';
 
 /// One frame standing in for the camera, and whether it came from the Mac's webcam or the bundled
 /// sample. The two always move together, so they share one notifier.
-typedef SimulatedFrame = ({Uint8List jpeg, bool isBridged});
+typedef SimulatedFrame = ({Uint8List bytes, bool isBridged});
 
 /// Stands in for the camera on the iOS Simulator, which has no capture hardware.
 ///
 /// Frames come from the Mac's webcam over a localhost bridge when one is running, and from the
-/// bundled sample image otherwise. Either way recognition is real: every frame goes through the
-/// wrapped platform's one-shot path, so the lines and boxes the overlay draws are genuine
-/// recognizer output. Only the session is fake, and the events that need hardware come from the app
-/// lifecycle and from [simulateInterruption] / [simulateFailure].
+/// bundled sample drifted by [SwayingFrames] otherwise. Either way every frame is a different
+/// image put through the wrapped platform's one-shot path, so the boxes the overlay draws are
+/// genuine recognizer output that has to keep up. Only the session is fake, and the events that
+/// need hardware come from the app lifecycle and from [simulateInterruption] / [simulateFailure].
 final class FakeCameraPlatform extends TextSightPlatform {
   /// How long a simulated interruption holds before the camera comes back on its own, as a real
   /// one does. Long enough to read the paused screen, short enough that nothing feels stuck.
   static const _interruptionHold = Duration(seconds: 6);
 
-  /// Paces the bundled-sample fallback. Bridged frames arrive at the webcam's own rate instead.
-  static const _sampleInterval = Duration(milliseconds: 200);
+  /// Paces the drifting fallback. Bridged frames arrive at the webcam's own rate instead. Composing
+  /// and encoding one frame measures about 8 ms, so the recognizer is what sets the real ceiling.
+  static const _sampleInterval = Duration(milliseconds: 150);
 
   /// Nothing registers a texture here, so any id will do. `TextSightView` only needs a non-null one.
   static const _textureId = 0;
@@ -43,15 +45,18 @@ final class FakeCameraPlatform extends TextSightPlatform {
 
   late final _bridge = _BridgeClient(onFrame: _onBridgeFrame, onLost: _onBridgeLost);
 
+  /// Drives the drift's phase, so the fallback keeps moving for as long as the app is up.
+  final _clock = Stopwatch()..start();
+
   Timer? _sampleTimer;
   Timer? _recoveryTimer;
-  Uint8List? _sampleBytes;
-  TextSightCapture? _sampleCapture;
+  SwayingFrames? _sway;
   var _options = const TextSightOptions();
   var _isOpen = false;
   var _isStreaming = false;
   var _isBridged = false;
   var _hasFailed = false;
+  var _isComposing = false;
   var _isRecognizing = false;
 
   new(this._real) {
@@ -85,7 +90,9 @@ final class FakeCameraPlatform extends TextSightPlatform {
   @override
   Future<int> initialize(TextSightOptions options, CaptureResolution resolution) async {
     _options = options;
-    await _loadSample();
+    _sway ??= await SwayingFrames.fromBytes(
+      (await rootBundle.load(ConstMedia.a12PointText.keyName)).buffer.asUint8List(),
+    );
     _isOpen = true;
     _bridge.start();
 
@@ -121,11 +128,7 @@ final class FakeCameraPlatform extends TextSightPlatform {
   Future<CameraPermissionStatus> requestCameraPermission() async => .granted;
 
   @override
-  Future<void> updateOptions(TextSightOptions options) async {
-    _options = options;
-    _sampleCapture = null;
-    await _loadSample();
-  }
+  Future<void> updateOptions(TextSightOptions options) async => _options = options;
 
   /// The Simulator has no torch, so the view model's own toggle state is the whole effect.
   @override
@@ -175,19 +178,10 @@ final class FakeCameraPlatform extends TextSightPlatform {
     _report(const SessionFailed(details: 'Simulated capture failure'));
   }
 
-  /// The sample is recognized once and its capture replayed, since a still cannot change between
-  /// ticks. Bridged frames are recognized one by one instead.
-  Future<void> _loadSample() async {
-    final bytes = _sampleBytes ??= (await rootBundle.load(ConstMedia.a12PointText.keyName)).buffer
-        .asUint8List();
-    _sampleCapture ??= await _real.recognizeImage(bytes, _options);
-  }
-
-  void _onBridgeFrame(Uint8List jpeg) {
+  void _onBridgeFrame(Uint8List bytes) {
     _isBridged = true;
     _stopSampleReplay();
-    _frameNotifier.value = (jpeg: jpeg, isBridged: true);
-    if (_isStreaming) unawaited(_recognize(jpeg));
+    _publish(bytes, isBridged: true);
   }
 
   void _onBridgeLost() {
@@ -195,14 +189,19 @@ final class FakeCameraPlatform extends TextSightPlatform {
     _startSampleReplay();
   }
 
+  void _publish(Uint8List bytes, {required bool isBridged}) {
+    _frameNotifier.value = (bytes: bytes, isBridged: isBridged);
+    if (_isStreaming) unawaited(_recognize(bytes));
+  }
+
   /// Newest frame wins: one arriving while a recognition is in flight is skipped, which is how the
   /// native frame gate paces the recognizer.
-  Future<void> _recognize(Uint8List jpeg) async {
+  Future<void> _recognize(Uint8List bytes) async {
     if (_isRecognizing) return;
 
     _isRecognizing = true;
     try {
-      _captures.add(await _real.recognizeImage(jpeg, _options));
+      _captures.add(await _real.recognizeImage(bytes, _options));
     } on Object {
       // A frame the recognizer rejects is dropped, exactly as native drops a bad frame.
     } finally {
@@ -213,7 +212,7 @@ final class FakeCameraPlatform extends TextSightPlatform {
   void _startSampleReplay() {
     if (!_isStreaming || _isBridged) return;
 
-    _sampleTimer ??= Timer.periodic(_sampleInterval, (_) => _replaySample());
+    _sampleTimer ??= Timer.periodic(_sampleInterval, (_) => unawaited(_driftSample()));
   }
 
   void _stopSampleReplay() {
@@ -221,13 +220,19 @@ final class FakeCameraPlatform extends TextSightPlatform {
     _sampleTimer = null;
   }
 
-  void _replaySample() {
-    final bytes = _sampleBytes;
-    final capture = _sampleCapture;
-    if (bytes == null || capture == null) return;
+  /// Composing is gated separately from recognizing, so a slow encode cannot stack up ticks.
+  Future<void> _driftSample() async {
+    final sway = _sway;
+    if (sway == null || _isComposing) return;
 
-    _frameNotifier.value = (jpeg: bytes, isBridged: false);
-    _captures.add(capture);
+    _isComposing = true;
+    try {
+      _publish(await sway.frameAt(_clock.elapsed), isBridged: false);
+    } on Object {
+      // A frame that fails to compose is skipped, and the next tick tries again.
+    } finally {
+      _isComposing = false;
+    }
   }
 
   void _stopStreaming() {
