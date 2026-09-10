@@ -48,7 +48,10 @@ dev_dependencies:
   # Generators
   build_runner: ^2.16.1
   copy_with_extension_gen: ^17.1.0
-  pigeon: ^28.0.0
+  # Exact, not a caret: pigeon stamps its own version into every generated header, and this
+  # package's lock is gitignored, so a float makes CI's codegen-freshness gate fail on each
+  # pigeon release. Bumping it is a deliberate change with a visible regeneration diff.
+  pigeon: 28.1.0
 
   # Testing
   bdd_framework: ^4.0.7
