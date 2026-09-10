@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart' show Theme;
 import 'package:text_sight/text_sight.dart';
 
 import '../data/recognition_result.dart';
+import 'confidence_scale_note.dart';
 import 'platform/platform_card.dart';
 import 'recognized_line_row.dart';
 
@@ -58,8 +59,10 @@ class _CaptureCard extends StatelessWidget {
           ),
           if (capture.lines.isEmpty)
             Text(emptyHint)
-          else
+          else ...[
             for (final line in capture.lines) RecognizedLineRow(line: line),
+            const ConfidenceScaleNote(),
+          ],
         ],
       ),
     ),

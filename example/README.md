@@ -30,8 +30,8 @@ keep the live scanner usable, `main()` swaps the platform seam for a stand-in wh
 Simulator. Nothing to enable, just `flutter run`.
 
 The real screen, the real controller, the real `TextSightView`, and real recognition: every frame
-goes through the same on-device recognizer the one-shot demo uses, so the boxes, the confidence
-colours and the text panel are genuine output. Only the capture session is fake.
+goes through the same on-device recognizer the one-shot demo uses, so the boxes and the text panel
+are genuine output. Only the capture session is fake.
 
 ### Pointing your Mac's webcam at it
 
@@ -62,6 +62,18 @@ recognized on its own. The boxes you see are then genuinely chasing a moving ima
 
 The motion lives in `SwayingFrames`, tuned by four constants in one place. Composing and encoding a
 frame measures about 8 ms, so the recognizer is what limits the rate, not the drawing.
+
+### Why the confidence colours may be missing
+
+The chips and the box strokes are tinted by confidence tier, green through orange to red, but only
+where the engine's numbers can actually be ranked. Vision on iOS 18+ reports a **coarse** scale
+that parks every line on the same value, so on a modern iPhone or Simulator the tiers switch off,
+the chips render plain, and a line under the results says why.
+
+That is `ConfidenceScale.isRankable`, which the demo reads once through `EngineConfidence` and
+branches on, and it is the pattern to copy. The recognition level is not the knob: the scale
+follows the backend, which follows the OS version. `fast` and `accurate` are both flat on iOS 18+,
+just at different constants.
 
 ### Faking the states that need hardware
 

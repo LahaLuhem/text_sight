@@ -14,10 +14,15 @@ code style (MVVM, naming, widget composition, …) lives in
   the real implementation. Frames come from a webcam bridge on `127.0.0.1:8765` (4-byte
   big-endian length, then JPEG) when one is running, and from the bundled sample otherwise. The
   sample is redrawn each tick with a small drift by `SwayingFrames`, so the fallback exercises live
-  tracking instead of a fixed scene. Recognition is always real, and the live scanner asks for
-  `RecognitionLevel.accurate` because Vision's `fast` path reports a flat 0.5 confidence. It is a no-op on a device and on Android, so those still
-  exercise the plugin end to end. This is the one place the example imports from the
+  tracking instead of a fixed scene. Recognition is always real. It is a no-op on a device and on
+  Android, so those still exercise the plugin end to end. This is the one place the example imports from the
   package's `src/`, since the federation seam is not on the public barrel.
+- **Confidence tiers are conditional.** `EngineConfidence` resolves
+  `TextSightEngine.confidenceScale` once at startup, and `ConfidenceChip`, `ConfidenceScaleNote`
+  and the live overlay's box strokes all branch on `isRankable`. Vision on iOS 18+ is coarse, so
+  every line reads the same number and the tiers switch off rather than implying a precision that
+  is not there. Changing the recognition level does not change this: the scale follows the
+  backend, which follows the OS version.
 - **Also the no-bundling test harness.** The iOS side must keep linking zero
   third-party ML libraries. After touching native or dependencies, re-check
   `rg -i 'mlkit|googlemlkit|MLImage' example/ios` returns nothing and the generated
