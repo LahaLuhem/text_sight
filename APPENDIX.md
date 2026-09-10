@@ -664,8 +664,12 @@ seam shows in the tree. Each public type gets its own file (per
   The scales are **not comparable**, across platforms or across iOS versions: the modern
   `RecognizeTextRequest` (18+) reports **coarse** values (frequently `1.0`), the legacy
   `VNRecognizeTextRequest` (15-17) is **graded**, and the same image scored `~0.5` on iOS 15 for
-  lines the 18+ path scored `1.0` (device-verified). `TextSightEngine.confidenceScale` names which
-  one you have, and `isRankable` answers the only question most consumers actually have.
+  lines the 18+ path scored `1.0` (device-verified). On the modern path that flat value tracks
+  `recognitionLevel` rather than the text: every line of the bundled sample read `0.5` at `fast`
+  and `1.0` at `accurate` (iOS 26.2 Simulator). So reaching for `accurate` buys no gradation, only
+  a different constant, which is what `visionCoarse.isRankable == false` is there to tell you.
+  `TextSightEngine.confidenceScale` names which one you have, and `isRankable` answers the only
+  question most consumers actually have.
 
   On Android below Google Play services 22.30 the unbundled ML Kit returns `0` for every line
   instead of a real value. No runtime gate is built for it: those devices are years stale and

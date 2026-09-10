@@ -240,7 +240,7 @@ jobs:
       # Pigeon writes the wire types, build_runner writes the copyWiths. Neither knows about the
       # other, so order does not matter.
       - run: dart run pigeon --input pigeons/text_sight.dart
-      - run: dart run build_runner build --delete-conflicting-outputs
+      - run: dart run build_runner build --force-aot
       # Both emit ~80-column Dart and the gate is 100, so the regen is never complete without this.
       - run: dart format lib
       - name: Assert generated code is up to date
@@ -249,7 +249,7 @@ jobs:
           # file.
           if [ -n "$(git status --porcelain)" ]; then
             git status --short
-            echo "::error::Generated code is stale. Run: dart run pigeon --input pigeons/text_sight.dart && dart run build_runner build --delete-conflicting-outputs && dart format lib"
+            echo "::error::Generated code is stale. Run: dart run pigeon --input pigeons/text_sight.dart && dart run build_runner build --force-aot && dart format lib"
             exit 1
           fi
 

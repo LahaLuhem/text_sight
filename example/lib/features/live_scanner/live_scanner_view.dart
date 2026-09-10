@@ -7,6 +7,7 @@ import 'package:pmvvm/mvvm_builder.widget.dart';
 import 'package:text_sight/text_sight.dart';
 
 import '/features/core/data/constants/core_constants.dart';
+import '/features/core/data/engine_confidence.dart';
 import '/features/core/data/fake_camera_platform.dart';
 import '/features/core/widgets/core_widgets.dart';
 import 'live_scanner_view_model.dart';
@@ -123,12 +124,23 @@ class _ScannerView extends StatelessWidget {
         ),
       TextSightView(
         controller: viewModel.controller,
-        overlayBuilder: (context, capture, constraints) => CustomPaint(
-          size: constraints.biggest,
-          painter: _ConfidenceBoxPainter(
-            capture.lines,
-            (confidence) => ConstTheme.confidence(context, confidence),
-          ),
+        overlayBuilder: (context, capture, constraints) => ValueListenableBuilder(
+          valueListenable: EngineConfidence.scaleListenable,
+          builder: (context, scale, _) {
+            // One stroke colour for every box unless the engine's numbers can actually be ranked.
+            final isTiered = scale?.isRankable ?? false;
+
+            return CustomPaint(
+              size: constraints.biggest,
+              painter: _ConfidenceBoxPainter(
+                capture.lines,
+                isTiered: isTiered,
+                colorFor: isTiered
+                    ? (confidence) => ConstTheme.confidence(context, confidence)
+                    : (_) => ConstTheme.neutral(context),
+              ),
+            );
+          },
         ),
         placeholderBuilder: (_) => const Center(child: PlatformProgressIndicator()),
       ),
@@ -245,7 +257,10 @@ class _RecognizedTextPanel extends StatelessWidget {
             : ListView(
                 padding: const .all(8),
                 shrinkWrap: true,
-                children: [for (final line in lines) RecognizedLineRow(line: line)],
+                children: [
+                  for (final line in lines) RecognizedLineRow(line: line),
+                  const ConfidenceScaleNote(),
+                ],
               ),
       ),
     );
@@ -257,7 +272,10 @@ class _ConfidenceBoxPainter extends CustomPainter {
   final List<RecognizedLine> lines;
   final Color Function(double confidence) colorFor;
 
-  new(this.lines, this.colorFor);
+  /// Whether [colorFor] varies by confidence, so a repaint is needed when it flips.
+  final bool isTiered;
+
+  new(this.lines, {required this.isTiered, required this.colorFor});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -280,7 +298,8 @@ class _ConfidenceBoxPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ConfidenceBoxPainter oldDelegate) => oldDelegate.lines != lines;
+  bool shouldRepaint(_ConfidenceBoxPainter oldDelegate) =>
+      oldDelegate.lines != lines || oldDelegate.isTiered != isTiered;
 }
 
 /// The model-preparation view: a progress indicator over a short message. The indicator runs
