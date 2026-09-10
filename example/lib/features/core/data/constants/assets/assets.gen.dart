@@ -11,16 +11,18 @@
 
 import 'package:flutter/widgets.dart';
 
-class ConstMedia {
-  const ConstMedia._();
-
+abstract final class ConstMedia {
+  static const AssetGenImage a12PointText = AssetGenImage(
+    'assets/12_point_text.png',
+    size: const Size(640.0, 480.0),
+  );
   static const AssetGenImage sampleText = AssetGenImage(
     'assets/sample_text.png',
     size: const Size(1000.0, 620.0),
   );
 
   /// List of all assets
-  static List<AssetGenImage> get values => [sampleText];
+  static List<AssetGenImage> get values => [a12PointText, sampleText];
 }
 
 class AssetGenImage {

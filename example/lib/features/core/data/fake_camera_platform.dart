@@ -178,7 +178,7 @@ final class FakeCameraPlatform extends TextSightPlatform {
   /// The sample is recognized once and its capture replayed, since a still cannot change between
   /// ticks. Bridged frames are recognized one by one instead.
   Future<void> _loadSample() async {
-    final bytes = _sampleBytes ??= (await rootBundle.load(ConstMedia.sampleText.keyName)).buffer
+    final bytes = _sampleBytes ??= (await rootBundle.load(ConstMedia.a12PointText.keyName)).buffer
         .asUint8List();
     _sampleCapture ??= await _real.recognizeImage(bytes, _options);
   }

@@ -48,6 +48,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - assets/12_point_text.png
     - assets/sample_text.png
 
 
