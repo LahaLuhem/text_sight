@@ -5,16 +5,17 @@
 - example: run the live scanner on the iOS Simulator with a stand-in camera
 
 ### Changed
-- \[#59\] Vision-only settings moved under TextSightOptions.darwin: recognitionLevel, usesLanguageCorrection, preferredLanguages (was languages) and minimumTextHeight. Only roi stays top-level, since it is the one setting both platforms honour.
-- \[#59\] TextSightController.updateOptions replaces updateRecognitionLevel, updateLanguages and updateRegionOfInterest, and a single options getter replaces the three read-backs. It sets everything at once, so read options first when you only mean to change one thing.
-- \[#59\] RecognitionLevel is now just fast or accurate, with language correction split out into DarwinOptions.usesLanguageCorrection. So fast can correct and accurate can skip it, and the live path now corrects by default where fast used to leave it off.
-- \[#59\] RecognizedLine.confidence is a required non-null double. Both engines always send a value, so there is no null to guard, but a number only means something next to the scale that produced it.
-- \[#45\] Surface the capture session's state as controller.sessionState, with stop() renamed pauseRecognition() and isRunning renamed isRecognizing
+- \[#59\] **BREAKING:** Vision-only settings moved under TextSightOptions.darwin: recognitionLevel (was level), usesLanguageCorrection, preferredLanguages (was languages) and minimumTextHeight. Only roi stays top-level, since it is the one setting both platforms honour. Migrate TextSightOptions(level: x, languages: y) to TextSightOptions(darwin: DarwinOptions(recognitionLevel: x, preferredLanguages: y)).
+- \[#59\] **BREAKING:** TextSightController.updateOptions replaces updateRecognitionLevel, updateLanguages and updateRegionOfInterest, and a single options getter replaces the three read-backs. It sets everything at once, so read options first when you only mean to change one: updateOptions(TextSightOptions(roi: r, darwin: controller.options.darwin)).
+- \[#59\] **BREAKING:** RecognitionLevel is now just fast or accurate, and level.usesLanguageCorrection is gone, split out into DarwinOptions.usesLanguageCorrection. So fast can correct and accurate can skip it. The live path corrects by default now, where fast used to leave it off: pass usesLanguageCorrection: false to keep the old behaviour.
+- \[#59\] **BREAKING:** RecognizedLine.confidence is a required non-null double. Both engines always send a value, so drop the (confidence ?? 1) guard the old docs recommended. A number still only means something next to the scale that produced it, which TextSightEngine.confidenceScale now reports.
+- \[#45\] **BREAKING:** Surface the capture session state as controller.sessionState, with stop() renamed pauseRecognition() and isRunning renamed isRecognizing. Rename both call sites.
 
 ### Fixed
 - \[#59\] Android no longer takes recognition settings it silently drops. setRecognitionLevel and setLanguages were empty no-ops that reported success, and the controller read them straight back as if they had landed. The Vision-only settings now sit behind darwin, so there is nothing left to accept and discard.
 - \[#59\] Changing several settings at once no longer tears. The iOS side took its state lock once per setter, so a frame caught between two calls could be read with the new level and the old languages. updateOptions applies the whole set under one lock hold.
 - \[#59\] RecognizedLine.confidence no longer documents a null that never arrives. The old docs had you threshold with (confidence ?? 1) while warning in the same breath that the scales are not comparable, and gave you no way to find out which scale you had.
+- ios: name the iOS 26 sensitive-content interruption reason
 
 ## [0.2.2] - 2026-09-05
 ### Fixed
