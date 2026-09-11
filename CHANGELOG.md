@@ -15,6 +15,7 @@
 - \[#59\] Android no longer takes recognition settings it silently drops. setRecognitionLevel and setLanguages were empty no-ops that reported success, and the controller read them straight back as if they had landed. The Vision-only settings now sit behind darwin, so there is nothing left to accept and discard.
 - \[#59\] Changing several settings at once no longer tears. The iOS side took its state lock once per setter, so a frame caught between two calls could be read with the new level and the old languages. updateOptions applies the whole set under one lock hold.
 - \[#59\] RecognizedLine.confidence no longer documents a null that never arrives. The old docs had you threshold with (confidence ?? 1) while warning in the same breath that the scales are not comparable, and gave you no way to find out which scale you had.
+- ios: name the iOS 26 sensitive-content interruption reason
 
 ## [0.2.2] - 2026-09-05
 ### Fixed
