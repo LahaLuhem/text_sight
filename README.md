@@ -168,6 +168,10 @@ One import gets you everything: `package:text_sight/text_sight.dart`.
 The right Vision API is picked for you. Android reads **Latin script only** for now. *Live* scanning
 needs a real device, since the iOS Simulator has no camera, but the one-shot runs anywhere.
 
+Those minimums are what your **users** need. **Building** the iOS side needs Xcode 26 or newer,
+because the plugin names an `AVCaptureSession` interruption reason that Apple added in the iOS 26
+SDK. Your own deployment target still goes as low as 15.0.
+
 ### Gotchas
 
 > **⚠️ iOS 15 and 16: the preview and recognition don't follow device rotation.** Those versions

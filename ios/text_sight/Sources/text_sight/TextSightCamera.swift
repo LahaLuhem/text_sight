@@ -402,6 +402,7 @@ final class TextSightCamera: NSObject {
     case .videoDeviceNotAvailableWithMultipleForegroundApps:
       "videoDeviceNotAvailableWithMultipleForegroundApps"
     case .videoDeviceNotAvailableDueToSystemPressure: "videoDeviceNotAvailableDueToSystemPressure"
+    case .sensitiveContentMitigationActivated: "sensitiveContentMitigationActivated"
     @unknown default: "interruptionReason(\(reason.rawValue))"
     }
   }
