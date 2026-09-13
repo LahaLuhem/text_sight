@@ -43,11 +43,7 @@ def test_sweep_charts_come_back_empty_without_a_sweep(
 def test_every_swept_candidate_has_an_order_and_a_colour() -> None:
     """A candidate missing from LEVEL_ORDER is dropped from charts and tables with no error, so
     the scenario's sweep and the config have to stay in step."""
-    swept = {
-        f"{level}{suffix}"
-        for level in ("fast", "accurate")
-        for suffix in ("", "+corrected")
-    }
+    swept = {f"{level}{suffix}" for level in ("fast", "accurate") for suffix in ("", "+corrected")}
 
     assert swept <= set(config.LEVEL_ORDER)
     assert swept <= set(config.LEVEL_COLORS)

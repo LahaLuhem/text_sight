@@ -70,13 +70,25 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- GitHub Actions ---
-  # `directory: "/"` scans everything under .github/, workflows and the local composite action.
+  # `directory: "/"` scans everything under .github/, workflows and the local composite actions.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     groups:
       actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  # --- Python: benchmark orchestrator / analyzer (uv-managed) ---
+  # Bumps pyproject.toml constraints + uv.lock under benchmark/python. Same grouping as
+  # the others: minor/patch grouped into one PR, majors individual for isolated review.
+  - package-ecosystem: "uv"
+    directory: "/benchmark/python"
+    schedule:
+      interval: "weekly"
+    groups:
+      uv:
         patterns: ["*"]
         update-types: ["minor", "patch"]
 

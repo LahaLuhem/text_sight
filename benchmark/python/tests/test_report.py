@@ -53,10 +53,22 @@ def test_a_blended_report_stamps_each_capture_separately() -> None:
     """A phone is not always to hand, so one report can carry runs from different days. Reporting
     only the first record's date would hide that."""
     records = [
-        {"platform": "android", "git_sha": "aaa", "package_version": "0.2.2",
-         "started_at": "2026-09-06T10:00:00Z", "sdk_version": "3.13.2", "iteration": 0},
-        {"platform": "ios", "git_sha": "bbb", "package_version": "0.2.0",
-         "started_at": "2026-09-03T10:00:00Z", "sdk_version": "3.13.0", "iteration": 0},
+        {
+            "platform": "android",
+            "git_sha": "aaa",
+            "package_version": "0.2.2",
+            "started_at": "2026-09-06T10:00:00Z",
+            "sdk_version": "3.13.2",
+            "iteration": 0,
+        },
+        {
+            "platform": "ios",
+            "git_sha": "bbb",
+            "package_version": "0.2.0",
+            "started_at": "2026-09-03T10:00:00Z",
+            "sdk_version": "3.13.0",
+            "iteration": 0,
+        },
     ]
 
     line = markdown._capture_line(records)
