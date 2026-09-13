@@ -67,8 +67,8 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 ## Dependabot automerges the boring tier, behind five aggregate checks
 [`dependabot-automerge.yml`](./.github/workflows/dependabot-automerge.yml) arms GitHub's native
 auto-merge (rebase) for patch and minor bumps in `github-actions`, `gradle` (both `/android` and
-`/example/android`), and `pub` under `/example`, plus `github-actions` **majors**. Root `pub`,
-and gradle / pub majors, wait for a human.
+`/example/android`), `uv`, and `pub` under `/example`, plus `github-actions` **majors**. Root `pub`,
+and gradle / pub / uv majors, wait for a human.
 Dependabot has no `automerge` config key the way Renovate does, so the mechanism is a workflow. The
 sibling
 [`better_internet_connectivity_checker`](https://github.com/LahaLuhem/better_internet_connectivity_checker)
@@ -81,6 +81,10 @@ and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos ru
   downstream Android consumer (ML Kit, Play Services, CameraX), so these bumps *are*
   publish-relevant, and `Android example build + unit tests` stands in for the read-through. The cost is
   the missing changelog entry, not the build, so check the Android deps before a release if one landed.
+- **`uv` is the easy one.** `benchmark/python` is chart and orchestration tooling that reaches no
+  published byte, and `benchmark.yml`'s Ruff and Pytest jobs cover it. Both siblings that run a
+  Python benchmark ([`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager),
+  [`list_smith`](https://github.com/LahaLuhem/list_smith)) automerge it on the same terms.
 - **Minor, not just patch,** because `dependabot.yml` groups both and `fetch-metadata` reports a
   group's *highest* semver step, and patch-only would skip most batches.
 - **`github-actions` majors automerge too.** Actions reach no consumer, and a bad bump breaks the
