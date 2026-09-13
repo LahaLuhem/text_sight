@@ -16,9 +16,7 @@ void main() {
 }
 
 /// Showcase app for `text_sight`: a landing hub onto each feature demo.
-class TextSightExampleApp extends StatelessWidget {
-  const new({super.key});
-
+class const TextSightExampleApp({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       const PlatformApp(title: 'text_sight example', home: HomeView());

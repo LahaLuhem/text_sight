@@ -29,11 +29,7 @@ void main() {
   });
 }
 
-class _Host extends StatelessWidget {
-  final Widget child;
-
-  const new({required this.child});
-
+class const _Host({required final Widget child}) extends StatelessWidget {
   // Scaffolded like the real screens, because a Material Chip needs a Material ancestor.
   @override
   Widget build(BuildContext context) => PlatformApp(home: PlatformScaffold(body: child));

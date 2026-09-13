@@ -5,11 +5,8 @@ import 'confidence_chip.dart';
 
 /// One recognized line, its text filling the row, with a trailing [ConfidenceChip].
 /// Shared by the live scanner's panel, the one-shot result, and the playground.
-class RecognizedLineRow extends StatelessWidget {
-  final RecognizedLine line;
-
-  const new({required this.line, super.key});
-
+class const RecognizedLineRow({required final RecognizedLine line, super.key})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const .symmetric(horizontal: 8, vertical: 4),

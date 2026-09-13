@@ -18,38 +18,35 @@ part 'darwin_options.g.dart';
 ///
 /// `copyWith` is generated from the fields, so adding one cannot leave the copy behind.
 @CopyWith()
-final class DarwinOptions {
+final class const DarwinOptions({
   /// The accuracy/latency trade-off. The one-shot raises it to [RecognitionLevel.accurate], having
   /// no per-frame budget to protect.
-  final RecognitionLevel recognitionLevel;
+  final RecognitionLevel recognitionLevel = .fast,
 
   /// Whether the recognizer fixes likely misreads against a lexicon.
   ///
   /// Helps ordinary prose, hurts serials and part numbers, which it happily "corrects" into words.
   /// Independent of [recognitionLevel], so turn it off when latency matters more.
-  final bool usesLanguageCorrection;
+  final bool usesLanguageCorrection = true,
 
   /// Recognition languages, most-preferred first. Repeats are dropped.
   ///
   /// A [Locale] rather than a raw tag keeps this type-pure while staying open to whatever the OS
   /// supports at runtime. Each goes to Vision as its BCP-47 tag (`en-US`, `zh-Hans`). Empty means
   /// no preference.
-  final Iterable<Locale> preferredLanguages;
+  final Iterable<Locale> preferredLanguages = const [
+    .fromSubtags(languageCode: 'en', countryCode: 'US'),
+  ],
 
   /// Smallest text to read, as a fraction of the frame height, in `[0, 1]`.
   ///
   /// Vision shrinks the image to suit before reading, so a higher floor is faster and blind to
   /// small print. `0`, the default, keeps every pixel. Measured against the *frame* even when
   /// [TextSightOptions.roi] narrows the scan box, so moving the box never changes what is readable.
-  final double minimumTextHeight;
-
+  final double minimumTextHeight = 0,
+}) {
   /// Creates Vision-only options. Every field has a live-oriented default.
-  const new({
-    this.recognitionLevel = .fast,
-    this.usesLanguageCorrection = true,
-    this.preferredLanguages = const [.fromSubtags(languageCode: 'en', countryCode: 'US')],
-    this.minimumTextHeight = 0,
-  });
+  this;
 
   @override
   String toString() =>

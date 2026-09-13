@@ -2,7 +2,7 @@
 ///
 /// More pixels read smaller text and cost frame rate. The camera picks the nearest size it has, so
 /// read `TextSightCapture.imageSize` for what actually arrived.
-enum CaptureResolution {
+enum CaptureResolution() {
   /// Fastest, misses small print.
   low,
 

@@ -8,7 +8,7 @@ import 'dart:ui' as ui;
 /// overlay ever updated. Drifting the frame means every tick is a genuinely different image, so the
 /// recognizer runs again and the boxes have to follow, the way the Android emulator's virtual scene
 /// sways enough to show the same thing.
-final class SwayingFrames {
+final class SwayingFrames(final ui.Image _source) {
   /// Drift in source pixels and tilt in radians, tuned to read as a held camera rather than a pan.
   /// The three periods are deliberately unequal, so the motion never retraces a straight line.
   static const _driftX = 12.0;
@@ -18,10 +18,6 @@ final class SwayingFrames {
   /// Has to cover the drift and the tilt together, or a frame would show past the image's edge.
   /// A tilt of [_tilt] alone needs about 1.6% on a 4:3 frame, the drift another 4%.
   static const _overscale = 1.12;
-
-  final ui.Image _source;
-
-  new(this._source);
 
   /// Decodes an encoded image. Takes bytes rather than an asset key so a test needs no bundle.
   static Future<SwayingFrames> fromBytes(Uint8List bytes) async {

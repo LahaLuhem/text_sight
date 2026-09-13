@@ -11,9 +11,7 @@ import '/features/core/widgets/core_widgets.dart';
 import 'playground_view_model.dart';
 
 /// Recognizer-config playground: tune level + region-of-interest on a still and compare.
-class PlaygroundView extends StatelessWidget {
-  const new({super.key});
-
+class const PlaygroundView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: PlaygroundViewModel(),
@@ -60,11 +58,7 @@ class PlaygroundView extends StatelessWidget {
 }
 
 /// The sample image with the draggable region-of-interest box drawn over it.
-class _SamplePreview extends StatelessWidget {
-  final PlaygroundViewModel viewModel;
-
-  const new({required this.viewModel});
-
+class const _SamplePreview({required final PlaygroundViewModel viewModel}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
     child: Padding(
@@ -85,11 +79,7 @@ class _SamplePreview extends StatelessWidget {
 }
 
 /// The recognition-level segmented control.
-class _LevelControl extends StatelessWidget {
-  final PlaygroundViewModel viewModel;
-
-  const new({required this.viewModel});
-
+class const _LevelControl({required final PlaygroundViewModel viewModel}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: .start,
@@ -110,11 +100,7 @@ class _LevelControl extends StatelessWidget {
 }
 
 /// The region-of-interest toggle, with a hint pointing at the draggable box while it is active.
-class _RoiControls extends StatelessWidget {
-  final PlaygroundViewModel viewModel;
-
-  const new({required this.viewModel});
-
+class const _RoiControls({required final PlaygroundViewModel viewModel}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: viewModel.roiConfigListenable,
@@ -146,18 +132,16 @@ class _RoiControls extends StatelessWidget {
 /// The sample image with a directly-manipulated region-of-interest box: drag the interior to move
 /// it, drag a corner handle to resize. Inert (just the image) while recognition is unrestricted.
 /// The box itself is view-model-owned state. Only the in-progress drag is view-local.
-class _RoiEditor extends StatefulWidget {
-  final RoiConfig config;
-  final Color color;
-  final ValueChanged<Rect> onRectChanged;
-
-  const new({required this.config, required this.color, required this.onRectChanged});
-
+class const _RoiEditor({
+  required final RoiConfig config,
+  required final Color color,
+  required final ValueChanged<Rect> onRectChanged,
+}) extends StatefulWidget {
   @override
   State<_RoiEditor> createState() => _RoiEditorState();
 }
 
-class _RoiEditorState extends State<_RoiEditor> {
+class _RoiEditorState() extends State<_RoiEditor> {
   /// The drag in progress: the grabbed corner (null ⇒ moving the whole box), with the box and
   /// pointer captured at touch-down. Pure presentation state, observed by nothing but the
   /// gesture handlers (the box is painted from the view model), so it never triggers a rebuild.
@@ -250,16 +234,16 @@ class _RoiEditorState extends State<_RoiEditor> {
 }
 
 /// A corner of the region-of-interest box, identifying which resize handle a drag grabbed.
-enum _Corner { topLeft, topRight, bottomLeft, bottomRight }
+enum _Corner() {
+  topLeft,
+  topRight,
+  bottomLeft,
+  bottomRight,
+}
 
 /// Strokes the active region-of-interest over the sample image, with a dot at each draggable
 /// corner. Draws nothing when [roi] is null (recognition unrestricted).
-class _RoiPainter extends CustomPainter {
-  final Rect? roi;
-  final Color color;
-
-  new(this.roi, this.color);
-
+class _RoiPainter(final Rect? roi, final Color color) extends CustomPainter {
   static const _handleRadius = 6.0;
 
   @override

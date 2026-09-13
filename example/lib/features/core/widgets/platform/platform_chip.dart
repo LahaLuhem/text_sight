@@ -9,21 +9,20 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 /// bare Material [Chip] throws "No Material widget found" on the iOS branch (a
 /// `CupertinoPageScaffold` provides no `Material` ancestor). The example owns one until
 /// the base library grows it.
-class PlatformChip extends StatelessWidget {
-  /// Leading widget, typically a small [Icon]. Optional.
-  final Widget? avatar;
-
+class const PlatformChip({
   /// The chip's label.
-  final Widget label;
+  required final Widget label,
+
+  /// Leading widget, typically a small [Icon]. Optional.
+  final Widget? avatar,
 
   /// Fill colour of the chip.
-  final Color? backgroundColor;
+  final Color? backgroundColor,
 
   /// Outline of the chip.
-  final BorderSide? side;
-
-  const new({required this.label, this.avatar, this.backgroundColor, this.side, super.key});
-
+  final BorderSide? side,
+  super.key,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformWidget(
     materialBuilder: (_) =>

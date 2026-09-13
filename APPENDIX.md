@@ -2,6 +2,7 @@
 
 - [`AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`](#agentsmd-and-claudemd-are-symlinks-into-ai)
 - [Dependabot automerges the boring tier, behind four aggregate checks](#dependabot-automerge)
+- [`use_primary_constructors` is on, with four narrow opt-outs](#primary-constructors)
 - [No-bundling: native dependencies never touch the Dart `pubspec.yaml`](#no-bundling-native-dependencies-never-touch-the-dart-pubspecyaml)
 - [Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview](#channel-topology-pigeon-control-api--eventchannel-results--texture-preview)
 - [Session state: a value on the controller, pushed by native](#session-state)
@@ -22,7 +23,7 @@ technical trade-offs.
 READMEs, [`CODESTYLE.md`](./CODESTYLE.md), and [`.ai/AGENTS.md`](./.ai/AGENTS.md)
 reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
-> **Status:** the symlink, dependabot-automerge, channel-topology, coordinate-normalization, iOS-capture-strategy,
+> **Status:** the symlink, dependabot-automerge, primary-constructors, channel-topology, coordinate-normalization, iOS-capture-strategy,
 > model-readiness, known-limitations, taskqueue-rejected, and public-API sections are written. `#no-bundling` and
 > `#federation-deferred` stay stubs, locked decisions whose rationale is filled in when the
 > corresponding code lands. Anchors are stable, and only stub bodies grow.
@@ -106,6 +107,36 @@ and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos ru
   seconds after opening, which hit every bot PR) and stays on for a force-push.
 - **`pull_request_target`** because Dependabot's `pull_request` runs get a read-only token and
   enabling auto-merge needs write. Safe as `changelog.yml`: PR code is never checked out.
+
+---
+
+<a id="primary-constructors"></a>
+## `use_primary_constructors` is on, with four narrow opt-outs
+
+Dart 3.13 lets a class declare its fields in the constructor header, and the lint pushes every
+class that way. Good fit for the data models, which lost a lot of boilerplate. Two places it
+bites, so those carry an `ignore` with the reason inline.
+
+**The Pigeon schema cannot have them.** Pigeon builds its message types by reading field
+declarations out of the class body, and a primary constructor leaves that body empty:
+
+| In the schema | What Pigeon does with it |
+|---|---|
+| `enum Foo() { ... }` | refuses it, "Pigeon doesn't support enhanced enums" |
+| `class Foo({required var double left});` | emits `class Foo { Foo(); }`, no fields, no error |
+
+The second row is the one to worry about. Codegen passes and every message then crosses the
+channel carrying nothing. That is why `pigeons/text_sight.dart` opts out for the whole file.
+CI's freshness job in [#channel-topology](#channel-topology) catches the drift, but only once
+somebody regenerates.
+
+**Namespaces have nothing to construct.** `TextSight`, `TextSightEngine` and `TextSightModel`
+are static-only and documented as never instantiated. The lint offers them a primary
+constructor anyway, and an empty `()` declares a public undocumented one, which
+`public_member_api_docs` then fails under CI's `--fatal-infos`. One-line ignore on each.
+
+`unnecessary_ignore` is also on, so the day a Pigeon or SDK release makes any of these four
+suppressions pointless, analyze will say so.
 
 ---
 
@@ -306,13 +337,13 @@ combinations become unrepresentable.
 emission order. Engine behaviour, not a contract. Capture-causal order is not promised: an
 in-flight recognition may land after a pause.
 
-| State | iOS | Android |
-|---|---|---|
-| active | `startRunning` succeeded | `CameraState.OPEN` |
-| paused, `appBackgrounded` | the sync stopped the session for the background | the owner reached `CREATED`, where CameraX closes the camera. `onPause` without `onStop` is not a pause |
-| paused, `interrupted` | `wasInterrupted`, any reason but the background one | a recoverable `CameraState` error, or `PENDING_OPEN` |
-| failed | `runtimeError` | a critical `CameraState` error |
-| idle | a real session released | a bound camera released |
+| State                     | iOS                                                 | Android                                                                                                 |
+|---------------------------|-----------------------------------------------------|---------------------------------------------------------------------------------------------------------|
+| active                    | `startRunning` succeeded                            | `CameraState.OPEN`                                                                                      |
+| paused, `appBackgrounded` | the sync stopped the session for the background     | the owner reached `CREATED`, where CameraX closes the camera. `onPause` without `onStop` is not a pause |
+| paused, `interrupted`     | `wasInterrupted`, any reason but the background one | a recoverable `CameraState` error, or `PENDING_OPEN`                                                    |
+| failed                    | `runtimeError`                                      | a critical `CameraState` error                                                                          |
+| idle                      | a real session released                             | a bound camera released                                                                                 |
 
 **Failure parks the session, `start()` unparks it.** iOS keeps a `hasFailed` input on its policy
 (`shouldRun = wanted && foreground && !failed`), Android parks the lifecycle owner. Neither retries
@@ -582,10 +613,10 @@ channel hop and not inference. Read `p50` only, since `max` swings 2.4x run to r
 
 Criterion, fixed before the after-run: loaded `p50` at or under 300 us in two of three runs.
 
-| Platform | baseline loaded `p50` | with `@TaskQueue` |
-|---|---|---|
-| Android emulator | 524 / 669 / 459 us | **216 / 233 / 319 us** |
-| iOS simulator | 110 / 104 / 113 / 124 / 116 / 115 us | **33 / 95 / 2295 / 2483 / 2553 / 2632 us** |
+| Platform         | baseline loaded `p50`                | with `@TaskQueue`                          |
+|------------------|--------------------------------------|--------------------------------------------|
+| Android emulator | 524 / 669 / 459 us                   | **216 / 233 / 319 us**                     |
+| iOS simulator    | 110 / 104 / 113 / 124 / 116 / 115 us | **33 / 95 / 2295 / 2483 / 2553 / 2632 us** |
 
 Android's ranges do not overlap. iOS goes from tight and unimodal to bimodal, four of six runs about
 20x worse. Six runs a side because the first iOS run (33 us) looked like a win and was not. Why iOS

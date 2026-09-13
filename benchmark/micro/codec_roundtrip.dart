@@ -102,11 +102,9 @@ double _measure(BenchmarkBase bench) {
 }
 
 /// Checksums the result so the optimiser cannot drop the decode as dead code.
-final class _DecodeBench extends BenchmarkBase {
-  new(this._codec, this._bytes) : super('decode');
+final class _DecodeBench(final CaptureCodec _codec, final Uint8List _bytes) extends BenchmarkBase {
+  this : super('decode');
 
-  final CaptureCodec _codec;
-  final Uint8List _bytes;
   var _sink = 0;
 
   @override
@@ -122,11 +120,10 @@ final class _DecodeBench extends BenchmarkBase {
 }
 
 /// Checksums the byte length, same dead-code guard as [_DecodeBench].
-final class _EncodeBench extends BenchmarkBase {
-  new(this._codec, this._capture) : super('encode');
+final class _EncodeBench(final CaptureCodec _codec, final BenchCapture _capture)
+    extends BenchmarkBase {
+  this : super('encode');
 
-  final CaptureCodec _codec;
-  final BenchCapture _capture;
   var _sink = 0;
 
   @override

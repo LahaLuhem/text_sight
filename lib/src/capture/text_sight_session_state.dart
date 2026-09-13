@@ -4,15 +4,15 @@ import 'package:meta/meta.dart';
 /// value-equal so a repeated report is a no-op. Recognition is a separate axis, see
 /// `TextSightController.isRecognizing`.
 @immutable
-sealed class TextSightSessionState {
+sealed class const TextSightSessionState() {
   /// Const base constructor for the sealed hierarchy.
-  const new();
+  this;
 }
 
 /// No capture session: before `start()`, after `dispose()`, or while a re-initialize swaps sessions.
-final class SessionIdle extends TextSightSessionState {
+final class const SessionIdle() extends TextSightSessionState {
   /// Creates the idle state.
-  const new();
+  this;
 
   @override
   bool operator ==(Object other) => other is SessionIdle;
@@ -26,9 +26,9 @@ final class SessionIdle extends TextSightSessionState {
 
 /// The capture session is running. Frames are recognized only while `isRecognizing` is on and
 /// something listens to `captures`.
-final class SessionActive extends TextSightSessionState {
+final class const SessionActive() extends TextSightSessionState {
   /// Creates the active state.
-  const new();
+  this;
 
   @override
   bool operator ==(Object other) => other is SessionActive;
@@ -41,15 +41,15 @@ final class SessionActive extends TextSightSessionState {
 }
 
 /// The session exists but is not delivering. The plugin resumes it itself once the cause lifts.
-final class SessionPaused extends TextSightSessionState {
+final class const SessionPaused({
   /// What paused the session.
-  final SessionPauseReason reason;
+  required final SessionPauseReason reason,
 
   /// The platform's own wording, for logs only.
-  final String? details;
-
+  final String? details,
+}) extends TextSightSessionState {
   /// Creates the paused state.
-  const new({required this.reason, this.details});
+  this;
 
   @override
   bool operator ==(Object other) =>
@@ -65,12 +65,12 @@ final class SessionPaused extends TextSightSessionState {
 
 /// The session stopped on an error and stays parked until `start()`. Failures of your own calls
 /// throw at the call site instead.
-final class SessionFailed extends TextSightSessionState {
+final class const SessionFailed({
   /// The platform's own wording, for logs only.
-  final String? details;
-
+  final String? details,
+}) extends TextSightSessionState {
   /// Creates the failed state.
-  const new({this.details});
+  this;
 
   @override
   bool operator ==(Object other) =>
@@ -84,7 +84,7 @@ final class SessionFailed extends TextSightSessionState {
 }
 
 /// Why a [SessionPaused] session is paused.
-enum SessionPauseReason {
+enum SessionPauseReason() {
   /// The app left the foreground. The plugin restarts the camera on return.
   appBackgrounded,
 

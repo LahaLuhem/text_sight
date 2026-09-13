@@ -249,10 +249,7 @@ List<String> _tags(Iterable<Locale> locales) => [
 
 /// Logs the controller's calls in order, can fail [initialize] on demand, and lets a test play
 /// native by reporting session states.
-final class _RecordingPlatform extends TextSightPlatform {
-  new({this.failsToInitialize = false});
-
-  final bool failsToInitialize;
+final class _RecordingPlatform({final bool failsToInitialize = false}) extends TextSightPlatform {
   final log = <String>[];
   late final states = StreamController<TextSightSessionState>.broadcast(
     onListen: () => log.add('listen'),

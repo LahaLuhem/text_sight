@@ -17,6 +17,8 @@ import '../recognition/text_sight_options.dart';
 ///
 /// A pure namespace: every entry point is `static` and it delegates to [TextSightPlatform.instance],
 /// so it holds no platform knowledge and is never instantiated.
+// A namespace has nothing to construct; a primary constructor would declare one.
+// ignore: use_primary_constructors
 abstract final class TextSight {
   /// Recognizes text in the encoded image [bytes] (PNG, JPEG, …) at [options].
   ///

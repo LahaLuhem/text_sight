@@ -11,7 +11,7 @@ import '/features/core/data/recognition_result.dart';
 /// Recognizes a bundled sample image through both static entry points, with no camera,
 /// session, or permission. The in-flight gate lives on the view's
 /// `AsyncIconActionButton`, so there is no busy flag here.
-final class OneShotViewModel extends ViewModel {
+final class OneShotViewModel() extends ViewModel {
   final _resultNotifier = ValueNotifier<RecognitionResult?>(null);
 
   ValueListenable<RecognitionResult?> get resultListenable => _resultNotifier;

@@ -14,9 +14,7 @@ import 'live_scanner_view_model.dart';
 
 /// Live camera OCR: the preview with a confidence-coloured box overlay, a torch
 /// toggle, and a scrolling recognized-text panel.
-class LiveScannerView extends StatelessWidget {
-  const new({super.key});
-
+class const LiveScannerView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: LiveScannerViewModel(),
@@ -104,11 +102,7 @@ class LiveScannerView extends StatelessWidget {
 }
 
 /// The ready state: preview + overlay + torch + recognized-text panel.
-class _ScannerView extends StatelessWidget {
-  final LiveScannerViewModel viewModel;
-
-  const new({required this.viewModel});
-
+class const _ScannerView({required final LiveScannerViewModel viewModel}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Stack(
     fit: .expand,
@@ -210,12 +204,10 @@ class _ScannerView extends StatelessWidget {
 }
 
 /// Names where the frames come from, and fires the two session events that need real hardware.
-class _SimulatedCameraControls extends StatelessWidget {
-  final LiveScannerViewModel viewModel;
-  final ValueListenable<SimulatedFrame?> frames;
-
-  const new({required this.viewModel, required this.frames});
-
+class const _SimulatedCameraControls({
+  required final LiveScannerViewModel viewModel,
+  required final ValueListenable<SimulatedFrame?> frames,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
     child: Padding(
@@ -240,11 +232,8 @@ class _SimulatedCameraControls extends StatelessWidget {
 }
 
 /// A bottom panel listing the most recent recognized lines, each with a confidence chip.
-class _RecognizedTextPanel extends StatelessWidget {
-  final TextSightCapture? capture;
-
-  const new({required this.capture});
-
+class const _RecognizedTextPanel({required final TextSightCapture? capture})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lines = capture?.lines ?? const <RecognizedLine>[];
@@ -268,15 +257,13 @@ class _RecognizedTextPanel extends StatelessWidget {
 }
 
 /// Strokes each recognized line's normalized box, tinted by its confidence tier.
-class _ConfidenceBoxPainter extends CustomPainter {
-  final List<RecognizedLine> lines;
-  final Color Function(double confidence) colorFor;
+class _ConfidenceBoxPainter(
+  final List<RecognizedLine> lines, {
 
   /// Whether [colorFor] varies by confidence, so a repaint is needed when it flips.
-  final bool isTiered;
-
-  new(this.lines, {required this.isTiered, required this.colorFor});
-
+  required final bool isTiered,
+  required final Color Function(double confidence) colorFor,
+}) extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     for (final line in lines) {
@@ -305,12 +292,8 @@ class _ConfidenceBoxPainter extends CustomPainter {
 /// The model-preparation view: a progress indicator over a short message. The indicator runs
 /// determinate while a download reports [progress] (`MaterialProgressIndicatorData.value`), and as
 /// a plain spinner otherwise (indeterminate, or on iOS where there is nothing to download).
-class _PreparingModel extends StatelessWidget {
-  final double? progress;
-  final String message;
-
-  const new({required this.message, this.progress});
-
+class const _PreparingModel({required final String message, final double? progress})
+    extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const .all(24),
@@ -328,14 +311,12 @@ class _PreparingModel extends StatelessWidget {
 }
 
 /// A centered icon + message, with an action button for the states the user can do something about.
-class _MessageView extends StatelessWidget {
-  final Widget icon;
-  final String message;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  const new({required this.icon, required this.message, this.actionLabel, this.onAction});
-
+class const _MessageView({
+  required final Widget icon,
+  required final String message,
+  final String? actionLabel,
+  final VoidCallback? onAction,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (actionLabel, onAction) = (this.actionLabel, this.onAction);

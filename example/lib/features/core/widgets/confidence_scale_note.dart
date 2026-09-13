@@ -6,9 +6,7 @@ import '../data/engine_confidence.dart';
 /// Says why the confidence tiers are switched off, and renders nothing when they are not.
 ///
 /// The demo would otherwise look broken on iOS 18+, where every line reads the same number.
-class ConfidenceScaleNote extends StatelessWidget {
-  const new({super.key});
-
+class const ConfidenceScaleNote({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
     valueListenable: EngineConfidence.scaleListenable,

@@ -14,15 +14,14 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 /// so a tappable child's tap feedback (the Material ink ripple, the Cupertino press
 /// highlight) stays inside the curve instead of bleeding past it. `DecoratedBox` can't
 /// clip its child, so the Cupertino branch uses a [Container].
-class PlatformCard extends StatelessWidget {
+class const PlatformCard({
   /// Content of the card.
-  final Widget child;
+  required final Widget child,
 
   /// Outer margin. Defaults to Material [Card]'s own default on both platforms.
-  final EdgeInsetsGeometry? margin;
-
-  const new({required this.child, this.margin, super.key});
-
+  final EdgeInsetsGeometry? margin,
+  super.key,
+}) extends StatelessWidget {
   /// Mirror of Material [Card]'s default margin, applied on the Cupertino branch (the
   /// Material branch lets [Card] apply its own when [margin] is null).
   static const _defaultMargin = EdgeInsets.all(4);

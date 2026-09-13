@@ -6,7 +6,12 @@ import 'dart:math';
 import 'bench_capture.dart';
 
 /// Realistic OCR-frame profiles, by rough line count and text length.
-enum PayloadProfile {
+enum PayloadProfile({
+  required final int minLines,
+  required final int maxLines,
+  required final int minTextLen,
+  required final int maxTextLen,
+}) {
   /// A street sign or label: a few short lines.
   sign(minLines: 1, maxLines: 3, minTextLen: 3, maxTextLen: 14),
 
@@ -17,27 +22,12 @@ enum PayloadProfile {
   document(minLines: 45, maxLines: 70, minTextLen: 20, maxTextLen: 60),
 
   /// Worst case: a very dense frame.
-  dense(minLines: 100, maxLines: 140, minTextLen: 8, maxTextLen: 40);
-
-  new({
-    required this.minLines,
-    required this.maxLines,
-    required this.minTextLen,
-    required this.maxTextLen,
-  });
-
-  final int minLines;
-
-  final int maxLines;
-
-  final int minTextLen;
-
-  final int maxTextLen;
+  dense(minLines: 100, maxLines: 140, minTextLen: 8, maxTextLen: 40),
 }
 
 /// Seeded payload generators. Seeds derive from the parameters, so every run on every machine
 /// builds byte-identical payloads, which is what makes the numbers comparable.
-abstract final class Payloads {
+abstract final class Payloads() {
   /// Line counts swept to chart how each candidate scales with frame size.
   static const sweepLineCounts = [1, 5, 10, 25, 50, 100];
 

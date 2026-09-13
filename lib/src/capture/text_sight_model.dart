@@ -18,6 +18,8 @@ import '../recognition/text_sight_readiness_state.dart';
 /// A pure namespace: every entry point is `static` and delegates to
 /// [TextSightPlatform.instance], so it carries no platform knowledge and is never
 /// instantiated.
+// A namespace has nothing to construct; a primary constructor would declare one.
+// ignore: use_primary_constructors
 abstract final class TextSightModel {
   /// Ensures the recognition model is present (fetching the unbundled ML Kit model
   /// when needed) and resolves to the terminal state: [ModelReady] on success, or

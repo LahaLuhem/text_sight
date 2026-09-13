@@ -18,9 +18,15 @@ import 'text_sight_session_state.dart';
 /// (or any listener) rebuilds from. Per-frame results arrive on [captures]. The preview renders the
 /// [textureId]. Every call delegates to [TextSightPlatform.instance], so the controller carries
 /// no platform knowledge of its own.
-final class TextSightController extends ChangeNotifier {
-  TextSightOptions _options;
-  bool _isTorchEnabled;
+final class TextSightController({
+  TextSightOptions options = const TextSightOptions(),
+
+  /// Fixed for this controller's life.
+  final CaptureResolution resolution = CaptureResolution.medium,
+  bool torchEnabled = false,
+}) extends ChangeNotifier {
+  TextSightOptions _options = options._stable();
+  var _isTorchEnabled = torchEnabled;
   var _isRecognizing = false;
   int? _textureId;
   TextSightSessionState _sessionState = const SessionIdle();
@@ -28,22 +34,14 @@ final class TextSightController extends ChangeNotifier {
 
   /// Creates a controller from [options], a [resolution] and an initial torch state. Nothing opens
   /// the camera until [start]. [resolution] cannot change after, it rebuilds the capture graph.
-  new({
-    TextSightOptions options = const TextSightOptions(),
-    this.resolution = CaptureResolution.medium,
-    bool torchEnabled = false,
-  }) : assert(
-         options.roi.isNormalizedRoi,
-         'Region-of-interest must be a normalized [0,1] rect with positive extent.',
-       ),
-       _options = options._stable(),
-       _isTorchEnabled = torchEnabled;
+  this
+    : assert(
+        options.roi.isNormalizedRoi,
+        'Region-of-interest must be a normalized [0,1] rect with positive extent.',
+      );
 
   /// The recognizer settings in force. Change them with [updateOptions].
   TextSightOptions get options => _options;
-
-  /// Fixed for this controller's life.
-  final CaptureResolution resolution;
 
   /// Whether the torch is currently requested on.
   bool get isTorchEnabled => _isTorchEnabled;

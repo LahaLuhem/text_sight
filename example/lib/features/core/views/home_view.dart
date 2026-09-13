@@ -12,9 +12,7 @@ import '../widgets/platform/platform_card.dart';
 import 'home_view_model.dart';
 
 /// Landing hub: one tile per feature demo, each pushed as its own route.
-class HomeView extends StatelessWidget {
-  const new({super.key});
-
+class const HomeView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: HomeViewModel(),
@@ -74,19 +72,12 @@ class HomeView extends StatelessWidget {
   );
 }
 
-class _DemoTile extends StatelessWidget {
-  final Widget icon;
-  final String title;
-  final String description;
-  final WidgetBuilder pageBuilder;
-
-  const new({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.pageBuilder,
-  });
-
+class const _DemoTile({
+  required final Widget icon,
+  required final String title,
+  required final String description,
+  required final WidgetBuilder pageBuilder,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
     margin: const .symmetric(horizontal: 16, vertical: 4),

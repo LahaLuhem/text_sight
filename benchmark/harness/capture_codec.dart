@@ -11,7 +11,7 @@ import 'package:standard_message_codec/standard_message_codec.dart';
 import 'bench_capture.dart';
 
 /// One transport candidate: a reversible wire encoding for a [BenchCapture].
-abstract interface class CaptureCodec {
+abstract interface class CaptureCodec() {
   /// Recorded as the result `candidate` field.
   String get name;
 
@@ -31,9 +31,7 @@ const allCodecs = <CaptureCodec>[
 
 /// Baseline, today's wire: a `Map` with a key per field through `StandardMessageCodec`. Decode
 /// mirrors `_decodeCapture` / `_decodeLine` exactly, casting each value via `num`.
-final class MapStdCodec implements CaptureCodec {
-  const new();
-
+final class const MapStdCodec() implements CaptureCodec {
   static const _codec = StandardMessageCodec();
 
   @override
@@ -88,9 +86,7 @@ final class MapStdCodec implements CaptureCodec {
 }
 
 /// Positional `List` (no per-field keys) through `StandardMessageCodec`.
-final class ListStdCodec implements CaptureCodec {
-  const new();
-
+final class const ListStdCodec() implements CaptureCodec {
   static const _codec = StandardMessageCodec();
 
   @override
@@ -137,9 +133,7 @@ final class ListStdCodec implements CaptureCodec {
 
 /// Replica of Pigeon's generated codec: a one-byte type tag per data class, then its fields as a
 /// positional list. Tag values are arbitrary, only the shape mirrors Pigeon.
-final class PigeonReplicaCodec implements CaptureCodec {
-  const new();
-
+final class const PigeonReplicaCodec() implements CaptureCodec {
   static const _codec = _PigeonCodec();
 
   @override
@@ -156,9 +150,7 @@ final class PigeonReplicaCodec implements CaptureCodec {
   }
 }
 
-final class _PigeonCodec extends StandardMessageCodec {
-  const new();
-
+final class const _PigeonCodec() extends StandardMessageCodec {
   static const _lineType = 129;
   static const _captureType = 130;
 
@@ -225,15 +217,13 @@ final class _PigeonCodec extends StandardMessageCodec {
 
 /// Hand-packed binary: no keys or tags, fixed-width floats, length-prefixed UTF-8, little-endian.
 /// Nullable confidence rides a NaN sentinel, which is the complexity the keyed forms avoid.
-final class PackedCodec implements CaptureCodec {
-  const new({required this.name, required this.floatBytes})
-    : assert(floatBytes == 4 || floatBytes == 8, 'floatBytes must be 4 or 8');
-
-  @override
-  final String name;
+final class const PackedCodec({
+  @override required final String name,
 
   /// 4 for float32, 8 for float64.
-  final int floatBytes;
+  required final int floatBytes,
+}) implements CaptureCodec {
+  this : assert(floatBytes == 4 || floatBytes == 8, 'floatBytes must be 4 or 8');
 
   @override
   Uint8List encode(BenchCapture capture) {
@@ -309,11 +299,7 @@ final class PackedCodec implements CaptureCodec {
 }
 
 /// Sequential little-endian reader backing [PackedCodec.decode].
-final class _PackedReader {
-  new(this._data, this._floatBytes);
-
-  final ByteData _data;
-  final int _floatBytes;
+final class _PackedReader(final ByteData _data, final int _floatBytes) {
   var _offset = 0;
 
   double readFloat() {

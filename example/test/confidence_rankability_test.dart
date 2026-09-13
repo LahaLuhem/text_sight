@@ -47,20 +47,12 @@ Future<void> _install(ConfidenceScale scale) {
 }
 
 /// Enough of a platform to answer the one question [EngineConfidence] asks.
-final class _ScalePlatform extends TextSightPlatform {
-  final ConfidenceScale scale;
-
-  new(this.scale);
-
+final class _ScalePlatform(final ConfidenceScale scale) extends TextSightPlatform {
   @override
   Future<ConfidenceScale> get confidenceScale async => scale;
 }
 
-class _Host extends StatelessWidget {
-  final Widget child;
-
-  const new({required this.child});
-
+class const _Host({required final Widget child}) extends StatelessWidget {
   @override
   // Scaffolded like the real screens, because a Material Chip needs a Material ancestor.
   Widget build(BuildContext context) => PlatformApp(home: PlatformScaffold(body: child));
