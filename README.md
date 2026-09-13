@@ -2,7 +2,7 @@
 [![Pub Version](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/text_sight/pulls) [![Pub Package](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
 [![Pub Points](https://img.shields.io/pub/points/text_sight?logo=dart)](https://pub.dev/packages/text_sight/score)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/LahaLuhem/text_sight/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/issues) [![GitHub closed issues](https://img.shields.io/github/issues-closed/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/issues?q=is%3Aissue+is%3Aclosed)
 [![GitHub pull requests](https://img.shields.io/github/issues-pr/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/pulls) [![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/pulls?q=is%3Apr+is%3Aclosed)
 
@@ -29,11 +29,8 @@
     * [iOS](#ios)
     * [Android](#android)
 - [The recognition model](#the-recognition-model)
-    * [Give it a nudge](#give-it-a-nudge)
-    * [Show the download](#show-the-download)
-    * [Or just bundle it](#or-just-bundle-it)
 - [Performance](#performance)
-- [Upgrading from 0.2](#upgrading-from-02)
+- [Upgrading to 1.0](#upgrading-to-10)
 - [Going deeper](#going-deeper)
 
 <!-- TOC end -->
@@ -84,11 +81,27 @@ final capture = await TextSight.recognizeImage(bytes); // or .recognizePath('/ph
 
 ### Tweak it mid-session
 
-Hand the controller a **region of interest** to scan just a scan-box, or change the recognition
-level, languages, or torch while the session runs.
+Hand the controller a **region of interest** to scan just a scan-box. Everything Apple Vision alone
+can do sits under `darwin`, so a setting Android ignores can't be reached without naming the
+platform.
 
 ```dart
-TextSightController(options: TextSightOptions(roi: Rect.fromLTWH(0.1, 0.4, 0.8, 0.2)));
+final controller = TextSightController(
+  options: TextSightOptions(
+    roi: Rect.fromLTWH(0.1, 0.4, 0.8, 0.2),
+    darwin: DarwinOptions(recognitionLevel: RecognitionLevel.accurate),
+  ),
+);
+```
+
+`updateOptions` swaps the whole set at once, so read `options` first when you only mean to change
+one thing. The torch is its own call, since a still image has no such concept.
+
+```dart
+await controller.updateOptions(
+  TextSightOptions(darwin: controller.options.darwin), // roi back to the whole frame
+);
+await controller.updateTorchEnabled(enabled: true);
 ```
 
 Scanning small print? Turn the camera up. Set once, unlike the knobs above.
@@ -128,7 +141,7 @@ empty.
 
 ### The example app
 
-The [`example/`](example/) app is the place to look next. Live overlay, torch, region-of-interest,
+The [`example/`](https://github.com/LahaLuhem/text_sight/tree/main/example) app is the place to look next. Live overlay, torch, region-of-interest,
 permissions, and the one-shot screen, all wired up and ready to crib from.
 
 <table>
@@ -142,21 +155,21 @@ permissions, and the one-shot screen, all wired up and ready to crib from.
 
 One import gets you everything: `package:text_sight/text_sight.dart`.
 
-| Type                                    | What it's for                                                |
-|-----------------------------------------|--------------------------------------------------------------|
-| `TextSightView` + `TextSightController` | the live camera path                                         |
-| `TextSight`                             | the static one-shot, on bytes or a file path                 |
-| `TextSightOptions`                      | region of interest, plus a `darwin` group of Vision-only knobs |
-| `TextSightCapture` and `RecognizedLine` | results: text, normalized box, confidence                    |
-| `TextSightSessionState`                 | what the camera session is doing: idle, active, paused, failed |
-| `TextSightEngine`                       | what this device's engine is like, e.g. `confidenceScale`    |
-| `ConfidenceScale`                       | what a confidence number means here, and whether it ranks    |
-| `TextSightModel`                        | Android model readiness, `ensureReady()` plus a stream       |
-| `DarwinOptions`                         | level, language correction, languages, text-height floor. iOS and macOS only |
-| `RecognitionLevel`                      | `fast` or `accurate`, inside `DarwinOptions`                 |
-| `CaptureResolution`                     | how many pixels the camera feeds the recognizer              |
-| `CameraPermissionStatus`                | granted, denied, permanently denied                          |
-| `RecognizedElement`                     | reserved. Always `null` in v1, word-level results come later |
+| Type                                    | What it's for                                                                                               |
+|-----------------------------------------|-------------------------------------------------------------------------------------------------------------|
+| `TextSightView` + `TextSightController` | the live camera path                                                                                        |
+| `TextSight`                             | the static one-shot, on bytes or a file path                                                                |
+| `TextSightOptions`                      | region of interest, plus a `darwin` group of Vision-only knobs                                              |
+| `TextSightCapture` and `RecognizedLine` | results: text, normalized box, confidence                                                                   |
+| `TextSightSessionState`                 | what the camera session is doing: idle, active, paused, failed                                              |
+| `TextSightEngine`                       | what this device's engine is like, e.g. `confidenceScale`                                                   |
+| `ConfidenceScale`                       | what a confidence number means here, and whether it ranks                                                   |
+| `TextSightModel`                        | Android model readiness, `ensureReady()` plus a stream                                                      |
+| `DarwinOptions`                         | `recognitionLevel`, `usesLanguageCorrection`, `preferredLanguages`, `minimumTextHeight`. iOS and macOS only |
+| `RecognitionLevel`                      | `fast` or `accurate`, inside `DarwinOptions`                                                                |
+| `CaptureResolution`                     | how many pixels the camera feeds the recognizer                                                             |
+| `CameraPermissionStatus`                | granted, denied, permanently denied                                                                         |
+| `RecognizedElement`                     | reserved. Always `null` in v1, word-level results come later                                                |
 
 ## Platform support
 
@@ -219,130 +232,25 @@ Nothing to do. The manifest already has what it needs.
 
 ## The recognition model
 
-On iOS there's nothing to do. Vision ships with the OS, so there's no download and no waiting.
-
-Android is the interesting one. The ML Kit model is **unbundled** by default: about 260 KB in your
-APK, with the real model pulled from Google Play Services the first time you use it. That's on
-purpose, since most apps don't need OCR the second they launch. The catch is that a scan started
-before the model lands comes back empty.
-
-### Give it a nudge
-
-Call this when the user opens your scanner:
-
-```dart
-final state = await TextSightModel.ensureReady();
-if (state is ModelUnavailable) {
-  // No Play Services, or the download didn't make it. Tell the user, maybe offer a retry.
-}
-```
-
-Call it as often as you like. On iOS it returns right away, and on Android it does too once the
-model is around.
-
-### Show the download
-
-Want a progress bar? Listen to the readiness stream. It's a sealed type, so the compiler makes sure
-you've handled every case:
-
-```dart
-TextSightModel.readiness.listen((state) {
-  final label = switch (state) {
-    ModelReady() => 'Ready to scan',
-    ModelDownloading(:final progress) => 'Downloading… ${((progress ?? 0) * 100).round()}%',
-    ModelUnavailable(:final reason) => 'Model unavailable ($reason)',
-  };
-});
-```
-
-The [`example/`](example/) scanner does exactly this: `ensureReady()` to gate, the stream for a real
-download bar.
-
-### Or just bundle it
-
-Ship the model inside your APK instead. Instant, offline, no Play Services. One line in your app's
-`android/gradle.properties`:
-
-```properties
-com.lahaluhem.text_sight.useBundled=true
-```
-
-Now `ensureReady()` returns immediately and `ModelUnavailable` never shows up. You trade size for
-it:
-
-| Mode                  | App size                   | First use           | Offline              | Needs Play Services |
-|-----------------------|----------------------------|---------------------|----------------------|---------------------|
-| Unbundled *(default)* | ~260 KB                    | downloads on demand | after first download | yes                 |
-| Bundled               | ~4 MB per script, per arch | instant             | yes                  | no                  |
+iOS is free here, Vision ships with the OS. Android pulls its ML Kit model from Play Services on
+first use, so your APK carries a ~260 KB stub instead of the whole thing. Warm it up with
+`TextSightModel.ensureReady()` when your scanner opens, or bundle it:
+[doc/android-model.md](https://github.com/LahaLuhem/text_sight/blob/main/doc/android-model.md).
 
 ## Performance
 
-Captured on a physical Galaxy S24 and iPhone 16 in profile mode. Your hardware will differ, and full
-method and numbers are in [`benchmark/`](benchmark/README.md).
+On an iPhone 16, live `fast` recognition keeps up with the camera at 30 captures/s. A Galaxy S24
+manages about 6/s at 2 MP. Charts, method, and the one-shot numbers:
+[doc/performance.md](https://github.com/LahaLuhem/text_sight/blob/main/doc/performance.md).
 
-### One image
+## Upgrading to 1.0
 
-What `TextSight.recognizeImage` costs, by page density. Read the line count beside each bar: a level
-that recognizes nothing returns fast, which would otherwise look like a win.
-
-![One-shot recognition latency on device](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/one_shot_latency.png)
-
-On Android the level is a no-op, since ML Kit's Latin recognizer has no accuracy dial, so its two
-bars land on top of each other. On iOS `fast` is roughly 4x quicker than `accurate`.
-
-**These bars predate a fix.** iOS was inheriting a Vision setting that quietly skipped small text,
-which is why `fast` here reads less and then nothing as the pages get denser. That setting is pinned
-off now, so the chart is due a recapture.
-
-### Live camera
-
-Recognized frames per second over a fixed window, both phones pointed at the same page.
-
-| Platform | Level      | Frame     | Captures/s | Paced by       |
-|----------|------------|-----------|-----------:|----------------|
-| iOS      | `fast`     | 1080x1920 |       30.0 | the camera     |
-| iOS      | `accurate` | 1080x1920 |        4.0 | the recognizer |
-| Android  | `fast`     | 480x640   |        5.9 | the recognizer |
-| Android  | `accurate` | 480x640   |        6.6 | the recognizer |
-
-Hitting the camera's own frame rate means recognition is keeping up and the camera is the limit.
-That is where iOS `fast` sits, at 30/s on a 30 fps camera. The
-recognizer paces everything else. Same issue as above: iOS `fast` was skipping small text when this
-ran, so some of that headroom was work it never did.
-
-**They predate the resolution fix too.** Android ran at CameraX's 640x480 default here. It now asks
-for about 2 MP in 4:3, which roughly doubles the lines it reads and costs frame rate.
-`CaptureResolution.low` gets the old speed back. iOS asks for 1080p.
-
-**Don't read this as iOS versus Android.** The two still capture at different sizes and shapes, so
-they are not doing the same work per frame, and both depend entirely on what the camera sees.
-
-### The transport is not the bottleneck
-
-Results cross from native to Dart as a small per-frame map. Decoding one on the UI isolate costs
-**microseconds**: worst case on the slower of the two phones, a dense 127-line frame is 87 µs, or
-**0.5% of a 60 fps frame budget**. So the recognizer's own work sets the pace.
-
-![Per-frame decode cost vs frame size](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/decode_vs_lines.png)
-![Encoded payload size vs frame size](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/wire_bytes_vs_lines.png)
-![Decode cost per realistic OCR profile](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/profile_decode_bars.png)
-
-Those three are host-measured, for the finer sweep a phone run does not produce. Leaner wire formats
-win big in *percent* and stay tiny in absolute microseconds, which is why the self-describing map
-stays.
-
-## Upgrading from 0.2
-
-| 0.2                    | 0.3                                                                  |
-|------------------------|----------------------------------------------------------------------|
-| `controller.stop()`    | `controller.pauseRecognition()`                                      |
-| `controller.isRunning` | `controller.isRecognizing`                                           |
-|                        | `controller.sessionState`, [above](#know-what-the-camera-is-doing)   |
-
-`captures` is unchanged. A test fake of `TextSightPlatform` needs `sessionStates` once it starts a
-controller.
+Coming from 0.2? `stop()` is now `pauseRecognition()`, the three `update*` setters are one
+`updateOptions()`, and the Vision-only settings moved under `darwin`. Full table, plus the two
+behaviour changes the compiler won't catch: [doc/upgrading.md](https://github.com/LahaLuhem/text_sight/blob/main/doc/upgrading.md).
 
 ## Going deeper
 
 Coordinate handling, the per-line confidence contract, the session state model, how
-region-of-interest differs across platforms, and what's next: all in [APPENDIX.md](APPENDIX.md).
+region-of-interest differs across platforms, and what's next: all in [APPENDIX.md](https://github.com/LahaLuhem/text_sight/blob/main/APPENDIX.md).
+The longer guides live in [`doc/`](https://github.com/LahaLuhem/text_sight/tree/main/doc).

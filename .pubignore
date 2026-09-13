@@ -58,6 +58,10 @@ example/devtools_options.yaml
 /android/gradle.properties
 /android/settings.gradle.kts
 
+# Long-form guides. README links them by absolute GitHub URL, so they resolve from pub.dev
+# without riding along in the tarball.
+/doc/*.md
+
 # Demo media. The screenshots are declared in pubspec.yaml's `screenshots:` field, so they
 # must ship in the tarball for pub.dev's gallery to render them (they're also inlined in
 # README.md via absolute GitHub raw URLs). Only the source screen recording is excluded,
