@@ -30,13 +30,20 @@ dependencies = [
 [dependency-groups]
 dev = [
     "ruff>=0.6,<1.0",
-    "pytest>=8.0,<10.0",
+    # 9.1 floor: the [tool.pytest] table below needs 9.0+, `max_warnings` needs 9.1+.
+    "pytest>=9.1,<10.0",
 ]
 
-[tool.pytest.ini_options]
+# Native TOML, so values keep their real types instead of pytest's INI string mode.
+[tool.pytest]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-ra --strict-markers"
+addopts = ["-ra"]
+strict = true  # unknown config keys, unregistered markers and loose xfails all become errors
+# Quoted because pytest registers these two as string options. An int is a TypeError.
+max_warnings = "0"  # a stray warning means a dep quietly took a deprecated path
+faulthandler_timeout = "60"  # a deadlock in the threaded adb-grant tests shouldn't wait out the job
+faulthandler_exit_on_timeout = true
 
 [tool.ruff]
 # Matches the Dart side's 100-column width (analysis_options.yaml formatter).
