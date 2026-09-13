@@ -11,8 +11,8 @@
 # Minor + patch bumps are grouped into one PR per ecosystem to cut noise. Major
 # bumps still arrive as individual PRs so they can be reviewed in isolation.
 #
-# `github-actions` (majors included), `gradle`, and `/example` `pub` bumps automerge once CI is
-# green (.github/workflows/dependabot-automerge.yml). Root `pub` and gradle/pub majors stay
+# `github-actions` (majors included), `gradle`, `uv`, and `/example` `pub` bumps automerge once CI
+# is green (.github/workflows/dependabot-automerge.yml). Root `pub` and gradle/pub/uv majors stay
 # manual. Rationale: APPENDIX.md#dependabot-automerge.
 version: 2
 
