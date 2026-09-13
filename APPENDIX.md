@@ -84,7 +84,9 @@ and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos ru
 - **`uv` is the easy one.** `benchmark/python` is chart and orchestration tooling that reaches no
   published byte, and `benchmark.yml`'s Ruff and Pytest jobs cover it. Both siblings that run a
   Python benchmark ([`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager),
-  [`list_smith`](https://github.com/LahaLuhem/list_smith)) automerge it on the same terms.
+  [`list_smith`](https://github.com/LahaLuhem/list_smith)) automerge it on the same terms. Pytest
+  runs in `strict` mode, so a bump that adds a new strictness option can turn this red. That is the
+  point: the bump PR is where you want to find out.
 - **Minor, not just patch,** because `dependabot.yml` groups both and `fetch-metadata` reports a
   group's *highest* semver step, and patch-only would skip most batches.
 - **`github-actions` majors automerge too.** Actions reach no consumer, and a bad bump breaks the
