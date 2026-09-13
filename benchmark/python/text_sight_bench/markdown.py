@@ -67,14 +67,11 @@ def _platforms(records: list[dict[str, Any]]) -> list[str]:
 
 
 def _capture_line(records: list[dict[str, Any]]) -> str:
-    """The provenance line, one per distinct capture.
-
-    Blended runs are normal here: a phone is not always to hand, so a report can carry one
-    platform's fresh numbers beside another's from weeks and several releases ago. Stamping them
-    all with the first record's date and sha would read as one sitting, so each gets its own line.
-    """
+    """The provenance line, one per distinct capture."""
     iterations = max((record["iteration"] for record in records), default=-1) + 1
     platforms = _platforms(records)
+    # One entry per platform/sha/version/day: a phone is not always to hand, so a report can
+    # carry runs from different sittings, and one shared stamp would read as a single one.
     captures: dict[tuple[str, str, str, str], dict[str, Any]] = {}
     for record in records:
         key = (
@@ -289,14 +286,9 @@ _LIVE_CAVEATS = (
 
 
 def _steady_windows(rows: pl.DataFrame, panel: pl.DataFrame) -> pl.DataFrame:
-    """The windows measured at the device's steady rate, judged against the whole run.
-
-    A phone boosts hard when it is cool and stalls when it is not, so a window can read either far
-    above or far below what the app will actually sustain. Both are the device, not the candidate,
-    and with only a few windows each they pull a per-candidate median in opposite directions.
-    Judging each window against the run's own median catches both, and falls back to everything
-    when a run is too short or too noisy to have a steady rate at all.
-    """
+    """The windows running near the whole run's median rate, or all of them if none do."""
+    # Judged against the whole run: a cool phone boosts and a hot one stalls, and with few
+    # windows each that drags a per-candidate median.
     reference = panel["captures_per_second"].median()
     if reference is None or reference <= 0:
         return rows

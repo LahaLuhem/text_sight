@@ -39,11 +39,7 @@ def flatten(records: list[dict[str, Any]]) -> pl.DataFrame:
 
 
 def flatten_device(records: list[dict[str, Any]]) -> pl.DataFrame:
-    """One row per device record. `candidate` is the level, `payload` the profile.
-
-    `lines_recognized` rides along: a level that reads nothing returns fast, and latency alone
-    would flatter it.
-    """
+    """One row per device record. `candidate` is the level, `payload` the profile."""
     rows = [
         {
             "platform": record["platform"],
