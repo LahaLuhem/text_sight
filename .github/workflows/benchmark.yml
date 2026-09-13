@@ -1,0 +1,52 @@
+name: Benchmark checks
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}-benchmark
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  harness:
+    name: Flutter analyze (harness)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # harness/ and micro/ have no pubspec of their own, so they resolve against the root one.
+      - uses: ./.github/actions/setup-flutter
+      - run: flutter --no-version-check analyze --fatal-infos benchmark/harness benchmark/micro
+
+  host-app:
+    name: Flutter analyze (host app)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchmark/app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-flutter
+        with:
+          working-directory: benchmark/app
+      - run: flutter --no-version-check analyze --fatal-infos .
+
+  # Single required-check contract for the ruleset. APPENDIX.md#dependabot-automerge
+  benchmark-ok:
+    needs: [harness, host-app]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Fail if any upstream job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        env:
+          RESULTS: >-
+            harness=${{ needs.harness.result }}
+            host-app=${{ needs.host-app.result }}
+        run: |
+          echo "$RESULTS"
+          exit 1

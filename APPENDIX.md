@@ -1,7 +1,7 @@
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [`AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`](#agentsmd-and-claudemd-are-symlinks-into-ai)
-- [Dependabot automerges the boring tier, behind four aggregate checks](#dependabot-automerge)
+- [Dependabot automerges the boring tier, behind five aggregate checks](#dependabot-automerge)
 - [`use_primary_constructors` is on, with four narrow opt-outs](#primary-constructors)
 - [No-bundling: native dependencies never touch the Dart `pubspec.yaml`](#no-bundling-native-dependencies-never-touch-the-dart-pubspecyaml)
 - [Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview](#channel-topology-pigeon-control-api--eventchannel-results--texture-preview)
@@ -64,7 +64,7 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 ---
 
 <a id="dependabot-automerge"></a>
-## Dependabot automerges the boring tier, behind four aggregate checks
+## Dependabot automerges the boring tier, behind five aggregate checks
 [`dependabot-automerge.yml`](./.github/workflows/dependabot-automerge.yml) arms GitHub's native
 auto-merge (rebase) for patch and minor bumps in `github-actions`, `gradle` (both `/android` and
 `/example/android`), and `pub` under `/example`, plus `github-actions` **majors**. Root `pub`,
@@ -91,7 +91,7 @@ and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos ru
   `publish.yml`'s tag-only OIDC path.
 - **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks, so this is
   safe only while `main`'s ruleset is **active** and requires `repo-ok`, `package-ok`, `example-ok`,
-  `conventions-ok`. Keep `required_signatures` off it: rebase-merge emits unsigned commits, so it
+  `benchmark-ok`, `conventions-ok`. Keep `required_signatures` off it: rebase-merge emits unsigned commits, so it
   would block every automerge.
 - **`GITHUB_TOKEN` enables the merge, not the changelog App.** The App sits in the ruleset's bypass
   list, and a bypass covers status checks too, so merging as it would skip the gate this rests on.
