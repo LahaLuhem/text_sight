@@ -3,9 +3,9 @@ library;
 
 /// What a [RecognizedLine.confidence] value means, which depends on the engine that produced it.
 ///
-/// Named for what the numbers behave like rather than who made them, so an engine with a third
-/// character slots in without every consumer learning its name. Values from different scales are
-/// never comparable, not across platforms and not across OS versions.
+/// Named for how the numbers behave rather than who made them, so a third engine slots in without
+/// consumers learning its name. Different scales are never comparable, across platforms or OS
+/// versions.
 enum ConfidenceScale({
   /// Whether ordering lines by confidence inside one capture tells you anything.
   ///

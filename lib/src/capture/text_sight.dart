@@ -9,15 +9,10 @@ import '../recognition/text_sight_options.dart';
 
 /// One-shot, still-image text recognition: the static counterpart to the live `TextSightController`.
 ///
-/// Shares the recognizer and result models with the live driver but needs no camera, session, texture,
-/// or permission: each call hands a still image to a transient native recognizer and returns a [TextSightCapture].
-/// Recognition defaults to [RecognitionLevel.accurate], unlike the live driver's latency-bound `.fast`,
-/// a still has no per-frame budget to protect. The returned capture's `quarterTurns` is always `0`,
-/// since a still is already upright.
-///
-/// A pure namespace: every entry point is `static` and it delegates to [TextSightPlatform.instance],
-/// so it holds no platform knowledge and is never instantiated.
-// A namespace has nothing to construct; a primary constructor would declare one.
+/// Same recognizer and result models as the live driver, but no camera, session, texture, or
+/// permission. Defaults to [RecognitionLevel.accurate], having no per-frame budget to protect,
+/// and `quarterTurns` is always `0`.
+// Nothing to construct here, so a primary constructor would only add a public member.
 // ignore: use_primary_constructors
 abstract final class TextSight {
   /// Recognizes text in the encoded image [bytes] (PNG, JPEG, …) at [options].

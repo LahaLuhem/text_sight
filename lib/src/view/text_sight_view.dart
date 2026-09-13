@@ -17,16 +17,13 @@ typedef TextSightOverlayBuilder = Widget Function(
 
 /// A live camera preview that recognizes text, driven by a [TextSightController].
 ///
-/// Renders the controller's [TextSightController.textureId] and rebuilds as the
-/// session state changes. Each [TextSightCapture] is delivered to [onResult]
-/// (for consumers that only need the text) and to [overlayBuilder] (for drawing
-/// boxes over the preview). Until the first capture arrives (while
-/// [TextSightController.start] opens the camera and the first frame is recognized)
-/// [placeholderBuilder] is shown (the preview's upright rotation rides the capture).
+/// Renders the controller's [TextSightController.textureId] and rebuilds as session state changes.
+/// Each [TextSightCapture] goes to [onResult] and to [overlayBuilder] for drawing boxes over the
+/// preview. [placeholderBuilder] shows until the first capture arrives, which is what carries the
+/// preview's upright rotation.
 ///
-/// The view does not start or stop the session itself. The consumer drives the
-/// controller, so session lifecycle (including pausing on app background) stays
-/// in one place.
+/// The view never starts or stops the session. The consumer drives the controller, so lifecycle
+/// (including pausing on app background) stays in one place.
 final class const TextSightView({
   /// The controller that owns the session this view renders.
   required final TextSightController controller,

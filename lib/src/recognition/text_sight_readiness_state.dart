@@ -1,11 +1,8 @@
 /// The readiness of the on-device recognition model, reported by `TextSightModel`.
 ///
-/// Sealed so a consumer can `switch` over the three outcomes exhaustively and pull
-/// each state's own data in the same step. On iOS the engine is the Vision *system
-/// framework*, so the model is always present and readiness is only ever [ModelReady]
-/// there. The other states arise on Android with the **unbundled** ML Kit model
-/// (the default), which is fetched from Google Play Services and so can be
-/// downloading, or unavailable when Play Services is missing or a fetch fails.
+/// Sealed, so a consumer can `switch` the three outcomes exhaustively and read each state's data
+/// in the same step. Only ever [ModelReady] on iOS, where Vision is a system framework. The others
+/// are Android with the default unbundled ML Kit model, which Play Services fetches.
 sealed class const TextSightReadinessState() {
   /// Const base constructor for the sealed hierarchy.
   this;
@@ -41,10 +38,9 @@ final class const ModelDownloading({
 
 /// The model cannot be made ready, so recognition will not produce results.
 ///
-/// A terminal failure state, Android-only in practice: the unbundled model needs
-/// Google Play Services (absent on some devices), and a fetch can fail. [reason]
-/// says which. [details] carries the native diagnostic when one is available. Never
-/// occurs on iOS. Bundling the model (the `useBundled` build flag) sidesteps it.
+/// Terminal, and Android-only: the unbundled model needs Google Play Services, which some devices
+/// lack, and a fetch can fail. [reason] says which, [details] carries the native diagnostic.
+/// Bundling the model (`useBundled`) sidesteps it.
 final class const ModelUnavailable({
   /// Why the model could not be made ready.
   required final ModelUnavailableReason reason,

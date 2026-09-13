@@ -5,16 +5,16 @@ in this package. Claude-Code-specific guidance lives in [CLAUDE.md](./CLAUDE.md)
 
 ## Project goal
 
-A Flutter **plugin** for live, on-device **text recognition**: **Apple Vision on iOS**,
-**ML Kit on Android**: the text-scanning sibling to
+A Flutter plugin for live, on-device text recognition: Apple Vision on iOS, ML Kit on
+Android. The text-scanning sibling to
 [`mobile_scanner`](https://pub.dev/packages/mobile_scanner). Two entry points: a live
 camera widget (`TextSightView` + `TextSightController`) and a one-shot static call
 (`TextSight.recognizeImage`/`.recognizePath`).
 
-The gap it fills: existing live + cross-platform OCR wrappers run **ML Kit on iOS too**,
+The gap it fills: existing live + cross-platform OCR wrappers run ML Kit on iOS too,
 which drags `GoogleMLKit` pods into the iOS build and trips the arm64 /
 Swift-Package-Manager deprecation warnings on Apple-Silicon simulators. `text_sight` uses
-each platform's **native** engine so iOS links **zero** third-party ML libraries (Apple
+each platform's native engine, so **iOS links zero third-party ML libraries** (Apple
 Vision is a system framework) while Android keeps ML Kit (fine there). This isolation is
 the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no-bundling).
 
@@ -35,26 +35,26 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 - **Flutter ≥ 3.44, Dart ≥ 3.12** (pinned in `pubspec.yaml`, and `.fvmrc` pins the Flutter
   channel for local use). Dart 3.12 comfortably clears the 3.10 static-dot-shorthand floor
   the code style leans on.
-- **iOS, Swift**, using the system frameworks **Vision** + **AVFoundation** (+ CoreMedia /
-  CoreVideo). `AVCaptureSession` → a `TextRecognizer` **hybrid**: Vision's Swift
-  **`RecognizeTextRequest`** (the WWDC 2024 API) on iOS 18+, the legacy **`VNRecognizeTextRequest`**
-  on iOS 15-17, picked once via a factory, with preview to a `FlutterTexture`. **iOS 15.0 deployment
-  floor** (Flutter's own floor since 3.47), and iOS 15-16 get degraded, un-rotated capture (no `RotationCoordinator`)
-  ([`APPENDIX.md#ios-capture-strategy`](../APPENDIX.md#ios-capture-strategy)). Ships **both**
-  `ios/text_sight.podspec` **and** `ios/text_sight/Package.swift` so host apps on CocoaPods
+- **iOS, Swift**, using the system frameworks Vision + AVFoundation (+ CoreMedia /
+  CoreVideo). `AVCaptureSession` → a `TextRecognizer` hybrid: Vision's Swift
+  `RecognizeTextRequest` (the WWDC 2024 API) on iOS 18+, the legacy `VNRecognizeTextRequest`
+  on iOS 15-17, picked once via a factory, with preview to a `FlutterTexture`. iOS 15.0 deployment
+  floor (Flutter's own floor since 3.47), and iOS 15-16 get degraded, un-rotated capture (no `RotationCoordinator`)
+  ([`APPENDIX.md#ios-capture-strategy`](../APPENDIX.md#ios-capture-strategy)). Ships both
+  `ios/text_sight.podspec` and `ios/text_sight/Package.swift` so host apps on CocoaPods
   *or* SwiftPM both work, and the SPM path is the cleanliness win. Neither bundles ML Kit or any
   library that duplicates a system framework, since the no-bundling line is *prefer-native*, not
   *zero-dependency* (hard rule 2).
-- **Android, Kotlin**, using **CameraX** + **ML Kit text recognition**. `ImageAnalysis`
+- **Android, Kotlin**, using CameraX + ML Kit text recognition. `ImageAnalysis`
   (`STRATEGY_KEEP_ONLY_LATEST`) → `TextRecognition` client, preview via `Texture`. ML Kit +
-  CameraX are declared **only** in `android/build.gradle.kts`. The module stays on Flutter's
-  **built-in Kotlin** (Gradle Kotlin-DSL, `plugins {}`), never the legacy
+  CameraX are declared only in `android/build.gradle.kts`. The module stays on Flutter's
+  built-in Kotlin (Gradle Kotlin-DSL, `plugins {}`), never the legacy
   `apply plugin: 'kotlin-android'`, which re-introduces the KGP deprecation warning this
   package exists to avoid.
 - **Channel topology** ([`APPENDIX.md#channel-topology`](../APPENDIX.md#channel-topology)):
-  the typed **control API** (initialize / start / pause-recognition / set-options / toggle-torch /
-  dispose) is **Pigeon** codegen (`@HostApi`). **Per-frame results** stream over a plain
-  **`EventChannel`**, the **camera preview** is a `Texture`, and **session state** comes back over a
+  the typed control API (initialize / start / pause-recognition / set-options / toggle-torch /
+  dispose) is Pigeon codegen (`@HostApi`). Per-frame results stream over a plain
+  `EventChannel`, the camera preview is a `Texture`, and session state comes back over a
   Pigeon `@FlutterApi`. Pigeon is a dev dependency, so it costs consumers nothing at runtime.
 - **Two generators, one freshness gate.** Pigeon writes the wire types, `copy_with_extension_gen`
   writes `copyWith` for the public value types. Both outputs are committed, and CI's
@@ -201,8 +201,8 @@ comply are blocked by CI.**
   | `sem-skip`      | (skip)            | Internal-only change (CI, docs, tests, native build glue, …) |
 
   The PR title becomes the CHANGELOG line verbatim, so write it as a release-note bullet.
-- **PR body must not be empty**, **no merge commits in the PR range** (rebase to integrate
-  `main`), and **commit subjects ≤ 82 characters**.
+- PR body must not be empty, no merge commits in the PR range (rebase to integrate
+  `main`), and commit subjects ≤ 82 characters.
 
 Cutting a release is one command: `scripts/release.sh [patch|minor|major]`. See
 `scripts/README.md` for usage, preflight, and the pipeline-owned-files contract.

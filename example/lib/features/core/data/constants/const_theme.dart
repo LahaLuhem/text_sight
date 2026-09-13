@@ -5,12 +5,10 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
 /// Confidence-tier palette for the demo, resolved per platform.
 ///
-/// Each colour returns the Material hue on Android and the matching
-/// `CupertinoColors.system*` colour on iOS, picked via [platformValue]
-/// (`defaultTargetPlatform`, the same dispatch as `context.platformIcon`) and then run
-/// through [CupertinoDynamicColor.resolve] so the iOS system colours follow light/dark
-/// mode. Recognized lines are tinted by confidence: [green] high, [orange] medium,
-/// [red] low, and [neutral] where the engine's scale cannot be ranked at all.
+/// Each colour returns the Material hue on Android and the matching `CupertinoColors.system*` on
+/// iOS via [platformValue], then runs through [CupertinoDynamicColor.resolve] so iOS follows
+/// light/dark. Tiers: [green] high, [orange] medium, [red] low, and [neutral] where the engine's
+/// scale cannot be ranked at all.
 abstract final class ConstTheme() {
   /// Alpha for a confidence-tinted chip fill.
   static const confidenceFillAlpha = 0.15;

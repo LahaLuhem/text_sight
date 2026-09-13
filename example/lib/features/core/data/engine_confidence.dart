@@ -3,10 +3,9 @@ import 'package:text_sight/text_sight.dart';
 
 /// The engine's confidence scale, asked once and shared.
 ///
-/// It depends on which recognizer the OS hands over, so it cannot change while the app runs, which
-/// is why one fetch is enough. Anything that ranks, thresholds or tints by confidence reads this
-/// first: Vision on iOS 18+ reports a coarse scale that parks every line on the same number, and
-/// colouring tiers from that would imply a precision the engine does not have.
+/// It depends on which recognizer the OS hands over, so it cannot change while the app runs.
+/// Anything that ranks, thresholds or tints by confidence reads this first: Vision on iOS 18+
+/// parks every line on the same number, and tiering from that would imply precision it lacks.
 abstract final class EngineConfidence() {
   static final _scaleNotifier = ValueNotifier<ConfidenceScale?>(null);
 

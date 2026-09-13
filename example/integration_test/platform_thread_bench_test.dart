@@ -5,14 +5,11 @@ import 'package:text_sight/src/platform/text_sight_platform.dart';
 import 'package:text_sight/text_sight.dart';
 
 /// Measures how long the platform thread is unavailable while a large `recognizeImage` payload
-/// crosses the control channel. That is the slice `@TaskQueue(serialBackgroundThread)` moves: the
-/// channel's message decode currently runs on the platform thread before the handler is invoked.
+/// crosses the control channel, the slice `@TaskQueue(serialBackgroundThread)` moves.
 ///
 /// The probe is `checkCameraPermission`, a synchronous host method, so its round trip is dominated
-/// by how long it waits for the platform thread. Run it before and after the annotation and diff.
-///
-/// Not isolated: Dart-isolate scheduling and the engine's own hop are inside the measurement. It
-/// bounds the effect rather than attributing it precisely.
+/// by that wait. Run before and after the annotation and diff. Dart-isolate scheduling and the
+/// engine's own hop sit inside the measurement, so it bounds the effect rather than attributing it.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 

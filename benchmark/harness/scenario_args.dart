@@ -1,9 +1,7 @@
 import 'dart:io';
 
-/// CLI flags shared by the benchmark entrypoints, so the orchestrator drives them uniformly:
-/// `--iterations`, `--output`, `--git-sha`, `--package-version`, all required.
-///
-/// Hand-parsed: too small a surface to justify `package:args`.
+/// CLI flags shared by the benchmark entrypoints: `--iterations`, `--output`, `--git-sha`,
+/// `--package-version`, all required. Hand-parsed, too small a surface for `package:args`.
 final class const ScenarioArgs._({
   required final int iterations,
   required final String outputPath,

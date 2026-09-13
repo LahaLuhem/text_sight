@@ -33,11 +33,9 @@ void main() {
         for (final corrected in const [false, true]) (level: level, corrected: corrected),
     ];
 
-    // Burn the device in before measuring anything. Whichever candidate went first read ~75%
-    // high, and running the sweep backwards showed the gap followed the position rather than the
-    // candidate. Measured on a Sony XQ-BQ52: it holds ~8 captures/s for about 40 s, drops off a
-    // thermal cliff, then sits flat at ~4.5 for the rest of the run. So this window has to outlast
-    // the cliff, not just the first cold frames.
+    // Burn the device in first, or whichever candidate runs first reads ~75% high. A Sony XQ-BQ52
+    // holds ~8 captures/s for ~40 s, falls off a thermal cliff, then sits flat at ~4.5, so the
+    // window has to outlast the cliff rather than just the cold frames.
     await controller.start();
     await Future<void>.delayed(_warmUpWindow);
     await controller.pauseRecognition();

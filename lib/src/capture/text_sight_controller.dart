@@ -13,11 +13,9 @@ import 'text_sight_session_state.dart';
 
 /// Configures and drives a live camera recognition session.
 ///
-/// The Dart face of the live-camera driver. A [ChangeNotifier] exposing the current configuration
-/// and session state through individual getters (no bundled state object) that a `TextSightView`
-/// (or any listener) rebuilds from. Per-frame results arrive on [captures]. The preview renders the
-/// [textureId]. Every call delegates to [TextSightPlatform.instance], so the controller carries
-/// no platform knowledge of its own.
+/// A [ChangeNotifier] exposing configuration and session state through individual getters that a
+/// `TextSightView` (or any listener) rebuilds from. Per-frame results arrive on [captures], and
+/// the preview renders [textureId].
 final class TextSightController({
   TextSightOptions options = const TextSightOptions(),
 
@@ -88,14 +86,12 @@ final class TextSightController({
   Future<CameraPermissionStatus> checkCameraPermission() =>
       TextSightPlatform.instance.checkCameraPermission();
 
-  /// Requests camera permission, surfacing the system prompt when the choice is
-  /// still undecided, and resolves to the resulting [CameraPermissionStatus].
+  /// Requests camera permission, prompting when the choice is undecided, and resolves to the
+  /// resulting [CameraPermissionStatus].
   ///
-  /// Call this before [start] to drive the permission flow without a third-party
-  /// package. You must still declare the platform usage string,
-  /// `NSCameraUsageDescription` on iOS, which is **required** (iOS terminates the
-  /// app if the camera is requested without it). The Android manifest entry ships
-  /// with the plugin. [start] itself never requests, so its behaviour is unchanged.
+  /// Call it before [start], which never requests on its own. You must still declare
+  /// `NSCameraUsageDescription` on iOS, or iOS terminates the app on first camera use. Android's
+  /// manifest entry ships with the plugin.
   Future<CameraPermissionStatus> requestCameraPermission() =>
       TextSightPlatform.instance.requestCameraPermission();
 

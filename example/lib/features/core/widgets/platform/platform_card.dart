@@ -6,14 +6,10 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 /// A platform-adaptive card: Material [Card] on Android, and a rounded, filled
 /// surface in the iOS idiom on Cupertino (which ships no native card).
 ///
-/// Gap-plugging stand-in: `platform_adaptive_widgets` exposes no `PlatformCard`
-/// (Cupertino has no `Card` to map to), so the example owns one until the base library
-/// grows it. The child supplies its own padding, exactly as a Material [Card] expects.
-///
-/// Both branches clip the child to the rounded corners (`clipBehavior: Clip.antiAlias`),
-/// so a tappable child's tap feedback (the Material ink ripple, the Cupertino press
-/// highlight) stays inside the curve instead of bleeding past it. `DecoratedBox` can't
-/// clip its child, so the Cupertino branch uses a [Container].
+/// Gap-plugging stand-in until `platform_adaptive_widgets` grows a `PlatformCard`. The child
+/// supplies its own padding, as a Material [Card] expects. Both branches clip to the rounded
+/// corners so a tappable child's feedback stays inside the curve, which is why Cupertino uses a
+/// [Container]: `DecoratedBox` cannot clip its child.
 class const PlatformCard({
   /// Content of the card.
   required final Widget child,

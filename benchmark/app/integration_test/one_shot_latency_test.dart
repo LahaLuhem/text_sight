@@ -8,8 +8,7 @@ import 'support/text_page.dart';
 
 /// Round-trip latency of `TextSight.recognizeImage`, by page profile, level and language
 /// correction. One number covers decode, inference, native encode and the channel hop, so it is
-/// what a call costs an app, not inference time. Both knobs are no-ops on Android, so its four
-/// series should land on top of each other.
+/// what a call costs an app. Both knobs are no-ops on Android, so its four series should coincide.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 

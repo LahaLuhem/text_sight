@@ -5,10 +5,9 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 /// A platform-adaptive chip: Material [Chip] on Android, and a rounded
 /// icon-and-label pill on Cupertino.
 ///
-/// Gap-plugging stand-in: `platform_adaptive_widgets` exposes no `PlatformChip`, and a
-/// bare Material [Chip] throws "No Material widget found" on the iOS branch (a
-/// `CupertinoPageScaffold` provides no `Material` ancestor). The example owns one until
-/// the base library grows it.
+/// Gap-plugging stand-in until `platform_adaptive_widgets` grows a `PlatformChip`. A bare Material
+/// [Chip] throws "No Material widget found" on the iOS branch, since a `CupertinoPageScaffold`
+/// provides no `Material` ancestor.
 class const PlatformChip({
   /// The chip's label.
   required final Widget label,

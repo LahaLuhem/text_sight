@@ -13,15 +13,10 @@ import 'pigeon_text_sight_platform.dart';
 
 /// The platform-facing contract both drivers delegate to: the federation seam.
 ///
-/// Drawn now even though v1 ships a single plugin package: the live controller
-/// (and, later, the static one-shot) talk only to [instance], never to the native channel directly,
-/// so splitting into per-platform packages later is mechanical. The contract is stated in the package's
-/// *public* types. Pigeon is an implementation detail of the concrete subclass and never appears here.
-///
-/// Methods default to throwing [UnimplementedError] rather than being abstract, so adding one later
-/// is non-breaking for any future federated implementation that has not overridden it yet.
-/// [instance] defaults to [PigeonTextSightPlatform]. A federated platform package could later
-/// supply its own via the [instance] setter.
+/// Drivers talk only to [instance], never to the native channel, so splitting into per-platform
+/// packages later is mechanical, and Pigeon never appears here. Methods throw [UnimplementedError]
+/// by default rather than being abstract, so adding one is non-breaking. [instance] defaults to
+/// [PigeonTextSightPlatform].
 abstract class TextSightPlatform() extends PlatformInterface {
   /// Constructs the interface, passing the verification token to [PlatformInterface].
   this : super(token: _token);
@@ -41,10 +36,8 @@ abstract class TextSightPlatform() extends PlatformInterface {
   }
 
   /// Opens the camera with [options] and returns the texture id the preview renders into.
-  /// Recognition does not begin until [start] is called.
-  ///
-  /// Reopening an already-open session is fine: the old one is released first, so the id this
-  /// returns replaces the previous one.
+  /// Recognition waits for [start]. Reopening an open session is fine, the old one is released
+  /// first and this id replaces it.
   Future<int> initialize(TextSightOptions options, CaptureResolution resolution) =>
       throw UnimplementedError('initialize() has not been implemented.');
 

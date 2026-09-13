@@ -1,29 +1,17 @@
 # Dependabot version updates.
 # Reference: https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
 #
-# Bot PRs branch as `dependabot/...` and carry no `sem-*` label. The
-# PR-convention and changelog workflows exempt `dependabot[bot]` from the
-# branch-name, sem-label and changelog jobs (see
-# .github/workflows/{pr-conventions,changelog}.yml), so these PRs land WITHOUT
-# an automatic CHANGELOG entry, so add one by hand if a root-package bump is
-# user-visible. The commit-length / no-merge-commit gate still applies to them.
-#
-# Minor + patch bumps are grouped into one PR per ecosystem to cut noise. Major
-# bumps still arrive as individual PRs so they can be reviewed in isolation.
-#
-# `github-actions` (majors included), `gradle`, `uv`, and `/example` `pub` bumps automerge once CI
-# is green (.github/workflows/dependabot-automerge.yml). Root `pub` and gradle/pub/uv majors stay
-# manual. Rationale: APPENDIX.md#dependabot-automerge.
+# Bot PRs skip the branch-name, sem-label and changelog jobs, so they land with no CHANGELOG
+# entry. Add one by hand if a root-package bump is user-visible.
+# Grouping, and what automerges: APPENDIX.md#dependabot-automerge
 version: 2
 
 updates:
   # --- Dart / Flutter: published library ---
   # Bumps the root pubspec's constraints. pub.dev only, git and path deps are not eligible.
   #
-  # `versioning-strategy: increase` so bumps land as `^28.0.0` rather than a widened range. On
-  # `auto` Dependabot reads `version:` as "this is a library" and widens instead of raising the
-  # floor, which buys nothing when most root deps are dev-only. /example is fine on `auto`, its
-  # `publish_to: none` already reads as an app.
+  # `versioning-strategy: increase` raises the floor instead of widening the range, which is what
+  # `auto` does once it reads `version:` as a library. /example stays on `auto`.
   - package-ecosystem: "pub"
     directory: "/"
     versioning-strategy: "increase"
@@ -45,10 +33,9 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- Android / Gradle: plugin module ---
-  # The plugin's own Gradle build, and the only place recognition and camera deps may live
-  # (no-bundling is the iOS contract). These reach every Android consumer through the AAR's POM.
-  # Also covers AGP in settings.gradle.kts, the JVM test stack, and the wrapper. Publish-relevant,
-  # so weigh the transitive-closure impact per PR.
+  # The only place recognition and camera deps may live, and they reach every Android consumer
+  # through the AAR's POM, so weigh the transitive closure per PR. Also covers AGP, the JVM test
+  # stack, and the wrapper.
   - package-ecosystem: "gradle"
     directory: "/android"
     schedule:
@@ -93,7 +80,6 @@ updates:
         update-types: ["minor", "patch"]
 
   # --- No `swift` (SPM) ecosystem (yet) ---
-  # Absent because there is nothing to track, not because Apple-side deps are banned: the contract
-  # is prefer-native, not zero-dependency (AGENTS.md hard rule 2). Package.swift carries only a
-  # local `path:` dep, and the example's SPM manifest is Flutter-generated and gitignored, so no
-  # committed resolved manifest exists. Add a `swift` block the day a registry dep lands.
+  # Not a ban (hard rule 2 is prefer-native, not zero-dependency), just nothing to track:
+  # Package.swift has only a local `path:` dep and the example's manifest is generated + gitignored.
+  # Add a `swift` block the day a registry dep lands.

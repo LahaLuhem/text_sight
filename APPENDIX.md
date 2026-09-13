@@ -273,7 +273,7 @@ the readiness `EventChannel` as a decoded map, so Golubets' sealed-class codegen
 gone unused. That, plus Golubets' own pub.dev page discouraging generated code in a published
 package's public API and requiring both ends on the same version, kept the package on Pigeon (see
 [#model-readiness](#model-readiness)). Low-risk and reversible: codegen is dev-time only and
-`messages.g.dart` is committed, so the fallback is simply to freeze it. (Pigeon's own
+`messages.g.dart` is committed, so the fallback is to freeze it. (Pigeon's own
 `@EventChannelApi` could later type the results stream, but with `Rect`/`Size` models that can't
 cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
 
@@ -300,7 +300,7 @@ project's formatter gate (`page_width: 100`, applied tree-wide) would otherwise 
 hand-written `copyWith` compiles fine while silently missing a field added later, and no test can
 catch a field nobody wrote down anywhere. `copy_with_extension_gen` derives it from the fields, so
 the drift cannot happen rather than merely being detectable. The generator and `build_runner` are
-dev-only; the `copy_with_extension` annotation is a **runtime** dependency because the annotated
+dev-only. The `copy_with_extension` annotation is a **runtime** dependency because the annotated
 source ships to consumers. Its own dependency list is just `meta`, which this package already
 declared, so the consumer-visible closure grows by exactly one package. A pure-Dart alternative was
 tried first and rejected: an all-required private constructor makes the drift a compile error, but
@@ -375,10 +375,10 @@ platform-agnostic and never branches on platform.
 
 The three coordinate systems that meet here disagree:
 
-- **Apple Vision** returns boxes normalized to `[0,1]` but with a **bottom-left** origin
+- **Apple Vision** returns boxes normalized to `[0,1]` but with a bottom-left origin
   (`VNRecognizedTextObservation.boundingBox`). The Swift side flips Y
   (`top = 1 - (origin.y + height)`) before sending.
-- **ML Kit** returns **pixel** rects in the *rotated* image space. The Kotlin side divides by
+- **ML Kit** returns pixel rects in the *rotated* image space. The Kotlin side divides by
   the rotated image width/height to normalize.
 - **Flutter** wants top-left normalized, so the painter maps a box onto the preview with one
   `BoxFit`-style transform.
@@ -436,7 +436,7 @@ model and the `Rect` ROI).
 <a id="ios-capture-strategy"></a>
 ## iOS capture & recognition strategy: roll-your-own AVCapture + Swift Vision
 
-**Decision.** The iOS live path is **roll-your-own** `AVCaptureSession` + Vision →
+**Decision.** The iOS live path is roll-your-own `AVCaptureSession` + Vision →
 `FlutterTexture`, mirroring the Android `TextSightCamera`. The primary recognizer is Vision's **Swift
 `RecognizeTextRequest`** (the WWDC 2024 API) with a legacy `VNRecognizeTextRequest` fallback for
 iOS 15-17 (the hybrid, below). The **deployment floor is 15.0** (`text_sight.podspec` +
@@ -468,7 +468,7 @@ rather than inheriting one. `topCandidates(1)` confidence and a normalized `regi
 carry over. The modern API *was* an iOS 18 floor, the hybrid below recovers iOS 15-17 through the
 legacy request while iOS 18+ keeps the modern path.
 
-**Backwards-compatible hybrid (iOS 15-17), as built (issue #5).** The floor is **15.0**, raised
+**Backwards-compatible hybrid (iOS 15-17), as built (issue #5).** The floor is 15.0, raised
 from the original 13.0 once Flutter 3.47 made 15 its own minimum, leaving 13 and 14 unreachable. A
 `TextRecognizer` protocol abstracts two backends: `ModernTextRecognizer` (`@available(iOS 18, *)`,
 the Swift `RecognizeTextRequest`) and `LegacyTextRecognizer` (`VNRecognizeTextRequest`, iOS 15-17,
@@ -488,7 +488,7 @@ also exposed `AVCaptureDevice.RotationCoordinator` (iOS 17+) in the *capture* pi
 "only the recognizer-construction site branches" guess was wrong. Rather than carry a second rotation
 pipeline (the pre-17 `UIDevice` / `videoOrientation` path) for a device population we **do not expect
 in practice**: iOS 15-16 is a vanishing slice by 2026, and most iOS-17-capable devices also run 18, so
-the coordinator is gated `@available(iOS 17, *)` and on iOS 15-16 rotation is simply **not tracked**
+the coordinator is gated `@available(iOS 17, *)` and on iOS 15-16 rotation is **not tracked**
 (`currentRotationAngle` stays 0): basic, un-rotated *live* capture (the one-shot is unaffected, since it
 reads EXIF). Recognition still works, and the live preview just won't follow device rotation. This
 degraded fallback (**option C**) was chosen for near-free 15-16 reach at low maintenance. The full
@@ -500,7 +500,7 @@ justify it** (caveated in the [README](./README.md)). Cross-ref: [#channel-topol
 <a id="model-readiness"></a>
 ## Model readiness and the bundled / unbundled axis (Android)
 
-**Decision.** The on-device recognition model loads **lazily and under app control**, never on the
+**Decision.** The on-device recognition model loads lazily and under app control, never on the
 app-startup path, and whether it is **bundled or unbundled** is a build-time choice. Two orthogonal
 axes, settled 2026-06-22:
 
@@ -754,7 +754,7 @@ the `@HostApi` ([#channel-topology](#channel-topology)).
 <a id="android-standalone-dev"></a>
 ## Developing the Android module standalone in Android Studio
 
-**Decision.** The plugin's `android/` carries a little **standalone-development scaffolding** so it
+**Decision.** The plugin's `android/` carries a little standalone-development scaffolding so it
 can be opened directly in Android Studio (`File > Open > android/`) with full symbol resolution,
 including `io.flutter.*`. This is *not* Flutter's default plugin layout. `flutter create
 --template=plugin` produces an `android/` that resolves only inside an app build. The additions:
@@ -783,7 +783,7 @@ from the consuming app, so the template declares neither AGP versions nor the en
 resolve standalone requires coupling to a specific engine version (the `engine.version` read above),
 which Flutter avoids baking into every generated plugin.
 
-**Why it's safe for consumers.** Every addition is read **only when `android/` is the Gradle root**:
+**Why it's safe for consumers.** Every addition is read only when `android/` is the Gradle root:
 a subproject's `settings.gradle.kts` and root `gradle.properties` are ignored in an app build, and
 the engine block is guarded by `project == rootProject` (false in-app). The whole lot is also
 excluded from the published package via [`.pubignore`](./.pubignore), and a consuming app builds the

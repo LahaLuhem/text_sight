@@ -136,7 +136,7 @@ style.
   | Group it when                                                     | Leave it neutral when                                                                   |
   |-------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
   | It is an **option**, so setting it promises behaviour that changes | It is an **observation**: `TextSightModel.ensureReady()` resolving instantly on iOS still did what it promised |
-  | The engine simply cannot do it, whatever the dependency            | The result differs but both platforms deliver it, e.g. `roi`, which Vision takes as a true region and Android delivers by cropping |
+  | The engine cannot do it at all, whatever the dependency            | The result differs but both platforms deliver it, e.g. `roi`, which Vision takes as a true region and Android delivers by cropping |
 
 - **Local-variable names carry a concise type-suffix.** Dart is strongly typed, but a
   reader without IDE inlay-hints can't see the inferred type, so the *name* has to do
@@ -749,7 +749,7 @@ these.
 
 - **Four-space indentation.** Matches the scaffold, the official Kotlin style guide, and
   `.editorconfig`'s `[{*.kt,*.kts,*.gradle.kts}]` block.
-- **Stay on Flutter's built-in Kotlin.** Use the Flutter Gradle `plugins {}` DSL, **not**
+- **Stay on Flutter's built-in Kotlin.** Use the Flutter Gradle `plugins {}` DSL, not
   the legacy `apply plugin: 'kotlin-android'` + buildscript classpath. The whole point of
   this package is killing deprecation warnings, so don't let the Android module emit the new
   KGP warning. See [*Hard rules*](./.ai/AGENTS.md#hard-rules).

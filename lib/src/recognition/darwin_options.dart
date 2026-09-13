@@ -12,11 +12,9 @@ part 'darwin_options.g.dart';
 /// Recognizer settings that only Apple Vision has, so iOS and macOS honour them and Android does
 /// nothing with them.
 ///
-/// Grouped rather than prefixed one by one, so the platform is stated once and a new Vision knob is
-/// a field here instead of a change to [TextSightOptions]. ML Kit's Latin recognizer exposes none of
-/// these, and its own knobs (picking a script bundle) will land in a sibling group.
-///
-/// `copyWith` is generated from the fields, so adding one cannot leave the copy behind.
+/// Grouped rather than prefixed one by one, so a new Vision knob is a field here instead of a
+/// change to [TextSightOptions]. `copyWith` is generated, so adding one cannot leave the copy
+/// behind.
 @CopyWith()
 final class const DarwinOptions({
   /// The accuracy/latency trade-off. The one-shot raises it to [RecognitionLevel.accurate], having
@@ -29,20 +27,17 @@ final class const DarwinOptions({
   /// Independent of [recognitionLevel], so turn it off when latency matters more.
   final bool usesLanguageCorrection = true,
 
-  /// Recognition languages, most-preferred first. Repeats are dropped.
+  /// Recognition languages, most-preferred first. Repeats are dropped, empty means no preference.
   ///
-  /// A [Locale] rather than a raw tag keeps this type-pure while staying open to whatever the OS
-  /// supports at runtime. Each goes to Vision as its BCP-47 tag (`en-US`, `zh-Hans`). Empty means
-  /// no preference.
+  /// A [Locale] rather than a raw tag, passed to Vision as its BCP-47 tag (`en-US`, `zh-Hans`).
   final Iterable<Locale> preferredLanguages = const [
     .fromSubtags(languageCode: 'en', countryCode: 'US'),
   ],
 
   /// Smallest text to read, as a fraction of the frame height, in `[0, 1]`.
   ///
-  /// Vision shrinks the image to suit before reading, so a higher floor is faster and blind to
-  /// small print. `0`, the default, keeps every pixel. Measured against the *frame* even when
-  /// [TextSightOptions.roi] narrows the scan box, so moving the box never changes what is readable.
+  /// Higher is faster and blind to small print, `0` keeps every pixel. Always measured against the
+  /// frame, so narrowing [TextSightOptions.roi] never changes what is readable.
   final double minimumTextHeight = 0,
 }) {
   /// Creates Vision-only options. Every field has a live-oriented default.

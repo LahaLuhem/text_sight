@@ -5,11 +5,10 @@ on:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+' # tag-pattern on pub.dev: '{{version}}'
 
-# Inlined rather than using setup-dart's reusable publish workflow, which runs `dart pub get`
-# without `--no-example`. That resolves example/ against CI's Flutter instead of the .fvmrc-pinned
-# one, rewriting example/pubspec.lock, and the dry-run then trips its "checked-in files are
-# modified" guard. `flutter pub get` (not dart) satisfies the `flutter: sdk: flutter` constraint,
-# and setup-dart stays first so its OIDC env is in place before publish runs.
+# Inlined, not setup-dart's reusable publish workflow: that one runs `dart pub get` without
+# `--no-example`, which rewrites example/pubspec.lock and trips the dry-run's "checked-in files are
+# modified" guard. `flutter pub get`, not `dart`, satisfies the `flutter: sdk: flutter` constraint,
+# and setup-dart stays first so its OIDC env is ready before publish.
 jobs:
   publish:
     runs-on: ubuntu-latest

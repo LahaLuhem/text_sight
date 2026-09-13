@@ -1,10 +1,6 @@
-# SwiftLint: deviations for the iOS plugin sources (the Swift under ios/). SwiftLint defaults apply
-# except the rules below, which mirror the project's Dart analysis_options posture: thorough, minus
-# the few opinionated rules that conflict with deliberate choices here.
-#
-# The example's RunnerTests are linted by a SEPARATE example/ios/.swiftlint.yml: SwiftLint resolves
-# `included`/`excluded` relative to each config's own directory, so each lint config lives in the
-# tree it covers, and the two carry different deviations. Paths below are relative to this file.
+# Deviations for the plugin's Swift under ios/. Defaults apply except the rules below.
+# The example's RunnerTests have their own example/ios/.swiftlint.yml, because SwiftLint resolves
+# `included`/`excluded` per config directory. Paths below are relative to this file.
 included:
   - text_sight/Sources/text_sight
 excluded:

@@ -36,7 +36,7 @@ def render_summary_markdown(
     lines: list[str] = [
         "# Codec round-trip: state of performance",
         "",
-        "Per-frame **decode** CPU and **wire size** of the recognition-results "
+        "Per-frame decode CPU and wire size of the recognition-results "
         "transport, by candidate encoding. Decode is what runs on the Dart UI "
         "isolate per delivered frame. `map_std` is today's wire and the baseline.",
         "",

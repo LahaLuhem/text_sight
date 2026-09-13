@@ -4,9 +4,9 @@ import 'recognized_line.dart';
 
 /// The result of one recognition pass: every [RecognizedLine] found plus the size of the image they were located in.
 ///
-/// Capture-agnostic by design: the same type is delivered by the live stream and by the static one-shot,
-/// carrying no hint of where the pixels came from. Map a line's normalized [RecognizedLine.boundingBox]
-/// into widget space using [imageSize] and whatever fit displays the preview.
+/// The same type comes from the live stream and the one-shot, with no hint of where the pixels
+/// came from. Map a normalized [RecognizedLine.boundingBox] into widget space with [imageSize] and
+/// whatever fit shows the preview.
 final class const TextSightCapture({
   /// The recognized lines, in the recognizer's emission order.
   required final List<RecognizedLine> lines,

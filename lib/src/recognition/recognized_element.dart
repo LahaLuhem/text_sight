@@ -2,10 +2,8 @@ import 'dart:ui' show Rect;
 
 /// A sub-line recognition unit (typically a word) with its own text and box.
 ///
-/// Reserved for a future release: the model shape carries it from v1 so that
-/// populating word-level detail later is an additive change, but
-/// `RecognizedLine.elements` stays `null` until that feature ships. The
-/// contract mirrors a line, one level down.
+/// Reserved for a future release. The shape ships from v1 so populating word-level detail later is
+/// additive, but `RecognizedLine.elements` stays `null` until then.
 final class const RecognizedElement({
   /// The recognized text of this element.
   required final String text,

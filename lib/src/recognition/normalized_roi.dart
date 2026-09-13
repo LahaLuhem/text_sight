@@ -6,10 +6,8 @@ extension NormalizedRoi on Rect? {
   /// Whether this is a valid region-of-interest: `null` (the whole frame), or a
   /// normalized `[0, 1]` rect with positive extent.
   ///
-  /// Shared by both recognizer drivers, the live `TextSightController` and the
-  /// static `TextSight` one-shot, which validate `TextSightOptions.roi` with a
-  /// debug `assert` against this. The check lives on the consumer, not the
-  /// `const` `TextSightOptions` constructor (which can't run one).
+  /// Both drivers `assert` against this in debug. The check lives here, not in the `const`
+  /// `TextSightOptions` constructor, which cannot run one.
   bool get isNormalizedRoi {
     final roi = this;
 

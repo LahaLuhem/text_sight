@@ -18,8 +18,8 @@ import 'text_sight_platform.dart';
 /// The default [TextSightPlatform]: Pigeon for control calls and session-state pushes, a plain
 /// `EventChannel` for the per-frame results.
 ///
-/// The one place public types meet their transport twins. Frames arrive as self-describing maps
-/// and are decoded into [TextSightCapture]s here. A federated platform package could replace it.
+/// The one place public types meet their transport twins, decoding self-describing frame maps
+/// into [TextSightCapture]s. A federated platform package could replace it.
 final class PigeonTextSightPlatform() extends TextSightPlatform implements TextSightFlutterApi {
   /// Registers as the FlutterApi handler. A handler registration only, no platform call, so
   /// constructing one in a test needs no mock.
