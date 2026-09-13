@@ -7,7 +7,7 @@ import 'package:text_sight/text_sight.dart';
 import '/features/core/data/fake_camera_platform.dart';
 import 'data/enums/session_status.dart';
 
-final class LiveScannerViewModel extends ViewModel {
+final class LiveScannerViewModel() extends ViewModel {
   /// The stand-in camera on the iOS Simulator, `null` against real hardware.
   final _fakeCamera = FakeCameraPlatform.installed;
 

@@ -6,7 +6,7 @@
 /// Android separates a refusal that can be re-prompted from a "don't ask again",
 /// so the actionable split is [denied] (asking again may surface the prompt)
 /// versus [permanentlyDenied] (only the OS settings can change it).
-enum CameraPermissionStatus {
+enum CameraPermissionStatus() {
   /// Camera access is granted, so the session can open the camera.
   granted,
 

@@ -5,4 +5,12 @@
 /// splits into [denied] (the prompt can be shown again, retry re-asks) and [permanentlyDenied]
 /// (only the system settings can grant it now). [paused], and a [failed] after scanning began, come
 /// from the controller's `sessionState`.
-enum SessionStatus { preparingModel, requesting, denied, permanentlyDenied, ready, paused, failed }
+enum SessionStatus() {
+  preparingModel,
+  requesting,
+  denied,
+  permanentlyDenied,
+  ready,
+  paused,
+  failed,
+}

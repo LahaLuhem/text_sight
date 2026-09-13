@@ -7,7 +7,12 @@ import 'package:flutter/painting.dart';
 /// Mirrors `harness/payloads.dart` including seeds, so a `document` here matches one there.
 // Benchmark
 //ignore: prefer-match-file-name
-enum PageProfile {
+enum PageProfile({
+  required final int minLines,
+  required final int maxLines,
+  required final int minTextLen,
+  required final int maxTextLen,
+}) {
   /// A street sign or label: a few short lines.
   sign(minLines: 1, maxLines: 3, minTextLen: 3, maxTextLen: 14),
 
@@ -18,19 +23,7 @@ enum PageProfile {
   document(minLines: 45, maxLines: 70, minTextLen: 20, maxTextLen: 60),
 
   /// Worst case: a very dense page.
-  dense(minLines: 100, maxLines: 140, minTextLen: 8, maxTextLen: 40);
-
-  new({
-    required this.minLines,
-    required this.maxLines,
-    required this.minTextLen,
-    required this.maxTextLen,
-  });
-
-  final int minLines;
-  final int maxLines;
-  final int minTextLen;
-  final int maxTextLen;
+  dense(minLines: 100, maxLines: 140, minTextLen: 8, maxTextLen: 40),
 }
 
 /// A rendered page plus the shape it came from.

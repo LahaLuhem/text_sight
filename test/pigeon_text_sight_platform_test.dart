@@ -720,7 +720,7 @@ void main() {
 TextSightOptionsMessage _sentOptions(_HostCall call) =>
     (call.payload! as List<Object?>).single! as TextSightOptionsMessage;
 
-final class _HostCall {
+final class _HostCall() {
   Object? payload;
   var invoked = false;
   var invocations = 0;

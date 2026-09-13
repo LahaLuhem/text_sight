@@ -9,20 +9,13 @@ import 'package:tap_debouncer/tap_debouncer.dart';
 /// as the async work completes. While locked, the button is disabled, the icon is
 /// swapped for a [PlatformProgressIndicator], and the label is replaced with
 /// [busyLabel]. This keeps the in-flight gate on the view, not the ViewModel.
-class AsyncIconActionButton extends StatelessWidget {
-  final Future<void> Function() onPressed;
-  final PlatformIcons idleIcon;
-  final String idleLabel;
-  final String busyLabel;
-
-  const new({
-    required this.onPressed,
-    required this.idleIcon,
-    required this.idleLabel,
-    required this.busyLabel,
-    super.key,
-  });
-
+class const AsyncIconActionButton({
+  required final Future<void> Function() onPressed,
+  required final PlatformIcons idleIcon,
+  required final String idleLabel,
+  required final String busyLabel,
+  super.key,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TapDebouncer(
     onTap: onPressed,

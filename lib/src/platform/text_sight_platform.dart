@@ -22,9 +22,9 @@ import 'pigeon_text_sight_platform.dart';
 /// is non-breaking for any future federated implementation that has not overridden it yet.
 /// [instance] defaults to [PigeonTextSightPlatform]. A federated platform package could later
 /// supply its own via the [instance] setter.
-abstract class TextSightPlatform extends PlatformInterface {
+abstract class TextSightPlatform() extends PlatformInterface {
   /// Constructs the interface, passing the verification token to [PlatformInterface].
-  new() : super(token: _token);
+  this : super(token: _token);
 
   static final _token = Object();
 

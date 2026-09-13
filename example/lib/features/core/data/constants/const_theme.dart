@@ -11,7 +11,7 @@ import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 /// through [CupertinoDynamicColor.resolve] so the iOS system colours follow light/dark
 /// mode. Recognized lines are tinted by confidence: [green] high, [orange] medium,
 /// [red] low, and [neutral] where the engine's scale cannot be ranked at all.
-abstract final class ConstTheme {
+abstract final class ConstTheme() {
   /// Alpha for a confidence-tinted chip fill.
   static const confidenceFillAlpha = 0.15;
 

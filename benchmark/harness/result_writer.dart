@@ -5,25 +5,15 @@ import 'dart:io';
 ///
 /// Schema mirrors the sibling suites: header, `samples`, `summary`. One writer per process:
 /// [open], a [writeRecord] per measurement, then [close].
-final class ResultWriter {
-  new _(
-    this._sink, {
-    required this.benchmark,
-    required this.sdkVersion,
-    required this.packageVersion,
-    required this.gitSha,
-  });
-
-  final String benchmark;
+final class ResultWriter._(
+  final IOSink _sink, {
+  required final String benchmark,
 
   /// A change invalidates captured baselines.
-  final String sdkVersion;
-
-  final String packageVersion;
-
-  final String gitSha;
-
-  final IOSink _sink;
+  required final String sdkVersion,
+  required final String packageVersion,
+  required final String gitSha,
+}) {
   var _firstRecord = true;
 
   /// Opens [outputPath] for writing and emits the JSON-array prefix.

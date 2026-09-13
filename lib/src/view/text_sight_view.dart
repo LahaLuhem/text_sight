@@ -27,34 +27,29 @@ typedef TextSightOverlayBuilder = Widget Function(
 /// The view does not start or stop the session itself. The consumer drives the
 /// controller, so session lifecycle (including pausing on app background) stays
 /// in one place.
-final class TextSightView extends StatefulWidget {
+final class const TextSightView({
   /// The controller that owns the session this view renders.
-  final TextSightController controller;
+  required final TextSightController controller,
 
   /// Called with every capture as it arrives.
-  final void Function(TextSightCapture capture)? onResult;
+  final void Function(TextSightCapture capture)? onResult,
 
   /// Builds an overlay stacked over the preview from the latest capture.
-  final TextSightOverlayBuilder? overlayBuilder;
+  final TextSightOverlayBuilder? overlayBuilder,
 
   /// Builds what shows until the first capture arrives (camera opening, first frame not yet
   /// recognized), including before [TextSightController.start].
-  final WidgetBuilder? placeholderBuilder;
-
+  final WidgetBuilder? placeholderBuilder,
+  super.key,
+}) extends StatefulWidget {
   /// Creates a view bound to [controller].
-  const new({
-    required this.controller,
-    this.onResult,
-    this.overlayBuilder,
-    this.placeholderBuilder,
-    super.key,
-  });
+  this;
 
   @override
   State<TextSightView> createState() => _TextSightViewState();
 }
 
-class _TextSightViewState extends State<TextSightView> {
+class _TextSightViewState() extends State<TextSightView> {
   StreamSubscription<TextSightCapture>? _subscription;
   TextSightCapture? _capture;
 

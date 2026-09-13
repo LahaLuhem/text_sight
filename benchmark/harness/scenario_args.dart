@@ -4,14 +4,12 @@ import 'dart:io';
 /// `--iterations`, `--output`, `--git-sha`, `--package-version`, all required.
 ///
 /// Hand-parsed: too small a surface to justify `package:args`.
-final class ScenarioArgs {
-  const new _({
-    required this.iterations,
-    required this.outputPath,
-    required this.gitSha,
-    required this.packageVersion,
-  });
-
+final class const ScenarioArgs._({
+  required final int iterations,
+  required final String outputPath,
+  required final String gitSha,
+  required final String packageVersion,
+}) {
   /// Exits 64 (`EX_USAGE`) on a bad flag: nothing interactive is around to catch a throw.
   factory parse(List<String> argv) {
     final flags = <String, String>{};
@@ -32,14 +30,6 @@ final class ScenarioArgs {
       packageVersion: _required(flags, 'package-version'),
     );
   }
-
-  final int iterations;
-
-  final String outputPath;
-
-  final String gitSha;
-
-  final String packageVersion;
 
   /// Recorded per record: a change invalidates captured baselines.
   static String get sdkVersion => Platform.version.split(' ').first;

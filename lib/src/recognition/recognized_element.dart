@@ -6,21 +6,21 @@ import 'dart:ui' show Rect;
 /// populating word-level detail later is an additive change, but
 /// `RecognizedLine.elements` stays `null` until that feature ships. The
 /// contract mirrors a line, one level down.
-final class RecognizedElement {
+final class const RecognizedElement({
   /// The recognized text of this element.
-  final String text;
+  required final String text,
 
   /// Bounding box normalized to `[0, 1]` with a top-left origin (the unified
   /// coordinate contract), as a [Rect] for direct use by an overlay painter.
-  final Rect boundingBox;
+  required final Rect boundingBox,
 
   /// Recognition confidence in `[0, 1]`, or `null` when the platform does not
   /// supply one. `null` means "unknown", not "low", so never compare it to a
   /// threshold without choosing an explicit default.
-  final double? confidence;
-
+  final double? confidence,
+}) {
   /// Creates a recognized element.
-  const new({required this.text, required this.boundingBox, this.confidence});
+  this;
 
   @override
   String toString() =>

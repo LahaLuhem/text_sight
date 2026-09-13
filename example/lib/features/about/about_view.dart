@@ -9,9 +9,7 @@ import '/features/core/widgets/core_widgets.dart';
 import 'about_view_model.dart';
 
 /// "Under the hood": the design decisions behind text_sight, as a list of cards.
-class AboutView extends StatelessWidget {
-  const new({super.key});
-
+class const AboutView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
     viewModel: AboutViewModel(),
@@ -101,13 +99,11 @@ class AboutView extends StatelessWidget {
 }
 
 /// One design-decision card: a leading icon beside a title and explanatory body.
-class _NuanceCard extends StatelessWidget {
-  final Widget icon;
-  final String title;
-  final String body;
-
-  const new({required this.icon, required this.title, required this.body});
-
+class const _NuanceCard({
+  required final Widget icon,
+  required final String title,
+  required final String body,
+}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
     child: Padding(

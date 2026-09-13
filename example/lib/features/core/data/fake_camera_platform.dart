@@ -24,7 +24,7 @@ typedef SimulatedFrame = ({Uint8List bytes, bool isBridged});
 /// image put through the wrapped platform's one-shot path, so the boxes the overlay draws are
 /// genuine recognizer output that has to keep up. Only the session is fake, and the events that
 /// need hardware come from the app lifecycle and from [simulateInterruption] / [simulateFailure].
-final class FakeCameraPlatform extends TextSightPlatform {
+final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightPlatform {
   /// How long a simulated interruption holds before the camera comes back on its own, as a real
   /// one does. Long enough to read the paused screen, short enough that nothing feels stuck.
   static const _interruptionHold = Duration(seconds: 6);
@@ -38,7 +38,6 @@ final class FakeCameraPlatform extends TextSightPlatform {
 
   static FakeCameraPlatform? _installed;
 
-  final TextSightPlatform _real;
   final _captures = StreamController<TextSightCapture>.broadcast();
   final _sessionStates = StreamController<TextSightSessionState>.broadcast();
   final _frameNotifier = ValueNotifier<SimulatedFrame?>(null);
@@ -59,7 +58,7 @@ final class FakeCameraPlatform extends TextSightPlatform {
   var _isComposing = false;
   var _isRecognizing = false;
 
-  new(this._real) {
+  this {
     // Native drops the session when the app backgrounds, so mirror it. The binding owns the
     // listener once constructed, so it needs no field.
     AppLifecycleListener(onHide: _reportBackgrounded, onShow: _reportForegrounded);
@@ -263,7 +262,10 @@ final class FakeCameraPlatform extends TextSightPlatform {
 ///
 /// Retries quietly and forever, so starting the bridge after the app is fine, and so is never
 /// starting it at all.
-final class _BridgeClient {
+final class _BridgeClient({
+  required final void Function(Uint8List jpeg) onFrame,
+  required final void Function() onLost,
+}) {
   /// CamBridge's default. Any server speaking the same framing works.
   static const _port = 8765;
   static const _headerBytes = 4;
@@ -274,15 +276,10 @@ final class _BridgeClient {
   /// allocate it.
   static const _maxFrameBytes = 8 * 1024 * 1024;
 
-  final void Function(Uint8List jpeg) onFrame;
-  final void Function() onLost;
-
   Socket? _socket;
   Timer? _retry;
   var _pending = Uint8List(0);
   var _isStarted = false;
-
-  new({required this.onFrame, required this.onLost});
 
   void start() {
     if (_isStarted) return;

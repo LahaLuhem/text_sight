@@ -14,7 +14,7 @@ typedef RoiConfig = ({bool restrict, Rect rect});
 
 /// Runs the same bundled still through the recognizer with whatever level and
 /// region-of-interest the knobs currently hold, so their effect can be compared.
-final class PlaygroundViewModel extends ViewModel {
+final class PlaygroundViewModel() extends ViewModel {
   static const _minRoiSize = 0.15;
 
   final _levelNotifier = ValueNotifier(RecognitionLevel.accurate);

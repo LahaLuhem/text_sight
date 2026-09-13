@@ -11,19 +11,19 @@ import 'darwin_options.dart';
 /// Two fields, so rebuilding one is a line. There is no `copyWith` here on purpose: clearing [roi]
 /// would need a sentinel, and `TextSightOptions(darwin: options.darwin)` already says it plainly.
 /// [DarwinOptions] has the generated `copyWith`, where it earns its keep.
-final class TextSightOptions {
+final class const TextSightOptions({
   /// The scan-box recognition is restricted to: a normalized `[0, 1]`, top-left `Rect`, or `null`
   /// for the whole frame.
   ///
   /// Vision gets a true region. Android crops the still and, on the live path, keeps the lines whose
   /// centre lands inside.
-  final Rect? roi;
+  final Rect? roi,
 
   /// Settings only Apple Vision honours. Android ignores every one of them.
-  final DarwinOptions darwin;
-
+  final DarwinOptions darwin = const DarwinOptions(),
+}) {
   /// Creates recognizer options. Every field has a live-oriented default.
-  const new({this.roi, this.darwin = const DarwinOptions()});
+  this;
 
   @override
   String toString() => 'TextSightOptions(roi: $roi, darwin: $darwin)';

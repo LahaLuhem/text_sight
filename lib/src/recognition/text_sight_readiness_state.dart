@@ -6,18 +6,18 @@
 /// there. The other states arise on Android with the **unbundled** ML Kit model
 /// (the default), which is fetched from Google Play Services and so can be
 /// downloading, or unavailable when Play Services is missing or a fetch fails.
-sealed class TextSightReadinessState {
+sealed class const TextSightReadinessState() {
   /// Const base constructor for the sealed hierarchy.
-  const new();
+  this;
 }
 
 /// The recognition model is present, so recognition will produce results.
 ///
 /// The terminal success state. Reached immediately on iOS, with the bundled ML Kit
 /// model, or once the unbundled model has finished downloading.
-final class ModelReady extends TextSightReadinessState {
+final class const ModelReady() extends TextSightReadinessState {
   /// Creates the ready state.
-  const new();
+  this;
 
   @override
   String toString() => 'ModelReady()';
@@ -27,13 +27,13 @@ final class ModelReady extends TextSightReadinessState {
 ///
 /// A non-terminal Android-only state: it never appears on iOS, nor with the bundled
 /// model. Recognition called now yields no results until [ModelReady] follows.
-final class ModelDownloading extends TextSightReadinessState {
+final class const ModelDownloading({
   /// Download progress in `[0, 1]`, or `null` while indeterminate, since the fetch has
   /// begun but Play Services has not yet reported byte counts.
-  final double? progress;
-
+  final double? progress,
+}) extends TextSightReadinessState {
   /// Creates the downloading state, optionally carrying [progress].
-  const new({this.progress});
+  this;
 
   @override
   String toString() => 'ModelDownloading(progress: $progress)';
@@ -45,22 +45,22 @@ final class ModelDownloading extends TextSightReadinessState {
 /// Google Play Services (absent on some devices), and a fetch can fail. [reason]
 /// says which. [details] carries the native diagnostic when one is available. Never
 /// occurs on iOS. Bundling the model (the `useBundled` build flag) sidesteps it.
-final class ModelUnavailable extends TextSightReadinessState {
+final class const ModelUnavailable({
   /// Why the model could not be made ready.
-  final ModelUnavailableReason reason;
+  required final ModelUnavailableReason reason,
 
   /// The native diagnostic message behind [reason], when one is available.
-  final String? details;
-
+  final String? details,
+}) extends TextSightReadinessState {
   /// Creates the unavailable state with its [reason] and optional [details].
-  const new({required this.reason, this.details});
+  this;
 
   @override
   String toString() => 'ModelUnavailable(reason: $reason, details: $details)';
 }
 
 /// Why the recognition model could not be made ready (see [ModelUnavailable]).
-enum ModelUnavailableReason {
+enum ModelUnavailableReason() {
   /// The device has no usable Google Play Services, which the unbundled model
   /// needs in order to download. Bundling the model (the `useBundled` build flag)
   /// removes the dependency on Play Services.

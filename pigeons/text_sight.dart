@@ -1,6 +1,8 @@
 // Pigeon-only syntax (mutable data fields, undocumented transport twins) that never ships
 // ignore_for_file: prefer-match-file-name
 // ignore_for_file: avoid_positional_boolean_parameters
+// Pigeon reads fields from the class body, so a primary constructor generates empty messages
+// ignore_for_file: use_primary_constructors
 
 // Pigeon schema: the dev-time transport behind the control API, never public. These message
 // classes are private twins of the public types, mapped by `TextSightPlatform`'s implementation.
