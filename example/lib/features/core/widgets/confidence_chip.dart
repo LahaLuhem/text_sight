@@ -6,9 +6,8 @@ import 'platform/platform_chip.dart';
 
 /// A small pill showing a recognized line's [confidence] (`[0, 1]`).
 ///
-/// Tinted by tier, green (high) through orange to red (low), only where the engine's scale can
-/// actually be ranked. On a coarse scale every line reads the same number, so the pill stays plain
-/// rather than painting a tier that means nothing.
+/// Tinted by tier, green through orange to red, only where the engine's scale can be ranked. On a
+/// coarse scale every line reads the same number, so the pill stays plain.
 class const ConfidenceChip({required final double confidence, super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(

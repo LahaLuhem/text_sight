@@ -1,8 +1,5 @@
-# detekt: Kotlin static analysis for android/src (the native plugin sources). Run with
-# `--build-upon-default-config`, so this file lists ONLY the deviations from detekt's default
-# ruleset, and everything not mentioned stays at its default. The deviations mirror the project's Dart
-# analysis_options posture: thorough by default, with the few opinionated rules that conflict with
-# this plugin's deliberate choices switched off. Messages.g.kt (generated) is excluded at the CLI.
+# detekt deviations for android/src. Run with `--build-upon-default-config`, so this lists ONLY
+# what differs from the default ruleset. Messages.g.kt is generated and excluded at the CLI.
 
 complexity:
   TooManyFunctions:

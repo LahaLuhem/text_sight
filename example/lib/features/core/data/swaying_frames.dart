@@ -4,10 +4,9 @@ import 'dart:ui' as ui;
 
 /// Turns a still image into a gently drifting camera feed.
 ///
-/// A fixed scene proves nothing about live tracking: the boxes would sit still whether or not the
-/// overlay ever updated. Drifting the frame means every tick is a genuinely different image, so the
-/// recognizer runs again and the boxes have to follow, the way the Android emulator's virtual scene
-/// sways enough to show the same thing.
+/// A fixed scene proves nothing about live tracking, since the boxes would sit still whether or not
+/// the overlay updated. Drifting means every tick is a different image, so the recognizer runs again
+/// and the boxes have to follow.
 final class SwayingFrames(final ui.Image _source) {
   /// Drift in source pixels and tilt in radians, tuned to read as a held camera rather than a pan.
   /// The three periods are deliberately unequal, so the motion never retraces a straight line.

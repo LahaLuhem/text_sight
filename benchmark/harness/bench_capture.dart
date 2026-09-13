@@ -1,8 +1,7 @@
 /// Stand-ins for one recognition pass, carrying exactly the wire fields the native side emits.
 ///
-/// Not the public `TextSightCapture`: that holds `dart:ui` `Rect` / `Size`, which a
-/// `dart compile exe` process cannot load. Every candidate rebuilds the same stand-in, so the
-/// measurement isolates codec cost rather than object shape.
+/// Not the public `TextSightCapture`, whose `dart:ui` `Rect` / `Size` a `dart compile exe` process
+/// cannot load. Every candidate rebuilds the same stand-in, so the measurement isolates codec cost.
 library;
 
 /// One recognition pass: analyzed-image size, a display-rotation hint, and the recognized [lines].

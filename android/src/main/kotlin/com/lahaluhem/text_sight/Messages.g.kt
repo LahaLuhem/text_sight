@@ -663,9 +663,9 @@ interface TextSightHostApi {
   /**
    * Opens the camera with [options] at [resolution]. Returns the preview texture id.
    *
-   * Reopening an already-open session is fine: the old one is released first, so the id this
-   * returns replaces the previous one. Recognition comes back off until [start]. Resolution rides
-   * here, not on the options, because it cannot change mid-session.
+   * Reopening an open session is fine, the old one is released first and this id replaces it.
+   * Recognition stays off until [start]. Resolution rides here because it cannot change
+   * mid-session.
    */
   suspend fun initialize(options: TextSightOptionsMessage, resolution: CaptureResolutionMessage): Long
   /**

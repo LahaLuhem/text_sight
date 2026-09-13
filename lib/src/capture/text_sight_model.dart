@@ -3,41 +3,25 @@ import '../recognition/text_sight_readiness_state.dart';
 
 /// Controls and observes readiness of the on-device recognition model.
 ///
-/// Mode-agnostic: both the live `TextSightController` and the one-shot `TextSight`
-/// recognize through the same model, so readiness belongs here, on neither driver.
-/// It exists so model loading need never block app startup. On Android the default
-/// (unbundled) ML Kit model is fetched from Google Play Services, and recognition
-/// requests made before it arrives yield no results, so call [ensureReady] when the
-/// user enters an OCR feature to fetch it in the background, and watch [readiness]
-/// to surface download progress or a failure.
-///
-/// On iOS this is effectively a no-op: Vision is a system framework, so the model
-/// is always [ModelReady] and [ensureReady] resolves immediately. Same with the
-/// bundled ML Kit model on Android (the `useBundled` build flag).
-///
-/// A pure namespace: every entry point is `static` and delegates to
-/// [TextSightPlatform.instance], so it carries no platform knowledge and is never
-/// instantiated.
-// A namespace has nothing to construct; a primary constructor would declare one.
+/// Mode-agnostic, so loading never blocks app startup. On Android the default unbundled ML Kit
+/// model is fetched from Play Services and requests made before it lands yield no results, so call
+/// [ensureReady] as the user enters an OCR feature and watch [readiness]. Always [ModelReady] on
+/// iOS and with Android's bundled model.
+// Nothing to construct here, so a primary constructor would only add a public member.
 // ignore: use_primary_constructors
 abstract final class TextSightModel {
-  /// Ensures the recognition model is present (fetching the unbundled ML Kit model
-  /// when needed) and resolves to the terminal state: [ModelReady] on success, or
-  /// [ModelUnavailable] if it cannot be fetched (failure is a state, not a throw).
+  /// Ensures the model is present, resolving to [ModelReady] or to [ModelUnavailable] if it
+  /// cannot be fetched (failure is a state, not a throw).
   ///
-  /// Safe to call repeatedly and to `await` without listening to [readiness]. It
-  /// resolves immediately when the model is already available (always on iOS and
-  /// with the bundled model). Watch [readiness] for intermediate [ModelDownloading]
-  /// progress while this is in flight.
+  /// Safe to call repeatedly, and returns at once when the model is already there. Watch
+  /// [readiness] for [ModelDownloading] progress meanwhile.
   static Future<TextSightReadinessState> ensureReady() =>
       TextSightPlatform.instance.ensureModelReady();
 
-  /// The live model-readiness stream: [ModelReady] once available,
-  /// [ModelDownloading] while the unbundled model fetches, [ModelUnavailable] on
-  /// failure.
+  /// The live readiness stream: [ModelReady], [ModelDownloading] while the unbundled model
+  /// fetches, [ModelUnavailable] on failure.
   ///
-  /// Emits the current state on subscription when it is already known (e.g.
-  /// [ModelReady] on iOS). Listening only *observes* and never starts a fetch.
-  /// That is [ensureReady]'s job. Subscribers must cancel their own subscription.
+  /// Emits the current state on subscription when it is known. Observing never starts a fetch,
+  /// that is [ensureReady]'s job. Cancel your own subscription.
   static Stream<TextSightReadinessState> get readiness => TextSightPlatform.instance.modelReadiness;
 }

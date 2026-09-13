@@ -1,11 +1,8 @@
 /// The camera-permission state for the live recognition session.
 ///
-/// A unified, cross-platform contract returned when checking or requesting
-/// camera access. The platforms reach a refusal differently. iOS shows the
-/// system prompt only once (a refusal is immediately settings-only), while
-/// Android separates a refusal that can be re-prompted from a "don't ask again",
-/// so the actionable split is [denied] (asking again may surface the prompt)
-/// versus [permanentlyDenied] (only the OS settings can change it).
+/// [denied] means asking again may still surface the prompt, which Android allows until the user
+/// picks "don't ask again". [permanentlyDenied] means only OS settings can change it, where iOS
+/// lands immediately since it prompts once.
 enum CameraPermissionStatus() {
   /// Camera access is granted, so the session can open the camera.
   granted,

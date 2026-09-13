@@ -1,8 +1,7 @@
 /// Encode and decode CPU plus wire size for one recognition frame, across transport candidates.
 ///
-/// Pure Dart, so it bounds the upside of a transport change and nothing more: native inference and
-/// real frame latency dominate end-to-end. Decode is the headline, since in production only the
-/// decode runs on the Dart UI isolate.
+/// Pure Dart, so it bounds the upside of a transport change and nothing more. Decode is the
+/// headline, since in production only the decode runs on the Dart UI isolate.
 library;
 
 // An entrypoint with only private helpers, so no public class matches the file name.

@@ -19,11 +19,10 @@ typedef SimulatedFrame = ({Uint8List bytes, bool isBridged});
 
 /// Stands in for the camera on the iOS Simulator, which has no capture hardware.
 ///
-/// Frames come from the Mac's webcam over a localhost bridge when one is running, and from the
-/// bundled sample drifted by [SwayingFrames] otherwise. Either way every frame is a different
-/// image put through the wrapped platform's one-shot path, so the boxes the overlay draws are
-/// genuine recognizer output that has to keep up. Only the session is fake, and the events that
-/// need hardware come from the app lifecycle and from [simulateInterruption] / [simulateFailure].
+/// Frames come from the Mac's webcam over a localhost bridge when one is running, else the bundled
+/// sample drifted by [SwayingFrames]. Every frame is a different image put through the wrapped
+/// platform's one-shot path, so the overlay's boxes are genuine recognizer output. Only the session
+/// is fake: [simulateInterruption] and [simulateFailure] stand in for what needs hardware.
 final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightPlatform {
   /// How long a simulated interruption holds before the camera comes back on its own, as a real
   /// one does. Long enough to read the paused screen, short enough that nothing feels stuck.
@@ -260,8 +259,7 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
 /// Reads a webcam bridge on the host Mac: per frame a 4-byte big-endian length, then that many
 /// bytes of JPEG. The Simulator shares the Mac's loopback, so `127.0.0.1` reaches it.
 ///
-/// Retries quietly and forever, so starting the bridge after the app is fine, and so is never
-/// starting it at all.
+/// Retries quietly and forever, so starting the bridge late, or never, is fine.
 final class _BridgeClient({
   required final void Function(Uint8List jpeg) onFrame,
   required final void Function() onLost,

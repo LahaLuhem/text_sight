@@ -17,9 +17,8 @@ final class const RecognizedLine({
 
   /// How sure the engine is about this line, in `[0, 1]`.
   ///
-  /// Engine-relative, not an absolute quality score: what a number means depends on
-  /// `TextSightEngine.confidenceScale`, and values from different scales are never comparable.
-  /// Both engines always supply one, so this is never null.
+  /// Engine-relative, not an absolute quality score: what it means depends on
+  /// `TextSightEngine.confidenceScale`, and different scales are never comparable. Never null.
   required final double confidence,
 
   /// Word-level [RecognizedElement]s, or `null` when not provided.

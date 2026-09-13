@@ -98,9 +98,9 @@ class SessionFailedMessage extends SessionStateMessage {
 abstract class TextSightHostApi {
   /// Opens the camera with [options] at [resolution]. Returns the preview texture id.
   ///
-  /// Reopening an already-open session is fine: the old one is released first, so the id this
-  /// returns replaces the previous one. Recognition comes back off until [start]. Resolution rides
-  /// here, not on the options, because it cannot change mid-session.
+  /// Reopening an open session is fine, the old one is released first and this id replaces it.
+  /// Recognition stays off until [start]. Resolution rides here because it cannot change
+  /// mid-session.
   @async
   int initialize(TextSightOptionsMessage options, CaptureResolutionMessage resolution);
 
@@ -144,10 +144,9 @@ abstract class TextSightHostApi {
   @async
   Map<String, Object?> ensureModelReady();
 
-  // Static one-shot driver: no camera session, texture, or permission. Each call runs a
-  // transient native recognizer over a still image and returns the same self-describing
-  // per-frame map the captures EventChannel emits (decoded Dart-side by `_decodeCapture`), so
-  // the result models need no Pigeon twin. `quarterTurns` is 0, since a still is already upright.
+  // Static one-shot driver: no session, texture, or permission. Returns the same self-describing
+  // per-frame map the captures EventChannel emits (decoded by `_decodeCapture`), so the result
+  // models need no Pigeon twin. `quarterTurns` is 0, a still is already upright.
 
   /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
   @async

@@ -599,9 +599,9 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 protocol TextSightHostApi {
   /// Opens the camera with [options] at [resolution]. Returns the preview texture id.
   ///
-  /// Reopening an already-open session is fine: the old one is released first, so the id this
-  /// returns replaces the previous one. Recognition comes back off until [start]. Resolution rides
-  /// here, not on the options, because it cannot change mid-session.
+  /// Reopening an open session is fine, the old one is released first and this id replaces it.
+  /// Recognition stays off until [start]. Resolution rides here because it cannot change
+  /// mid-session.
   func initialize(options: TextSightOptionsMessage, resolution: CaptureResolutionMessage) async throws -> Int64
   /// Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
   /// Dart signature is `Future<void>` either way.
@@ -639,9 +639,9 @@ class TextSightHostApiSetup {
     let channelSuffix = messageChannelSuffix.count > 0 ? ".\(messageChannelSuffix)" : ""
     /// Opens the camera with [options] at [resolution]. Returns the preview texture id.
     ///
-    /// Reopening an already-open session is fine: the old one is released first, so the id this
-    /// returns replaces the previous one. Recognition comes back off until [start]. Resolution rides
-    /// here, not on the options, because it cannot change mid-session.
+    /// Reopening an open session is fine, the old one is released first and this id replaces it.
+    /// Recognition stays off until [start]. Resolution rides here because it cannot change
+    /// mid-session.
     let initializeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.initialize\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       initializeChannel.setMessageHandler { message, reply in

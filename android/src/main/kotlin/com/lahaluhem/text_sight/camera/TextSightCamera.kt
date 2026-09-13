@@ -141,10 +141,9 @@ internal class TextSightCamera(
         val imageWidth = if (isQuarterTurned) bitmap.height else bitmap.width
         val imageHeight = if (isQuarterTurned) bitmap.width else bitmap.height
 
-        // With an ROI, crop the upright bitmap so ML Kit reads only that region: a true crop that
-        // isolates partial-line text (matching iOS Vision) and recognizes fewer pixels, unlike the
-        // live path, where cropping every frame would cost too much. The crop's origin offsets the
-        // recognized boxes back into full-image coordinates.
+        // With an ROI, crop the upright bitmap so ML Kit reads only that region, isolating
+        // partial-line text like iOS Vision does. Too expensive to do per frame on the live path.
+        // The crop's origin offsets the recognized boxes back into full-image coordinates.
         val crop = roi?.toPixelRect(imageWidth, imageHeight)
         val input = if (crop == null) {
             InputImage.fromBitmap(bitmap, rotationDegrees)

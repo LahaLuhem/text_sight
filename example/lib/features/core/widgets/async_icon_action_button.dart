@@ -5,10 +5,9 @@ import 'package:tap_debouncer/tap_debouncer.dart';
 
 /// A [PlatformButton.icon] that locks itself while [onPressed] is in flight.
 ///
-/// Wraps [TapDebouncer] with `cooldown: Duration.zero` so the button re-arms as soon
-/// as the async work completes. While locked, the button is disabled, the icon is
-/// swapped for a [PlatformProgressIndicator], and the label is replaced with
-/// [busyLabel]. This keeps the in-flight gate on the view, not the ViewModel.
+/// Wraps [TapDebouncer] with `cooldown: Duration.zero`, so it re-arms as soon as the work
+/// completes. While locked the icon becomes a [PlatformProgressIndicator] and the label
+/// [busyLabel], keeping the in-flight gate on the view rather than the ViewModel.
 class const AsyncIconActionButton({
   required final Future<void> Function() onPressed,
   required final PlatformIcons idleIcon,

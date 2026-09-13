@@ -14,26 +14,21 @@ plugins {
     id("com.android.library")
 }
 
-// Bundled vs unbundled ML Kit text recognition is a build-time choice, and the Kotlin API is identical,
-// so only the artifact (and the app-size / availability trade-off) differs. Default unbundled
-// (~260 KB/script, fetched via Google Play Services). A consuming app opts into the bundled model
-// (~4 MB/script/arch, in-APK, instant + offline) by setting this in its android/gradle.properties:
+// Unbundled ML Kit by default (~260 KB/script via Play Services). A consuming app opts into the
+// bundled model (~4 MB/script/arch, in-APK, offline) from its own android/gradle.properties:
 //
 //     com.lahaluhem.text_sight.useBundled=true
 //
-// Mirrors mobile_scanner's gradle flag, inverted because our default is unbundled. The value also
-// feeds BuildConfig.USE_BUNDLED, so the readiness path can skip Google Play Services when the model
-// ships in the APK. A consumer's root gradle.properties propagates here, so findProperty sees it.
+// Also feeds BuildConfig.USE_BUNDLED. Trade-off: APPENDIX.md#model-readiness
 val useBundled =
     (project.findProperty("com.lahaluhem.text_sight.useBundled") as? String)?.toBoolean() ?: false
 
 android {
     namespace = "com.lahaluhem.text_sight"
 
-    // Latest STABLE API level, matching Flutter's default (flutter.compileSdkVersion). Deliberately
-    // NOT a newer/preview level: AGP bakes this into the AAR as minCompileSdk, forcing every consumer
-    // to compile against >= it, and since pub.dev ships this as source, they'd also need that SDK
-    // platform installed. A higher value here breaks stock-Flutter consumers (see APPENDIX).
+    // Latest STABLE API level, matching flutter.compileSdkVersion. NOT a preview level: AGP bakes
+    // this into the AAR as minCompileSdk, so a higher value forces every consumer onto that SDK
+    // platform and breaks stock-Flutter ones (see APPENDIX).
     compileSdk = 36
 
     compileOptions {
@@ -145,12 +140,9 @@ dependencies {
 }
 
 // ── Standalone-only ──────────────────────────────────────────────────────────────────────────────
-// Resolves io.flutter.* when this module is opened on its own in Android Studio. `project ==
-// rootProject` is true ONLY when android/ is the Gradle root (standalone development). Inside an app
-// build the plugin is the `:text_sight` subproject and the Flutter Gradle plugin already puts the
-// engine on the classpath, so this whole block is skipped, so consumers never see it. The engine
-// version is read from the pinned Flutter SDK (engine.version maps to Flutter's `1.0.0-<hash>` Maven
-// coordinate), so it tracks the SDK automatically instead of being hardcoded.
+// Resolves io.flutter.* when android/ is the Gradle root, which only happens in standalone
+// development. An app build skips the whole block, so consumers never see it.
+// APPENDIX.md#android-standalone-dev
 if (project == rootProject) {
     val localProperties = file("local.properties")
     val flutterSdk: String? =

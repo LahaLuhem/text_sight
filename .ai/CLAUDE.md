@@ -6,7 +6,7 @@ live in [AGENTS.md](./AGENTS.md). The full code-style guide lives in
 [`../APPENDIX.md`](../APPENDIX.md). Read AGENTS.md and CODESTYLE.md first.
 
 ## Role & context
-You're assisting with **text_sight**: a Flutter **plugin** for live, on-device text
+You're assisting with **text_sight**: a Flutter plugin for live, on-device text
 recognition: Apple Vision on iOS, ML Kit on Android, the text-scanning sibling to
 `mobile_scanner`. The whole point is that **iOS links zero third-party ML libraries**
 (no GoogleMLKit), so the no-bundling discipline is sacred. Treat the user as technical and
@@ -45,7 +45,7 @@ for 7 days, and a tag push triggers an automated publish).
   invoke plain `flutter` / `dart`, not the manager directly.
 - **Lint with `flutter analyze`**: the project promotes many lints to `error:` in
   `analysis_options.yaml`, and those are the contract, not suggestions. The Swift/Kotlin sides are
-  gated by **detekt** (`android/detekt.yml`) and **SwiftLint** (per-tree `.swiftlint.yml` under `ios/`
+  gated by detekt (`android/detekt.yml`) and SwiftLint (per-tree `.swiftlint.yml` under `ios/`
   and `example/ios/`) in CI. Still apply
   [`../CODESTYLE.md`](../CODESTYLE.md)'s native conventions by hand for what those don't cover.
 - **Agent tool** for wide / open-ended searches or to keep large outputs out of main
@@ -79,8 +79,8 @@ for 7 days, and a tag push triggers an automated publish).
 - **`project` memories**: scope/constraints the user states aloud (e.g. "ship v0.1 before
   the sprint ends", "minimum Flutter bumps to X on date Y", "DataScanner path is on hold").
   Convert relative dates to absolute.
-- **`feedback` memories**: corrections AND validated non-obvious choices. Include **Why**
-  and **How to apply** lines.
+- **`feedback` memories**: corrections AND validated non-obvious choices. Include `Why`
+  and `How to apply` lines.
 - **`reference` memories**: external pointers (the pub.dev page, `mobile_scanner` /
   `apple_vision_recognize_text` / `flutter_scalable_ocr` upstreams, the Apple Vision /
   ML Kit docs). Not internal code paths, since those live in AGENTS.md or are derivable.
@@ -111,7 +111,7 @@ is **not** in the routine-edit list. All move together only when the user explic
 - **Never push without being asked.** Especially not to `main`, and especially not a semver
   tag (which triggers pub.dev publish via `.github/workflows/publish.yml`).
 - **Never `--amend`** unless the user asked. Create a new commit instead.
-- **Never `--no-verify`**, **never `git add -A`**. Stage named paths.
+- **Never `--no-verify`, never `git add -A`.** Stage named paths.
 - Match existing commit style (short imperative subject, no Claude-authored footer unless
   asked).
 - When asked for a commit: show `git status` + `git diff`, draft the message, wait for
