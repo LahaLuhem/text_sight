@@ -221,14 +221,10 @@ def _discover_devices(*, include_virtual: bool) -> list[Device]:
 
 
 def _grant_android_camera(serial: str, stop: threading.Event) -> None:
-    """Grants CAMERA until `stop` is set, re-granting so a reinstall cannot drop it.
-
-    `flutter drive` installs at run start and removes the app at the end, so that window is the
-    only time the grant can exist. `stop` is what bounds this loop, not a clock: a cold Gradle
-    build outlasts any deadline worth hardcoding.
-    """
+    """Grants CAMERA until `stop` is set, re-granting so a reinstall cannot drop it."""
     granted = False
     problem = ""
+    # No deadline: `flutter drive` owns the window, and a cold Gradle build outlasts any clock.
     while not stop.is_set():
         try:
             listed = subprocess.run(

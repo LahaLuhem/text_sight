@@ -32,11 +32,10 @@ payload is.
 | Encoded wire byte count | GC-pause impact under live rendering |
 | | ML inference (dominates end-to-end) |
 
-So these numbers bound the upside of a transport change. They do not
-predict an end-to-end speedup. On a real device the recognizer's inference and
-texture handling dwarf the transport. **Decode is the headline metric**: in
-production only the decode runs on the Dart UI isolate per frame (the encode
-happens natively).
+These numbers do not predict an end-to-end speedup. On a real device the
+recognizer's inference and texture handling dwarf the transport. **Decode is
+the headline metric**: in production only the decode runs on the Dart UI
+isolate per frame (the encode happens natively).
 
 ## Candidates (`harness/capture_codec.dart`)
 

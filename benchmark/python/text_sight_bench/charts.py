@@ -1,8 +1,5 @@
 """Charts in two halves: `prepare_*` crunches the numbers, `render_*` draws them, so you can
 check what came back before drawing it.
-
-Module-level matplotlib imports are deliberate: `cmd_report` gates the call site with a
-`find_spec` check that points at `uv sync`.
 """
 
 from __future__ import annotations
@@ -11,6 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import NamedTuple
 
+# Safe at module level: `cmd_report` checks for these before it imports anything from here.
 import matplotlib
 import matplotlib.pyplot as plt
 import polars as pl
@@ -50,7 +48,7 @@ def render_decode_vs_lines(agg: pl.DataFrame, out_path: Path) -> Path:
     """Decode µs against lines-per-frame, one line per candidate."""
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.lineplot(
-        data=agg.to_pandas(),
+        data=agg,
         x="line_count",
         y="decode_microseconds",
         hue="candidate",
@@ -82,7 +80,7 @@ def render_wire_bytes_vs_lines(agg: pl.DataFrame, out_path: Path) -> Path:
     """Wire size in KB against lines-per-frame, one line per candidate."""
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.lineplot(
-        data=agg.to_pandas(),
+        data=agg,
         x="line_count",
         y="wire_kb",
         hue="candidate",
@@ -114,7 +112,7 @@ def render_profile_decode_bars(agg: pl.DataFrame, out_path: Path) -> Path:
     """Decode µs per profile, grouped bars per candidate."""
     fig, ax = plt.subplots(figsize=(9, 5))
     sns.barplot(
-        data=agg.to_pandas(),
+        data=agg,
         x="payload",
         y="decode_microseconds",
         order=PROFILE_ORDER,

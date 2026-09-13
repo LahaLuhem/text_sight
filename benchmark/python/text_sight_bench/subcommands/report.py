@@ -13,17 +13,23 @@ from text_sight_bench.config import (
     LIVE_SUMMARY_FILENAME,
 )
 
+# seaborn wants pandas for its own frames and pyarrow to read the polars ones it is handed.
+_CHART_DEPS = ("polars", "matplotlib", "seaborn", "pandas", "pyarrow")
+
+
+def _deps_missing(*names: str) -> bool:
+    """True if any of `names` is absent. Prints which ones, and the fix."""
+    absent = [name for name in names if importlib.util.find_spec(name) is None]
+    if not absent:
+        return False
+    print(f"missing analysis deps: {', '.join(absent)}", file=sys.stderr)
+    print("  run `uv sync` from benchmark/python/", file=sys.stderr)
+    return True
+
 
 def cmd_report(args: argparse.Namespace) -> int:
     """Renders the codec charts + SUMMARY.md, skipping any chart with no data behind it."""
-    missing = [
-        name
-        for name in ("polars", "matplotlib", "seaborn", "pandas")
-        if importlib.util.find_spec(name) is None
-    ]
-    if missing:
-        print(f"missing analysis deps: {', '.join(missing)}", file=sys.stderr)
-        print("  run `uv sync` from benchmark/python/", file=sys.stderr)
+    if _deps_missing(*_CHART_DEPS):
         return 1
 
     # Local imports keep the chart stack off the import path until it's needed.
@@ -63,14 +69,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 def cmd_report_device(args: argparse.Namespace) -> int:
     """Renders the device chart + DEVICE_SUMMARY.md from one or more scenario JSONs."""
-    missing = [
-        name
-        for name in ("polars", "matplotlib", "seaborn", "pandas")
-        if importlib.util.find_spec(name) is None
-    ]
-    if missing:
-        print(f"missing analysis deps: {', '.join(missing)}", file=sys.stderr)
-        print("  run `uv sync` from benchmark/python/", file=sys.stderr)
+    if _deps_missing(*_CHART_DEPS):
         return 1
 
     from text_sight_bench import charts, markdown
@@ -100,9 +99,7 @@ def cmd_report_device(args: argparse.Namespace) -> int:
 
 def cmd_report_live(args: argparse.Namespace) -> int:
     """Renders LIVE_SUMMARY.md from one or more live-throughput JSONs."""
-    if importlib.util.find_spec("polars") is None:
-        print("missing analysis deps: polars", file=sys.stderr)
-        print("  run `uv sync` from benchmark/python/", file=sys.stderr)
+    if _deps_missing("polars"):
         return 1
 
     from text_sight_bench import markdown

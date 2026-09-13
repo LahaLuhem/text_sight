@@ -1,11 +1,5 @@
 # Benchmark orchestrator / analyzer for text_sight, managed by `uv`.
-#
-#     cd benchmark/python
-#     uv sync                              # create .venv, install everything
-#     uv run python run.py build           # AOT-compile the micro-benchmark
-#     uv run python run.py run             # execute + capture JSON
-#     uv run python run.py report <json>   # render committed charts + SUMMARY.md
-#     uv run ruff check . && uv run pytest # lint + test
+# Commands are in ../README.md#running.
 #
 # `uv.lock` is checked in for reproducible analysis, since perf claims are only
 # defensible if the stack is pinned.
@@ -17,7 +11,8 @@ description = "Benchmark orchestration + reporting for the text_sight captures-t
 requires-python = ">=3.10"
 
 # polars (Rust-backed) for analysis, seaborn/matplotlib for the committed
-# README charts. pyarrow bridges polars -> pandas at the seaborn boundary.
+# README charts. pyarrow is what lets seaborn read a polars frame directly. Drop
+# it and seaborn falls back to a path pandas has deprecated.
 # No scipy/jinja2, since there is no `compare` (Mann-Whitney) layer yet and the
 # markdown is plain f-strings.
 dependencies = [

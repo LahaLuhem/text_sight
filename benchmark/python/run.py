@@ -1,13 +1,5 @@
 """CLI entry for the text_sight benchmark orchestrator.
 
-Subcommands:
-  build           AOT-compile the codec_roundtrip micro-benchmark.
-  run             Execute it, capturing one result JSON file.
-  report <json>   Render committed README charts + SUMMARY.md from result JSON.
-  run-device      Drive a device scenario (benchmark/app) on attached phones.
-  report-device   Render the device chart + DEVICE_SUMMARY.md.
-  report-live     Render LIVE_SUMMARY.md from live-throughput runs.
-
 There is no `compare`, since there is no before/after transport to diff yet.
 """
 
