@@ -34,9 +34,49 @@ jobs:
           working-directory: benchmark/app
       - run: flutter --no-version-check analyze --fatal-infos .
 
+  ruff-lint:
+    name: Ruff lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchmark/python
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python-uv
+        with:
+          working-directory: benchmark/python
+      - run: uv run ruff check .
+
+  ruff-format:
+    name: Ruff format
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchmark/python
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python-uv
+        with:
+          working-directory: benchmark/python
+      - run: uv run ruff format --check .
+
+  pytest:
+    name: Pytest
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: benchmark/python
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python-uv
+        with:
+          working-directory: benchmark/python
+      # No coverage gate: pyproject pulls in no pytest-cov, unlike the Dart side's very_good_coverage.
+      - run: uv run pytest
+
   # Single required-check contract for the ruleset. APPENDIX.md#dependabot-automerge
   benchmark-ok:
-    needs: [harness, host-app]
+    needs: [harness, host-app, ruff-lint, ruff-format, pytest]
     if: always()
     runs-on: ubuntu-latest
     permissions: {}
@@ -47,6 +87,9 @@ jobs:
           RESULTS: >-
             harness=${{ needs.harness.result }}
             host-app=${{ needs.host-app.result }}
+            ruff-lint=${{ needs.ruff-lint.result }}
+            ruff-format=${{ needs.ruff-format.result }}
+            pytest=${{ needs.pytest.result }}
         run: |
           echo "$RESULTS"
           exit 1

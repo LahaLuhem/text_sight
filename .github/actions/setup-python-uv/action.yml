@@ -1,0 +1,25 @@
+name: Setup Python (uv)
+description: >-
+  Install uv (which provisions the Python pinned in .python-version), restore its cache keyed on
+  uv.lock, and `uv sync --frozen` to build the .venv. `--frozen` fails when uv.lock has drifted from
+  pyproject.toml, the same contract `dart pub get` enforces on the Dart side. The caller runs
+  `actions/checkout` first, since local composite actions only resolve after checkout.
+
+inputs:
+  working-directory:
+    description: Directory containing `pyproject.toml`, `uv.lock`, and `.python-version`.
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v10
+      with:
+        enable-cache: true
+        cache-dependency-glob: ${{ inputs.working-directory }}/uv.lock
+
+    - name: uv sync
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: uv sync --frozen
