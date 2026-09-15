@@ -4,25 +4,27 @@ What the live path *sustains*, per recognition level. Windows where the phone wa
 
 > **Scope.** Recognized frames per second over a fixed window, and the gap between them. Under the single-in-flight backpressure that gap is roughly one recognition. Directional only: the numbers depend entirely on what the camera was pointed at, so keep the scene fixed when comparing runs.
 
-Captured (Android): SDK `3.13.2` · package `0.2.2` · git `bf2d478` · N=3 · 2026-09-06T18:36:21.446658Z
-Captured (iOS): SDK `3.13.2` · package `0.2.0` · git `21c6760` · N=3 · 2026-09-03T11:05:05.889411Z
+Captured (Android): SDK `3.13.3` · package `0.2.2` · git `384ea54` · N=3 · 2026-09-15T10:18:45.400559Z
+Captured (iOS): SDK `3.13.3` · package `0.2.2` · git `384ea54` · N=3 · 2026-09-15T10:19:16.174310Z
 
 Measured on iOS and Android, so your hardware will differ.
 
 - Only *recognized* frames are visible from Dart, so the drop ratio (camera frames delivered versus recognized) is not here. That needs native counters.
 - A gap at the camera's frame interval (about 33 ms at 30 fps) means recognition is keeping up and the camera is the limit, not the recognizer.
 - `level` is a no-op on Android, so its rows should match.
-- **Your users will see better than this for a while.** A cold phone boosts hard: this Sony held about 8 captures/s for the first minute of continuous scanning before settling to the sustained figure below, so a short scan feels roughly twice as fast as a long one. The run burns the device in first, so the table reports the floor rather than the peak.
+- **Your users will see better than this at first.** A cold phone boosts hard, so a short scan runs faster than a long one. The run burns the device in before measuring and keeps only the windows near the run's median rate, so this is the sustained floor, not the opening peak.
 - **lines** is the median per capture. Zero means nothing readable was in frame, which makes the throughput number meaningless as a recognition measure.
 
 | Platform | Level | Sustained cap/s | Gap p50 (ms) | Gap p95 (ms) | Lines | Window (s) |
 |---|---|--:|--:|--:|--:|--:|
-| iOS (Apple Vision) | `fast` | 30.0 | 33.3 | 34.4 | 8 | 8 |
-| iOS (Apple Vision) | `accurate` | 4.0 | 249.9 | 258.0 | 21 | 8 |
-| Android (ML Kit) | `fast` | 4.5 | 219.5 | 242.6 | 9 | 8 |
-| Android (ML Kit) | `fast+corrected` | 4.5 | 218.5 | 233.5 | 8 | 8 |
-| Android (ML Kit) | `accurate` | 4.5 | 219.2 | 235.9 | 8 | 8 |
-| Android (ML Kit) | `accurate+corrected` | 4.5 | 217.8 | 256.2 | 10 | 8 |
+| iOS (Apple Vision) | `fast` | 19.0 | 52.8 | 56.4 | 9 | 8 |
+| iOS (Apple Vision) | `fast+corrected` | 16.9 | 59.5 | 62.8 | 9 | 8 |
+| iOS (Apple Vision) | `accurate` | 5.0 | 199.1 | 205.3 | 15 | 8 |
+| iOS (Apple Vision) | `accurate+corrected` | 3.9 | 257.8 | 273.1 | 13 | 8 |
+| Android (ML Kit) | `fast` | 5.5 | 182.9 | 221.1 | 17 | 8 |
+| Android (ML Kit) | `fast+corrected` | 5.5 | 188.8 | 217.9 | 16 | 8 |
+| Android (ML Kit) | `accurate` | 5.4 | 189.5 | 207.3 | 17 | 8 |
+| Android (ML Kit) | `accurate+corrected` | 5.1 | 200.9 | 227.0 | 15 | 8 |
 
 Frames delivered by the capture session, as the preview receives them:
 
