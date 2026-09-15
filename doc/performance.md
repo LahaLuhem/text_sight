@@ -3,10 +3,6 @@
 Captured on a physical Galaxy S24 and iPhone 16 in profile mode. Your hardware will differ. Full
 method and numbers live in [`benchmark/`](../benchmark/README.md).
 
-> **Two fixes landed after these runs, so the charts are due a recapture.** iOS was inheriting a
-> Vision setting that quietly skipped small text, and Android was capturing at 640x480. Both are
-> pinned now. Where it changes how to read a number, it's called out below.
-
 ## One image
 
 What `TextSight.recognizeImage` costs, by page density. Read the line count beside each bar: a level
@@ -14,30 +10,52 @@ that recognizes nothing returns fast, which would otherwise look like a win.
 
 ![One-shot recognition latency on device](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/one_shot_latency.png)
 
-On Android the level is a no-op, since ML Kit's Latin recognizer has no accuracy dial, so its two
-bars land on top of each other. On iOS `fast` is roughly 4x quicker than `accurate`, though some of
-that gap is the small-text setting: `fast` here reads less, then nothing, as the pages get denser.
+On Android all four bars land on top of each other. ML Kit's Latin recognizer has no accuracy dial
+and handles correction itself, so neither knob does anything there.
+
+On iOS both knobs bite, and they stack:
+
+| iOS, the 63-line page | p50 |
+|---|--:|
+| `fast` | 101 ms |
+| `fast` + correction | 199 ms |
+| `accurate` | 404 ms |
+| `accurate` + correction | 736 ms |
+
+Roughly 4x for the level, then roughly double again for correction. On pages this clean both levels
+read every line, so `fast` is the one to reach for. A live scene is a different story, see below.
+
+Neither iOS level reads the 127-line page at all. It renders at 15.8 pt, and Vision returns nothing
+at that size here, so those four bars time a miss rather than a recognition. Android reads 126 of
+the 127.
 
 ## Live camera
 
-Recognized frames per second over a fixed window, both phones pointed at the same page.
+Recognized frames per second over a fixed window, both phones pointed at the same page at the same
+time.
 
-| Platform | Level      | Frame     | Captures/s | Paced by       |
-|----------|------------|-----------|-----------:|----------------|
-| iOS      | `fast`     | 1080x1920 |       30.0 | the camera     |
-| iOS      | `accurate` | 1080x1920 |        4.0 | the recognizer |
-| Android  | `fast`     | 480x640   |        5.9 | the recognizer |
-| Android  | `accurate` | 480x640   |        6.6 | the recognizer |
+| Platform | Level | Frame | Captures/s | Lines read |
+|----------|-------|-------|-----------:|-----------:|
+| iOS | `fast` | 1080x1920 | 19.0 | 9 |
+| iOS | `fast` + correction | 1080x1920 | 16.9 | 9 |
+| iOS | `accurate` | 1080x1920 | 5.0 | 15 |
+| iOS | `accurate` + correction | 1080x1920 | 3.9 | 13 |
+| Android | any | 1440x1920 | 5.1 to 5.5 | 15 to 17 |
 
-Hitting the camera's own frame rate means recognition is keeping up and the camera is the limit.
-That's where iOS `fast` sits, at 30/s on a 30 fps camera. The recognizer paces everything else.
+Here `accurate` earns its cost. It pulls noticeably more text out of the same frame, which the
+one-image numbers hide because those pages are clean enough for either level to read everything.
 
-Android ran at CameraX's 640x480 default here. It now asks for about 2 MP in 4:3, which roughly
-doubles the lines it reads and costs frame rate. `CaptureResolution.low` gets the old speed back.
-iOS asks for 1080p.
+The recognizer paces every row above. If you ever see the gap sit at the camera's own frame interval
+(about 33 ms at 30 fps), that means recognition is keeping up and the camera is the limit instead.
+
+Android asks CameraX for about 2 MP in 4:3 and got 1440x1920 here. `CaptureResolution.low` trades
+lines for frame rate. iOS asks for 1080p.
 
 **Don't read this as iOS versus Android.** The two capture at different sizes and shapes, so they
 aren't doing the same work per frame, and both depend entirely on what the camera sees.
+
+> Phones boost when they're cool. These are the settled numbers, so a short scan will feel quicker
+> than this and a long one will drift down to it.
 
 ## The transport is not the bottleneck
 

@@ -131,11 +131,24 @@ uv run python run.py run-device --scenario live_throughput
 uv run python run.py report-live ../results-local/current/live_throughput_*.json --out ../results-local/live/
 ```
 
-It needs camera permission, which cannot be pre-granted because `flutter drive` uninstalls the app
-afterwards. On Android the runner grants it over adb mid-run, and on a real iPhone tap Allow while the
-scenario waits. iOS simulators are skipped outright, since they have no camera to open.
+It needs camera permission. On Android the runner grants it over adb mid-run, and on a real iPhone
+you tap Allow while the scenario waits. Runs keep the app installed, so that tap lasts until the
+next fresh install. iOS simulators are skipped outright, since they have no camera to open.
 `report-live` writes a table and no chart on purpose: with an uncontrolled scene, a chart would
 imply precision these numbers do not have.
+
+**Warm the phone up first, or the sweep lies.** A cool phone boosts, so whichever candidate happens
+to run first comes out looking fastest.
+
+| S24, one scene | spread over the four candidates |
+|---|---|
+| cold, forward sweep | 6.1 to 9.6 cap/s, falling in sweep order |
+| warm, `--reverse` | 5.1 to 5.5 cap/s, flat |
+
+Both knobs are no-ops on Android, so flat is the right answer and the cold run was just reading its
+own thermal curve. The 45 s burn-in did not cover it. Run the sweep twice and keep the second, or
+pass `--reverse` and check the two agree. If this keeps biting, the cause is more likely what
+happens between runs (the app staying alive, back-to-back drives) than a longer burn-in.
 
 The Dart binary also runs standalone (a median table prints to stdout):
 
