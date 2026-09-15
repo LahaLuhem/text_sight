@@ -11,15 +11,19 @@ topics:
   - camera
 screenshots:
   - description: >-
-      Live camera text recognition with a confidence-coloured box overlay and a
+      Live camera text recognition on Android (ML Kit), with a confidence-coloured box
+      overlay and a recognized-text panel.
+    path: doc/screenshots/1-live-ocr-android.webp
+  - description: >-
+      Live camera text recognition on iOS (Apple Vision), with a box overlay and a
       recognized-text panel.
-    path: doc/screenshots/1-live-ocr.webp
+    path: doc/screenshots/2-live-ocr-ios.webp
   - description: >-
       One-shot still-image recognition on Android (ML Kit), with per-line confidence.
-    path: doc/screenshots/2-one-shot-android.png
+    path: doc/screenshots/3-one-shot-android.png
   - description: >-
       One-shot still-image recognition on iOS (Apple Vision), with per-line confidence.
-    path: doc/screenshots/3-one-shot-ios.png
+    path: doc/screenshots/4-one-shot-ios.png
 
 
 

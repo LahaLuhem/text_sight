@@ -9,9 +9,14 @@
 **Live, on-device text recognition for Flutter.** Apple Vision on iOS, ML Kit on Android. Like
 [`mobile_scanner`](https://pub.dev/packages/mobile_scanner), but for text instead of barcodes.
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/1-live-ocr.webp" width="260" alt="Live text recognition with confidence-coloured boxes over the camera feed">
-</p>
+<table align="center">
+  <tr>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/1-live-ocr-android.webp" width="240" alt="Live text recognition on Android, with confidence-coloured boxes over the camera feed"><br><sub><b>Android</b> · ML Kit</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/2-live-ocr-ios.webp" width="240" alt="Live text recognition on iOS, with boxes over the camera feed"><br><sub><b>iOS</b> · Apple Vision</sub></td>
+  </tr>
+</table>
+
+<p align="center"><sub>iOS gives every line the same confidence, so the tier colours are off there. See <a href="#api-at-a-glance">API at a glance</a>.</sub></p>
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
@@ -44,7 +49,7 @@ Most cross-platform OCR plugins run Google ML Kit on *both* platforms, which qui
 |-----------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **No ML framework in your iOS app**     | iOS recognition is Apple Vision, which is already part of the OS. No GoogleMLKit, nothing third-party to ship, so your iOS build stays smaller. CI fails the moment one sneaks in. |
 | **Android fetches its model on demand** | The ML Kit model stays unbundled by default, so your APK carries a ~260 KB stub instead of the whole thing. Want it baked in? One line of Gradle.                                  |
-| **`fast` or `accurate`, per call**      | Pick low latency or better reading, and switch mid-session. iOS only, since ML Kit's Latin recognizer has no such knob. Neither shrinks the frame first, so small print survives.  |
+| **`fast` or `accurate`, per call**      | Switch mid-session. On one live page `accurate` read 15 lines where `fast` got 9, for roughly 4x the time. iOS only, since ML Kit's Latin recognizer has no such knob.             |
 | **No permission package**               | `requestCameraPermission()` goes straight to AVFoundation and the Android permission flow. Already using `permission_handler`? That still works.                                   |
 | **The same boxes everywhere**           | Every box is normalized `[0, 1]` from the top-left on both platforms, so your overlay never branches on `Platform`.                                                                |
 | **Camera optional**                     | One-shot recognition reads bytes or a file path. No camera, no permission, runs anywhere.                                                                                          |
@@ -89,10 +94,16 @@ platform.
 final controller = TextSightController(
   options: TextSightOptions(
     roi: Rect.fromLTWH(0.1, 0.4, 0.8, 0.2),
-    darwin: DarwinOptions(recognitionLevel: RecognitionLevel.accurate),
+    darwin: DarwinOptions(
+      recognitionLevel: RecognitionLevel.accurate,
+      usesLanguageCorrection: false,
+    ),
   ),
 );
 ```
+
+`usesLanguageCorrection` is on by default. It helps prose, mangles serials and part numbers, and
+roughly doubles the time on iOS, so scanning codes wants it off on both counts.
 
 `updateOptions` swaps the whole set at once, so read `options` first when you only mean to change
 one thing. The torch is its own call, since a still image has no such concept.
@@ -109,6 +120,9 @@ Scanning small print? Turn the camera up. Set once, unlike the knobs above.
 ```dart
 TextSightController(resolution: CaptureResolution.high);
 ```
+
+`minimumTextHeight` is the iOS half, and it is already `0`, so nothing is being skipped for you to
+turn back on. That leaves pixels as the only lever, and text small enough still comes back empty.
 
 ### Know what the camera is doing
 
@@ -146,8 +160,8 @@ permissions, and the one-shot screen, all wired up and ready to crib from.
 
 <table>
   <tr>
-    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/2-one-shot-android.png" width="240" alt="One-shot recognition on Android"><br><sub><b>Android</b> · ML Kit</sub></td>
-    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/3-one-shot-ios.png" width="240" alt="One-shot recognition on iOS"><br><sub><b>iOS</b> · Apple Vision</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/3-one-shot-android.png" width="240" alt="One-shot recognition on Android"><br><sub><b>Android</b> · ML Kit</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/4-one-shot-ios.png" width="240" alt="One-shot recognition on iOS"><br><sub><b>iOS</b> · Apple Vision</sub></td>
   </tr>
 </table>
 
@@ -239,8 +253,9 @@ first use, so your APK carries a ~260 KB stub instead of the whole thing. Warm i
 
 ## Performance
 
-On an iPhone 16, live `fast` recognition keeps up with the camera at 30 captures/s. A Galaxy S24
-manages about 6/s at 2 MP. Charts, method, and the one-shot numbers:
+Both engines keep up with a live preview, and on iOS `fast` runs several times quicker than
+`accurate`. Getting results from native to Dart costs microseconds a frame, so the recognizer is
+what sets the pace. Numbers, charts and method:
 [doc/performance.md](https://github.com/LahaLuhem/text_sight/blob/main/doc/performance.md).
 
 ## Upgrading to 1.0

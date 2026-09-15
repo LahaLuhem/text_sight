@@ -102,6 +102,15 @@ and writes one JSON per platform. Useful flags: `--platform ios|android`, `--dev
 falls back to `--debug`, since simulators cannot run profile mode, and the run says so: those timings
 are for checking the plumbing, not for reporting.
 
+It runs the devices one after another. To overlap them, start a `--platform android` and a
+`--platform ios` run at once, writing to the same `--out`. They share `app/`'s build tree, but
+flutter serializes its own startup behind a lock, so they queue instead of colliding. One-shot on
+two phones went 5 min to 81 s that way.
+
+Worth it for the camera scenario too, where it also means both phones see the same scene at the same
+moment. Point them before you start, since the second one builds while the first is already
+measuring.
+
 `report-device` takes one or both JSONs and writes `one_shot_latency.png` plus `DEVICE_SUMMARY.md`.
 Every row carries the lines the recognizer actually read, because a level that recognizes nothing
 returns fast and would otherwise look like a win.
@@ -137,18 +146,17 @@ next fresh install. iOS simulators are skipped outright, since they have no came
 `report-live` writes a table and no chart on purpose: with an uncontrolled scene, a chart would
 imply precision these numbers do not have.
 
-**Warm the phone up first, or the sweep lies.** A cool phone boosts, so whichever candidate happens
-to run first comes out looking fastest.
+**Warm the phone up first, or the sweep lies.** A cool phone boosts, so whichever candidate runs
+first looks fastest.
 
 | S24, one scene | spread over the four candidates |
 |---|---|
 | cold, forward sweep | 6.1 to 9.6 cap/s, falling in sweep order |
 | warm, `--reverse` | 5.1 to 5.5 cap/s, flat |
 
-Both knobs are no-ops on Android, so flat is the right answer and the cold run was just reading its
-own thermal curve. The 45 s burn-in did not cover it. Run the sweep twice and keep the second, or
-pass `--reverse` and check the two agree. If this keeps biting, the cause is more likely what
-happens between runs (the app staying alive, back-to-back drives) than a longer burn-in.
+Both knobs are no-ops on Android, so flat is the right answer. Run it twice and keep the second, or
+pass `--reverse` and check the two agree. A longer burn-in probably isn't the fix, what happens
+between runs is the likelier cause.
 
 The Dart binary also runs standalone (a median table prints to stdout):
 
