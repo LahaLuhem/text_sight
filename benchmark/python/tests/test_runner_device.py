@@ -142,3 +142,13 @@ def test_the_sweep_runs_forwards_by_default(
     runner.cmd_run_device(_args("live_throughput", tmp_path))
 
     assert "--dart-define=REVERSE_SWEEP=false" in fake_run.drives[0]
+
+
+def test_the_app_is_left_installed(
+    monkeypatch: pytest.MonkeyPatch, fake_run: _FakeRun, tmp_path: Path
+) -> None:
+    """Teardown's uninstall is what makes the next iOS install ask to be trusted again."""
+    _with_devices(monkeypatch, _IPHONE)
+    runner.cmd_run_device(_args("one_shot_latency", tmp_path))
+
+    assert "--keep-app-running" in fake_run.drives[0]
