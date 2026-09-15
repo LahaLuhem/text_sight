@@ -133,7 +133,7 @@ def cmd_run_device(args: argparse.Namespace) -> int:
             print(f"  note: {device.name} is virtual, running {mode} (timings are not comparable)")
 
         print(f"\ndrive  {scenario}  {device.name}  ({args.iterations} iterations, {mode[2:]})")
-        # No grant survives the uninstall, so grant from the side for as long as the drive runs.
+        # A fresh or replaced install starts ungranted, so grant from the side for the whole drive.
         stop_granting = threading.Event()
         granter: threading.Thread | None = None
         if scenario in CAMERA_SCENARIOS and device.platform == "android":
@@ -149,6 +149,8 @@ def cmd_run_device(args: argparse.Namespace) -> int:
                 f"--driver={PERF_DRIVER}",
                 f"--target={target}",
                 mode,
+                # Teardown otherwise uninstalls. Next iOS install needs the untrusted-developer prompt again
+                "--keep-app-running",
                 "-d",
                 device.id,
                 f"--dart-define=ITERATIONS={args.iterations}",
