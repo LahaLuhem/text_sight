@@ -1,4 +1,4 @@
-## [Unreleased]
+## [1.0.0] - 2026-09-15
 ### Added
 - \[#59\] TextSightEngine.confidenceScale reports what a confidence number means on this device: visionGraded, visionCoarse or mlKit. Branch on its isRankable flag to know whether sorting lines inside one capture tells you anything.
 - \[#59\] DarwinOptions.minimumTextHeight sets the smallest text Vision will read, as a fraction of the frame height. A higher floor is faster and blind to small print, and it stays frame-relative even when roi narrows the scan box.
@@ -68,7 +68,7 @@
 - Recognizer configuration on the controller: region of interest (a normalized `Rect`), recognition level, language preferences, and torch.
 - A unified result model — per-line confidence and normalized `[0,1]` top-left bounding boxes, identical across platforms, with a rotation-aware preview.
 
-[Unreleased]: https://github.com/LahaLuhem/text_sight/compare/0.2.2...HEAD
+[1.0.0]: https://github.com/LahaLuhem/text_sight/compare/0.2.2...1.0.0
 [0.2.2]: https://github.com/LahaLuhem/text_sight/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/LahaLuhem/text_sight/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/LahaLuhem/text_sight/compare/0.1.1...0.2.0
