@@ -10,8 +10,8 @@ that recognizes nothing returns fast, which would otherwise look like a win.
 
 ![One-shot recognition latency on device](https://raw.githubusercontent.com/LahaLuhem/text_sight/main/benchmark/reports/one_shot_latency.png)
 
-On Android all four bars land on top of each other. ML Kit's Latin recognizer has no accuracy dial
-and handles correction itself, so neither knob does anything there.
+On Android all four bars coincide. ML Kit's Latin recognizer has no accuracy dial and corrects on
+its own, so neither knob does anything.
 
 On iOS both knobs bite, and they stack:
 
@@ -22,17 +22,15 @@ On iOS both knobs bite, and they stack:
 | `accurate` | 404 ms |
 | `accurate` + correction | 736 ms |
 
-Roughly 4x for the level, then roughly double again for correction. On pages this clean both levels
-read every line, so `fast` is the one to reach for. A live scene is a different story, see below.
+Roughly 4x for the level, then double again for correction. Both levels read every line on pages
+this clean, so reach for `fast`. Live is a different story, see below.
 
-Neither iOS level reads the 127-line page at all. It renders at 15.8 pt, and Vision returns nothing
-at that size here, so those four bars time a miss rather than a recognition. Android reads 126 of
-the 127.
+Neither iOS level reads the 127-line page. It renders at 15.8 pt and Vision returns nothing that
+small here, so those bars time a miss. Android reads 126 of 127.
 
 ## Live camera
 
-Recognized frames per second over a fixed window, both phones pointed at the same page at the same
-time.
+Recognized frames per second over a fixed window, both phones on the same page at the same time.
 
 | Platform | Level | Frame | Captures/s | Lines read |
 |----------|-------|-------|-----------:|-----------:|
@@ -42,26 +40,25 @@ time.
 | iOS | `accurate` + correction | 1080x1920 | 3.9 | 13 |
 | Android | any | 1440x1920 | 5.1 to 5.5 | 15 to 17 |
 
-Here `accurate` earns its cost. It pulls noticeably more text out of the same frame, which the
-one-image numbers hide because those pages are clean enough for either level to read everything.
+Here `accurate` earns its cost, pulling more text out of the same frame. The one-image pages are
+clean enough for either level, which hides that.
 
-The recognizer paces every row above. If you ever see the gap sit at the camera's own frame interval
-(about 33 ms at 30 fps), that means recognition is keeping up and the camera is the limit instead.
+The recognizer paces every row. A gap at the camera's own interval (about 33 ms at 30 fps) would
+mean the camera is the limit instead.
 
 Android asks CameraX for about 2 MP in 4:3 and got 1440x1920 here. `CaptureResolution.low` trades
 lines for frame rate. iOS asks for 1080p.
 
-**Don't read this as iOS versus Android.** The two capture at different sizes and shapes, so they
-aren't doing the same work per frame, and both depend entirely on what the camera sees.
+**Don't read this as iOS versus Android.** Different capture sizes and shapes mean different work
+per frame, and both depend on what the camera sees.
 
-> Phones boost when they're cool. These are the settled numbers, so a short scan will feel quicker
-> than this and a long one will drift down to it.
+> Phones boost when cool, so these settled numbers are the floor. A short scan feels quicker.
 
 ## The transport is not the bottleneck
 
 Results cross from native to Dart as a small per-frame map. Decoding one on the UI isolate costs
-**microseconds**: worst case on the slower of the two phones, a dense 127-line frame is 87 µs, or
-0.5% of a 60 fps frame budget. So the recognizer's own work sets the pace.
+**microseconds**: worst case on the slower phone, a dense 127-line frame is 87 µs, 0.5% of a 60 fps
+frame. The recognizer sets the pace.
 
 <details>
 <summary>Host-measured charts, for the finer sweep a phone run doesn't produce</summary>

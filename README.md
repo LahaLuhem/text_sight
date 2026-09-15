@@ -9,9 +9,14 @@
 **Live, on-device text recognition for Flutter.** Apple Vision on iOS, ML Kit on Android. Like
 [`mobile_scanner`](https://pub.dev/packages/mobile_scanner), but for text instead of barcodes.
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/1-live-ocr.webp" width="260" alt="Live text recognition with confidence-coloured boxes over the camera feed">
-</p>
+<table align="center">
+  <tr>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/1-live-ocr-android.webp" width="240" alt="Live text recognition on Android, with confidence-coloured boxes over the camera feed"><br><sub><b>Android</b> · ML Kit</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/2-live-ocr-ios.webp" width="240" alt="Live text recognition on iOS, with boxes over the camera feed"><br><sub><b>iOS</b> · Apple Vision</sub></td>
+  </tr>
+</table>
+
+<p align="center"><sub>iOS gives every line the same confidence, so the tier colours are off there. See <a href="#api-at-a-glance">API at a glance</a>.</sub></p>
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
@@ -146,8 +151,8 @@ permissions, and the one-shot screen, all wired up and ready to crib from.
 
 <table>
   <tr>
-    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/2-one-shot-android.png" width="240" alt="One-shot recognition on Android"><br><sub><b>Android</b> · ML Kit</sub></td>
-    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/3-one-shot-ios.png" width="240" alt="One-shot recognition on iOS"><br><sub><b>iOS</b> · Apple Vision</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/3-one-shot-android.png" width="240" alt="One-shot recognition on Android"><br><sub><b>Android</b> · ML Kit</sub></td>
+    <td align="center"><img src="https://raw.githubusercontent.com/LahaLuhem/text_sight/main/doc/screenshots/4-one-shot-ios.png" width="240" alt="One-shot recognition on iOS"><br><sub><b>iOS</b> · Apple Vision</sub></td>
   </tr>
 </table>
 
@@ -239,8 +244,9 @@ first use, so your APK carries a ~260 KB stub instead of the whole thing. Warm i
 
 ## Performance
 
-On an iPhone 16, live `fast` recognition keeps up with the camera at 30 captures/s. A Galaxy S24
-manages about 6/s at 2 MP. Charts, method, and the one-shot numbers:
+Both engines keep up with a live preview, and on iOS `fast` runs several times quicker than
+`accurate`. Getting results from native to Dart costs microseconds a frame, so the recognizer is
+what sets the pace. Numbers, charts and method:
 [doc/performance.md](https://github.com/LahaLuhem/text_sight/blob/main/doc/performance.md).
 
 ## Upgrading to 1.0

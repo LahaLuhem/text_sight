@@ -137,18 +137,17 @@ next fresh install. iOS simulators are skipped outright, since they have no came
 `report-live` writes a table and no chart on purpose: with an uncontrolled scene, a chart would
 imply precision these numbers do not have.
 
-**Warm the phone up first, or the sweep lies.** A cool phone boosts, so whichever candidate happens
-to run first comes out looking fastest.
+**Warm the phone up first, or the sweep lies.** A cool phone boosts, so whichever candidate runs
+first looks fastest.
 
 | S24, one scene | spread over the four candidates |
 |---|---|
 | cold, forward sweep | 6.1 to 9.6 cap/s, falling in sweep order |
 | warm, `--reverse` | 5.1 to 5.5 cap/s, flat |
 
-Both knobs are no-ops on Android, so flat is the right answer and the cold run was just reading its
-own thermal curve. The 45 s burn-in did not cover it. Run the sweep twice and keep the second, or
-pass `--reverse` and check the two agree. If this keeps biting, the cause is more likely what
-happens between runs (the app staying alive, back-to-back drives) than a longer burn-in.
+Both knobs are no-ops on Android, so flat is the right answer. Run it twice and keep the second, or
+pass `--reverse` and check the two agree. A longer burn-in probably isn't the fix, what happens
+between runs is the likelier cause.
 
 The Dart binary also runs standalone (a median table prints to stdout):
 
