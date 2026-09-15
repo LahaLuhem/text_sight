@@ -149,7 +149,8 @@ def cmd_run_device(args: argparse.Namespace) -> int:
                 f"--driver={PERF_DRIVER}",
                 f"--target={target}",
                 mode,
-                # Teardown otherwise uninstalls. Next iOS install needs the untrusted-developer prompt again
+                # Teardown otherwise uninstalls. Next iOS install needs the
+                # untrusted-developer prompt again
                 "--keep-app-running",
                 "-d",
                 device.id,
