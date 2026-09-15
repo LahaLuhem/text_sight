@@ -10,6 +10,7 @@
 - \[#59\] **BREAKING:** RecognitionLevel is now just fast or accurate, and level.usesLanguageCorrection is gone, split out into DarwinOptions.usesLanguageCorrection. So fast can correct and accurate can skip it. The live path corrects by default now, where fast used to leave it off: pass usesLanguageCorrection: false to keep the old behaviour.
 - \[#59\] **BREAKING:** RecognizedLine.confidence is a required non-null double. Both engines always send a value, so drop the (confidence ?? 1) guard the old docs recommended. A number still only means something next to the scale that produced it, which TextSightEngine.confidenceScale now reports.
 - \[#45\] **BREAKING:** Surface the capture session state as controller.sessionState, with stop() renamed pauseRecognition() and isRunning renamed isRecognizing. Rename both call sites.
+- Bump pigeon to 29.0.1 and refresh the on-device reports
 
 ### Fixed
 - \[#59\] Android no longer takes recognition settings it silently drops. setRecognitionLevel and setLanguages were empty no-ops that reported success, and the controller read them straight back as if they had landed. The Vision-only settings now sit behind darwin, so there is nothing left to accept and discard.
