@@ -22,7 +22,7 @@ dependencies:
   # (platform_adaptive_widgets, better_internet_connectivity_checker). All pure-Dart/Flutter:
   # nothing here links a native ML/camera library, so the iOS no-bundling check still holds.
   pmvvm: ^4.0.1
-  platform_adaptive_widgets: ^2.1.2
+  platform_adaptive_widgets: ^2.2.0
   platform_icons: ^0.1.1
   material_ui: ^1.2.0
   gap: ^3.0.1
