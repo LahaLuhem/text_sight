@@ -126,7 +126,7 @@ dependencies {
     testImplementation("org.mockito:mockito-core:5.23.0")
     // Real android.graphics.Rect (and friends) on the JVM, so the box-geometry helpers test
     // in place without extracting the arithmetic off Android types.
-    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("org.robolectric:robolectric:4.17")
     // mockito-kotlin's whenever/mock DSL over the already-present mockito-core, for stubbing the
     // ML Kit Text/Text.Line value graph that the frame encoder reads.
     testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
