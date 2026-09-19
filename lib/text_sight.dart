@@ -1,8 +1,7 @@
 /// Live, on-device text recognition: Apple Vision on iOS, ML Kit on Android.
 ///
-/// Import only this file. Live: `TextSightView` with a `TextSightController`. One-shot:
-/// `TextSight`. Both yield `TextSightCapture`s of `RecognizedLine`s, and `TextSightModel` reports
-/// when the on-device model is ready.
+/// Import only this file. Live preview is a `TextSightView` plus a `TextSightController`, one-shot
+/// stills go through `TextSight`, and both hand back `TextSightCapture`s.
 library;
 
 export 'src/capture/camera_permission_status.dart';

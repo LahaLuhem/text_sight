@@ -1,15 +1,12 @@
 /// @docImport 'recognized_line.dart';
 library;
 
-/// What a [RecognizedLine.confidence] value means, which depends on the engine that produced it.
+/// What a [RecognizedLine.confidence] number means, which is down to the engine that produced it.
 ///
-/// Named for how the numbers behave rather than who made them, so a third engine slots in without
-/// consumers learning its name. Different scales are never comparable, across platforms or OS
-/// versions.
+/// Two scales are never comparable, not across platforms and not across OS versions.
 enum ConfidenceScale({
-  /// Whether ordering lines by confidence inside one capture tells you anything.
-  ///
-  /// Branch on this rather than the value's name, and a new scale cannot break you.
+  /// Whether sorting lines by confidence inside one capture tells you anything. Branch on this
+  /// rather than the enum value, and a new scale can't break you.
   required final bool isRankable,
 }) {
   /// Spread across `[0, 1]`, so ranking lines within one capture means something.

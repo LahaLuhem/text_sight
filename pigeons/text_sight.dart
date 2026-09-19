@@ -4,9 +4,9 @@
 // Pigeon reads fields from the class body, so a primary constructor generates empty messages
 // ignore_for_file: use_primary_constructors
 
-// Pigeon schema: the dev-time transport behind the control API, never public. These message
-// classes are private twins of the public types, mapped by `TextSightPlatform`'s implementation.
-// Per-frame results ride a plain EventChannel instead, which is why no @EventChannelApi shows up.
+// The dev-time transport behind the control API, never published. Every `*Message` below is the
+// private twin of a public type, and `TextSightPlatform`'s implementation does the mapping.
+// Per-frame results ride a plain EventChannel, which is why there's no @EventChannelApi here.
 @ConfigurePigeon(
   PigeonOptions(
     dartPackageName: 'text_sight',
@@ -20,10 +20,9 @@ library;
 
 import 'package:pigeon/pigeon.dart';
 
-/// Transport twin of the public `RecognitionLevel`.
 enum RecognitionLevelMessage { fast, accurate }
 
-/// Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
+/// Normalized `[0, 1]` from the top-left, twinning the public `Rect`.
 class RegionOfInterestMessage {
   new({required this.left, required this.top, required this.width, required this.height});
 
@@ -33,7 +32,6 @@ class RegionOfInterestMessage {
   double height;
 }
 
-/// Transport twin of the public `TextSightOptions`.
 class TextSightOptionsMessage {
   new({
     required this.level,
@@ -55,29 +53,21 @@ class TextSightOptionsMessage {
   RegionOfInterestMessage? roi;
 }
 
-/// Transport twin of the public `ConfidenceScale`.
 enum ConfidenceScaleMessage { visionGraded, visionCoarse, mlKit }
 
-/// Transport twin of the public `CaptureResolution`.
 enum CaptureResolutionMessage { low, medium, high }
 
-/// Transport twin of the public `CameraPermissionStatus`.
 enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
 
-/// Transport twin of the public `SessionPauseReason`.
 enum SessionPauseReasonMessage { appBackgrounded, interrupted }
 
-/// Transport twin of the public sealed `TextSightSessionState`, one case per state. Pigeon needs
-/// the parent empty.
+/// One case per public session state. Pigeon needs the parent empty.
 sealed class SessionStateMessage;
 
-/// Twin of `SessionIdle`.
 class SessionIdleMessage extends SessionStateMessage;
 
-/// Twin of `SessionActive`.
 class SessionActiveMessage extends SessionStateMessage;
 
-/// Twin of `SessionPaused`.
 class SessionPausedMessage extends SessionStateMessage {
   new({required this.reason, this.details});
 
@@ -85,74 +75,63 @@ class SessionPausedMessage extends SessionStateMessage {
   String? details;
 }
 
-/// Twin of `SessionFailed`.
 class SessionFailedMessage extends SessionStateMessage {
   new({this.details});
 
   String? details;
 }
 
-/// The typed control channel. Per-frame results stream over a plain
-/// EventChannel and the preview is a texture. Neither rides this API.
+/// The typed control channel. Per-frame results stream over a plain EventChannel and the preview is
+/// a texture, so neither rides this API.
 @HostApi()
 abstract class TextSightHostApi {
-  /// Opens the camera with [options] at [resolution]. Returns the preview texture id.
+  /// Opens the camera and returns the preview texture id. Reopening is fine, the old session is
+  /// released first. Recognition stays off until [start].
   ///
-  /// Reopening an open session is fine, the old one is released first and this id replaces it.
-  /// Recognition stays off until [start]. Resolution rides here because it cannot change
-  /// mid-session.
+  /// [resolution] rides here rather than on [setOptions] because it can't change mid-session.
   @async
   int initialize(TextSightOptionsMessage options, CaptureResolutionMessage resolution);
 
-  /// Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
+  /// Starts frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
   /// Dart signature is `Future<void>` either way.
   void start();
 
-  /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
+  /// Stops recognizing, keeping the session open for a later [start]. Not `@async`, as [start].
   void pauseRecognition();
 
-  /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
+  /// Releases the camera and texture. Idempotent.
   @async
   void dispose();
 
-  // Camera permission: the live camera path needs it, the static one-shot does not. The check is a
-  // synchronous status read, and the request is async because it drives the system prompt.
-
-  /// Reports the current camera-permission status without prompting.
+  /// Reads the camera-permission status without prompting.
   CameraPermissionStatusMessage checkCameraPermission();
 
-  /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
+  /// Prompts when the user hasn't decided yet. `@async` because it drives the system prompt.
   @async
   CameraPermissionStatusMessage requestCameraPermission();
 
-  /// Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
-  /// change mid-session, so it rides [initialize] instead.
+  /// Replaces the recognizer settings on an open session. Resolution isn't in here, see
+  /// [initialize].
   void setOptions(TextSightOptionsMessage options);
 
-  /// Turns the camera torch on or off.
   void setTorchEnabled(bool enabled);
 
-  /// What a per-line confidence means on this device. Fixed once the engine is picked, so the
-  /// Dart side reads it once and caches.
+  /// Fixed once the engine is picked, so the Dart side reads it once and caches.
   ConfidenceScaleMessage confidenceScale();
 
-  // Readiness sits here because both drivers share the one model. Progress streams over
-  // com.lahaluhem.text_sight/readiness, so this call only hands back the final state.
-
-  /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
-  /// Google Play Services when needed) and returns the terminal readiness state.
+  /// Fetches the unbundled ML Kit model through Play Services when it's needed, and returns the
+  /// terminal state. Progress streams over com.lahaluhem.text_sight/readiness instead.
   @async
   Map<String, Object?> ensureModelReady();
 
-  // Static one-shot driver: no session, texture, or permission. Returns the same self-describing
-  // per-frame map the captures EventChannel emits (decoded by `_decodeCapture`), so the result
-  // models need no Pigeon twin. `quarterTurns` is 0, a still is already upright.
+  // Both one-shots hand back the same self-describing map the captures EventChannel emits, so the
+  // result models need no Pigeon twin at all. `quarterTurns` is 0, a still is already upright.
 
-  /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
+  /// Recognizes text in an encoded image (PNG, JPEG, …).
   @async
   Map<String, Object?> recognizeImage(Uint8List bytes, TextSightOptionsMessage options);
 
-  /// Recognizes text in the image at file [path], honouring [options].
+  /// Recognizes text in the image file at [path].
   @async
   Map<String, Object?> recognizePath(String path, TextSightOptionsMessage options);
 }

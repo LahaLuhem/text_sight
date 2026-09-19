@@ -7,9 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:text_sight/text_sight.dart';
 
-/// On-device smoke test for the static one-shot driver: it runs the real native
-/// recognizer (Apple Vision / ML Kit) over the bundled sample image and asserts a
-/// populated, upright capture comes back through each entry point.
+/// On-device smoke test: runs the real recognizer over the bundled sample and checks each entry
+/// point hands back a populated, upright capture.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -65,8 +64,7 @@ Future<String> _writeTempCopy(Uint8List bytes) async {
   return file.path;
 }
 
-/// Asserts [capture] is the upright sample described by the current scenario's example row:
-/// the expected quarter-turns and image size, with recognized lines including the expected token.
+/// Checks [capture] against the current scenario's example row.
 void _checkUprightSample(BddContext ctx, TextSightCapture capture) {
   check(capture.quarterTurns).equals(ctx.example.val('quarterTurns') as int);
   check(capture.imageSize).equals(

@@ -5,10 +5,8 @@ import 'package:flutter/widgets.dart';
 import '../capture/text_sight_controller.dart';
 import '../recognition/text_sight_capture.dart';
 
-/// Builds an overlay painted over the live preview from the latest [capture].
-///
-/// The [constraints] are the preview's, so a painter can map a line's
-/// normalized box onto the displayed pixels.
+/// Builds the overlay drawn over the preview. [constraints] are the preview's, so a painter can map
+/// a normalized box onto real pixels.
 typedef TextSightOverlayBuilder = Widget Function(
   BuildContext context,
   TextSightCapture capture,
@@ -17,29 +15,24 @@ typedef TextSightOverlayBuilder = Widget Function(
 
 /// A live camera preview that recognizes text, driven by a [TextSightController].
 ///
-/// Renders the controller's [TextSightController.textureId] and rebuilds as session state changes.
-/// Each [TextSightCapture] goes to [onResult] and to [overlayBuilder] for drawing boxes over the
-/// preview. [placeholderBuilder] shows until the first capture arrives, which is what carries the
-/// preview's upright rotation.
-///
-/// The view never starts or stops the session. The consumer drives the controller, so lifecycle
-/// (including pausing on app background) stays in one place.
+/// It never starts or stops the session. You drive the controller, so the lifecycle (pausing on app
+/// background included) stays in one place.
 final class const TextSightView({
-  /// The controller that owns the session this view renders.
+  /// Owns the session this renders.
   required final TextSightController controller,
 
   /// Called with every capture as it arrives.
   final void Function(TextSightCapture capture)? onResult,
 
-  /// Builds an overlay stacked over the preview from the latest capture.
+  /// Stacked over the preview, rebuilt on every capture.
   final TextSightOverlayBuilder? overlayBuilder,
 
-  /// Builds what shows until the first capture arrives (camera opening, first frame not yet
-  /// recognized), including before [TextSightController.start].
+  /// Shows until the first capture lands, which includes everything before
+  /// [TextSightController.start].
   final WidgetBuilder? placeholderBuilder,
   super.key,
 }) extends StatefulWidget {
-  /// Creates a view bound to [controller].
+  /// Creates it.
   this;
 
   @override
@@ -77,8 +70,8 @@ class _TextSightViewState() extends State<TextSightView> {
     builder: (context, _) {
       final textureId = widget.controller.textureId;
       final capture = _capture;
-      // Hold the placeholder until the first capture: the preview texture is raw and its upright
-      // rotation rides `quarterTurns` on the capture, so showing it sooner flashes it mis-rotated.
+      // The texture is raw and its rotation rides on the capture, so showing it any sooner flashes
+      // it sideways.
       if (textureId == null || capture == null) {
         return widget.placeholderBuilder?.call(context) ?? const SizedBox.shrink();
       }
@@ -88,12 +81,11 @@ class _TextSightViewState() extends State<TextSightView> {
       return Stack(
         fit: .expand,
         children: [
-          // The preview texture is delivered in the camera's raw orientation, so rotate it to
-          // display-upright. The overlay stays unrotated, since its boxes are already display-oriented.
           RotatedBox(
             quarterTurns: capture.quarterTurns,
             child: Texture(textureId: textureId),
           ),
+          // Deliberately not rotated: the overlay's boxes are already display-oriented.
           if (overlayBuilder != null)
             LayoutBuilder(
               builder: (context, constraints) => overlayBuilder(context, capture, constraints),
@@ -106,8 +98,7 @@ class _TextSightViewState() extends State<TextSightView> {
   void _subscribe() => _subscription = widget.controller.captures.listen((capture) {
     widget.onResult?.call(capture);
 
-    // Rebuild for the overlay (every frame) or when the preview rotation changes. Otherwise keep
-    // the latest capture without a rebuild, since an unchanged rotation has nothing new to paint.
+    // With no overlay, an unchanged rotation has nothing new to paint, so skip the rebuild.
     final rotationChanged = capture.quarterTurns != _capture?.quarterTurns;
     if (widget.overlayBuilder != null || rotationChanged) {
       setState(() => _capture = capture);

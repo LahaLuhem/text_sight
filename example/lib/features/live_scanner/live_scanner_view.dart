@@ -12,8 +12,7 @@ import '/features/core/data/fake_camera_platform.dart';
 import '/features/core/widgets/core_widgets.dart';
 import 'live_scanner_view_model.dart';
 
-/// Live camera OCR: the preview with a confidence-coloured box overlay, a torch
-/// toggle, and a scrolling recognized-text panel.
+/// Live camera OCR: preview, confidence-coloured boxes, torch toggle, scrolling text panel.
 class const LiveScannerView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -24,9 +23,8 @@ class const LiveScannerView({super.key}) extends StatelessWidget {
         child: ValueListenableBuilder(
           valueListenable: viewModel.sessionStatusListenable,
           builder: (context, status, _) => switch (status) {
-            // Readiness arrives as a sealed TextSightReadinessState, so switch over it. The download
-            // path is the interesting one (Android, unbundled model). ensureReady() in the view
-            // model drives the actual gate and flips to .ready / .failed once it resolves.
+            // The download branch is the interesting one: Android with the unbundled model. The
+            // view model's ensureReady() is what actually gates this.
             .preparingModel => Center(
               child: StreamBuilder(
                 stream: TextSightModel.readiness,
@@ -289,9 +287,8 @@ class _ConfidenceBoxPainter(
       oldDelegate.lines != lines || oldDelegate.isTiered != isTiered;
 }
 
-/// The model-preparation view: a progress indicator over a short message. The indicator runs
-/// determinate while a download reports [progress] (`MaterialProgressIndicatorData.value`), and as
-/// a plain spinner otherwise (indeterminate, or on iOS where there is nothing to download).
+/// Shown while the model is being prepared. Determinate once a download reports [progress], a
+/// plain spinner otherwise.
 class const _PreparingModel({required final String message, final double? progress})
     extends StatelessWidget {
   @override

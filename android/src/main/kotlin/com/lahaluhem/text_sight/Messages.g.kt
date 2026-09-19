@@ -201,7 +201,6 @@ class FlutterError (
   val details: Any? = null
 ) : RuntimeException()
 
-/** Transport twin of the public `RecognitionLevel`. */
 enum class RecognitionLevelMessage(val raw: Int) {
   FAST(0),
   ACCURATE(1);
@@ -213,7 +212,6 @@ enum class RecognitionLevelMessage(val raw: Int) {
   }
 }
 
-/** Transport twin of the public `ConfidenceScale`. */
 enum class ConfidenceScaleMessage(val raw: Int) {
   VISION_GRADED(0),
   VISION_COARSE(1),
@@ -226,7 +224,6 @@ enum class ConfidenceScaleMessage(val raw: Int) {
   }
 }
 
-/** Transport twin of the public `CaptureResolution`. */
 enum class CaptureResolutionMessage(val raw: Int) {
   LOW(0),
   MEDIUM(1),
@@ -239,7 +236,6 @@ enum class CaptureResolutionMessage(val raw: Int) {
   }
 }
 
-/** Transport twin of the public `CameraPermissionStatus`. */
 enum class CameraPermissionStatusMessage(val raw: Int) {
   GRANTED(0),
   DENIED(1),
@@ -252,7 +248,6 @@ enum class CameraPermissionStatusMessage(val raw: Int) {
   }
 }
 
-/** Transport twin of the public `SessionPauseReason`. */
 enum class SessionPauseReasonMessage(val raw: Int) {
   APP_BACKGROUNDED(0),
   INTERRUPTED(1);
@@ -265,7 +260,7 @@ enum class SessionPauseReasonMessage(val raw: Int) {
 }
 
 /**
- * Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
+ * Normalized `[0, 1]` from the top-left, twinning the public `Rect`.
  *
  * Generated class from Pigeon that represents data sent in messages.
  */
@@ -317,11 +312,7 @@ data class RegionOfInterestMessage (
   }
 }
 
-/**
- * Transport twin of the public `TextSightOptions`.
- *
- * Generated class from Pigeon that represents data sent in messages.
- */
+/** Generated class from Pigeon that represents data sent in messages. */
 data class TextSightOptionsMessage (
   val level: RecognitionLevelMessage,
   /** Whether the recognizer fixes likely misreads against a lexicon. Vision only. */
@@ -380,18 +371,13 @@ data class TextSightOptionsMessage (
 }
 
 /**
- * Transport twin of the public sealed `TextSightSessionState`, one case per state. Pigeon needs
- * the parent empty.
+ * One case per public session state. Pigeon needs the parent empty.
  *
  * Generated class from Pigeon that represents data sent in messages.
  * This class should not be extended by any user class outside of the generated file.
  */
 sealed class SessionStateMessage 
-/**
- * Twin of `SessionIdle`.
- *
- * Generated class from Pigeon that represents data sent in messages.
- */
+/** Generated class from Pigeon that represents data sent in messages. */
 class SessionIdleMessage  : SessionStateMessage() {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): SessionIdleMessage {
@@ -421,11 +407,7 @@ class SessionIdleMessage  : SessionStateMessage() {
   }
 }
 
-/**
- * Twin of `SessionActive`.
- *
- * Generated class from Pigeon that represents data sent in messages.
- */
+/** Generated class from Pigeon that represents data sent in messages. */
 class SessionActiveMessage  : SessionStateMessage() {
   companion object {
     fun fromList(pigeonVar_list: List<Any?>): SessionActiveMessage {
@@ -455,11 +437,7 @@ class SessionActiveMessage  : SessionStateMessage() {
   }
 }
 
-/**
- * Twin of `SessionPaused`.
- *
- * Generated class from Pigeon that represents data sent in messages.
- */
+/** Generated class from Pigeon that represents data sent in messages. */
 data class SessionPausedMessage (
   val reason: SessionPauseReasonMessage,
   val details: String? = null
@@ -500,11 +478,7 @@ data class SessionPausedMessage (
   }
 }
 
-/**
- * Twin of `SessionFailed`.
- *
- * Generated class from Pigeon that represents data sent in messages.
- */
+/** Generated class from Pigeon that represents data sent in messages. */
 data class SessionFailedMessage (
   val details: String? = null
 ) : SessionStateMessage()
@@ -654,53 +628,48 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
 
 
 /**
- * The typed control channel. Per-frame results stream over a plain
- * EventChannel and the preview is a texture. Neither rides this API.
+ * The typed control channel. Per-frame results stream over a plain EventChannel and the preview is
+ * a texture, so neither rides this API.
  *
  * Generated interface from Pigeon that represents a handler of messages from Flutter.
  */
 interface TextSightHostApi {
   /**
-   * Opens the camera with [options] at [resolution]. Returns the preview texture id.
+   * Opens the camera and returns the preview texture id. Reopening is fine, the old session is
+   * released first. Recognition stays off until [start].
    *
-   * Reopening an open session is fine, the old one is released first and this id replaces it.
-   * Recognition stays off until [start]. Resolution rides here because it cannot change
-   * mid-session.
+   * [resolution] rides here rather than on [setOptions] because it can't change mid-session.
    */
   suspend fun initialize(options: TextSightOptionsMessage, resolution: CaptureResolutionMessage): Long
   /**
-   * Begins frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
+   * Starts frame delivery and recognition. Not `@async`: both natives only flip a flag, and the
    * Dart signature is `Future<void>` either way.
    */
   fun start()
-  /** Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start]. */
+  /** Stops recognizing, keeping the session open for a later [start]. Not `@async`, as [start]. */
   fun pauseRecognition()
-  /** Releases the camera and texture. Idempotent, so calling it with nothing open is fine. */
+  /** Releases the camera and texture. Idempotent. */
   suspend fun dispose()
-  /** Reports the current camera-permission status without prompting. */
+  /** Reads the camera-permission status without prompting. */
   fun checkCameraPermission(): CameraPermissionStatusMessage
-  /** Prompts for camera permission when it has not yet been decided, resolving to the resulting status. */
+  /** Prompts when the user hasn't decided yet. `@async` because it drives the system prompt. */
   suspend fun requestCameraPermission(): CameraPermissionStatusMessage
   /**
-   * Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
-   * change mid-session, so it rides [initialize] instead.
+   * Replaces the recognizer settings on an open session. Resolution isn't in here, see
+   * [initialize].
    */
   fun setOptions(options: TextSightOptionsMessage)
-  /** Turns the camera torch on or off. */
   fun setTorchEnabled(enabled: Boolean)
-  /**
-   * What a per-line confidence means on this device. Fixed once the engine is picked, so the
-   * Dart side reads it once and caches.
-   */
+  /** Fixed once the engine is picked, so the Dart side reads it once and caches. */
   fun confidenceScale(): ConfidenceScaleMessage
   /**
-   * Ensures the recognition model is present (fetching the unbundled ML Kit model via
-   * Google Play Services when needed) and returns the terminal readiness state.
+   * Fetches the unbundled ML Kit model through Play Services when it's needed, and returns the
+   * terminal state. Progress streams over com.lahaluhem.text_sight/readiness instead.
    */
   suspend fun ensureModelReady(): Map<String, Any?>
-  /** Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options]. */
+  /** Recognizes text in an encoded image (PNG, JPEG, …). */
   suspend fun recognizeImage(bytes: ByteArray, options: TextSightOptionsMessage): Map<String, Any?>
-  /** Recognizes text in the image at file [path], honouring [options]. */
+  /** Recognizes text in the image file at [path]. */
   suspend fun recognizePath(path: String, options: TextSightOptionsMessage): Map<String, Any?>
 
   companion object {

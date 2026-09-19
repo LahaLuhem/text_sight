@@ -4,12 +4,11 @@ import 'package:integration_test/integration_test.dart';
 import 'package:text_sight/src/platform/text_sight_platform.dart';
 import 'package:text_sight/text_sight.dart';
 
-/// Measures how long the platform thread is unavailable while a large `recognizeImage` payload
-/// crosses the control channel, the slice `@TaskQueue(serialBackgroundThread)` moves.
+/// How long the platform thread is blocked while a large `recognizeImage` payload crosses the
+/// control channel, which is the slice `@TaskQueue(serialBackgroundThread)` moves.
 ///
-/// The probe is `checkCameraPermission`, a synchronous host method, so its round trip is dominated
-/// by that wait. Run before and after the annotation and diff. Dart-isolate scheduling and the
-/// engine's own hop sit inside the measurement, so it bounds the effect rather than attributing it.
+/// Run it before and after the annotation and diff the two. Dart-isolate scheduling and the
+/// engine's own hop sit inside the number, so it bounds the effect rather than pinning it.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -37,8 +36,7 @@ void main() {
   });
 }
 
-/// One probe round trip: a synchronous host call, so it queues behind whatever holds the platform
-/// thread.
+/// A synchronous host call, so it queues behind whatever is holding the platform thread.
 Future<void> _ping() => TextSightPlatform.instance.checkCameraPermission();
 
 Future<void> _warmUp(Uint8List payload) async {

@@ -8,12 +8,11 @@ import 'package:text_sight/text_sight.dart';
 import '/features/core/data/constants/core_constants.dart';
 import '/features/core/data/recognition_result.dart';
 
-/// The region-of-interest knobs: whether recognition is restricted, and the normalized,
-/// top-left box it is restricted to (dragged directly on the preview).
+/// Whether recognition is restricted, and the normalized box it's restricted to.
 typedef RoiConfig = ({bool restrict, Rect rect});
 
-/// Runs the same bundled still through the recognizer with whatever level and
-/// region-of-interest the knobs currently hold, so their effect can be compared.
+/// Runs the same bundled still through the recognizer at whatever the knobs currently say, so you
+/// can see what each one does.
 final class PlaygroundViewModel() extends ViewModel {
   static const _minRoiSize = 0.15;
 
@@ -62,8 +61,8 @@ final class PlaygroundViewModel() extends ViewModel {
     _roiConfigNotifier.value = (restrict: restrict ?? config.restrict, rect: rect ?? config.rect);
   }
 
-  /// Clamps [rect] to the unit square with a [_minRoiSize] floor, preserving its dimensions where
-  /// it can, so dragging the box into an edge slides it back in rather than shrinking it.
+  /// Keeps [rect]'s size where it can, so dragging the box into an edge slides it back in rather
+  /// than shrinking it.
   static Rect _clampRoi(Rect rect) {
     final width = rect.width.clamp(_minRoiSize, 1.0);
     final height = rect.height.clamp(_minRoiSize, 1.0);

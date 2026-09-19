@@ -12,8 +12,7 @@ import 'package:text_sight/src/platform/messages.g.dart';
 import 'package:text_sight/src/platform/pigeon_text_sight_platform.dart';
 import 'package:text_sight/text_sight.dart';
 
-/// Tolerance for round-tripped `Rect` extents: `Rect` stores L/T/R/B and derives
-/// width/height (`right - left`), so they carry sub-epsilon float error.
+/// `Rect` stores L/T/R/B and derives width and height, so those carry sub-epsilon float error.
 const _floatTolerance = 1e-9;
 
 void main() {
@@ -714,21 +713,20 @@ void main() {
       });
 }
 
-/// Records the decoded argument payload a mocked host method receives, and whether it was invoked
-/// at all (a no-argument method like `ensureModelReady` carries a `null` payload either way).
 /// The options twin a `setOptions` call carried.
 TextSightOptionsMessage _sentOptions(_HostCall call) =>
     (call.payload! as List<Object?>).single! as TextSightOptionsMessage;
 
+/// What a mocked host method received, and whether it was called at all. A no-argument method like
+/// `ensureModelReady` carries a `null` payload either way.
 final class _HostCall() {
   Object? payload;
   var invoked = false;
   var invocations = 0;
 }
 
-/// Installs a mock handler for the Pigeon `@HostApi` [method], recording the
-/// decoded argument payload it receives into the returned [_HostCall] and
-/// replying with the success envelope wrapping [reply].
+/// Mocks the Pigeon `@HostApi` [method]: records what it receives into the returned [_HostCall] and
+/// answers with the success envelope around [reply].
 _HostCall _mockHostMethod(TestDefaultBinaryMessenger messenger, String method, {Object? reply}) {
   final call = _HostCall();
   final channel = BasicMessageChannel<Object?>(
@@ -797,8 +795,7 @@ Map<String, Object?> _wireLine(BddTableValues row) => <String, Object?>{
   'elements': null,
 };
 
-/// A one-shot host reply: the same captures wire map a single upright line would
-/// produce (`quarterTurns` 0), sized [imageWidth] by [imageHeight].
+/// A one-shot host reply, the same wire map a single upright line would produce.
 Map<String, Object?> _stillReply(int imageWidth, int imageHeight) => <String, Object?>{
   'imageWidth': imageWidth.toDouble(),
   'imageHeight': imageHeight.toDouble(),

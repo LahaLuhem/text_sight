@@ -8,8 +8,7 @@ import '/features/core/data/constants/core_constants.dart';
 import '/features/core/widgets/core_widgets.dart';
 import 'one_shot_view_model.dart';
 
-/// Still-image recognition: recognize a bundled sample from bytes and from a file path,
-/// with no camera, session, or permission.
+/// Still-image recognition off a bundled sample, from bytes and from a file path.
 class const OneShotView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(

@@ -1,23 +1,22 @@
 import 'dart:ui' show Rect;
 
-/// A sub-line recognition unit (typically a word) with its own text and box.
+/// A word-sized piece of a line, with its own box.
 ///
-/// Reserved for a future release. The shape ships from v1 so populating word-level detail later is
-/// additive, but `RecognizedLine.elements` stays `null` until then.
+/// Reserved. The shape ships now so filling it in later is additive, but `RecognizedLine.elements`
+/// stays `null` until then.
 final class const RecognizedElement({
-  /// The recognized text of this element.
+  /// What it reads.
   required final String text,
 
-  /// Bounding box normalized to `[0, 1]` with a top-left origin (the unified
-  /// coordinate contract), as a [Rect] for direct use by an overlay painter.
+  /// Normalized to `[0, 1]` from the top-left, so an overlay painter can map it straight onto the
+  /// preview.
   required final Rect boundingBox,
 
-  /// Recognition confidence in `[0, 1]`, or `null` when the platform does not
-  /// supply one. `null` means "unknown", not "low", so never compare it to a
-  /// threshold without choosing an explicit default.
+  /// `[0, 1]`, or `null` when the platform doesn't give one. `null` means unknown, not low, so
+  /// don't feed it to a threshold without picking a default first.
   final double? confidence,
 }) {
-  /// Creates a recognized element.
+  /// Creates it.
   this;
 
   @override

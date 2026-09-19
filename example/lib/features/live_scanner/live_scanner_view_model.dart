@@ -24,8 +24,7 @@ final class LiveScannerViewModel() extends ViewModel {
     unawaited(_start());
   }
 
-  /// The session controller, bound to the view's `TextSightView`, and the source of its
-  /// `captures` stream.
+  /// Bound to the view's `TextSightView`, and the source of its `captures` stream.
   TextSightController get controller => _controller;
 
   ValueListenable<SessionStatus> get sessionStatusListenable => _sessionStatusNotifier;
@@ -62,8 +61,8 @@ final class LiveScannerViewModel() extends ViewModel {
       _controller.isRecognizing ? _controller.pauseRecognition() : _controller.start();
 
   Future<void> _start() async {
-    // Fetch the on-device model first (instant on iOS / with the bundled model). Keeps model loading
-    // off app startup and lets the UI show download progress before the camera ever opens.
+    // Model first, so the download can show progress before the camera ever opens. Instant on iOS
+    // and with the bundled model.
     _sessionStatusNotifier.value = .preparingModel;
     final readiness = await TextSightModel.ensureReady();
     if (readiness is ModelUnavailable) {

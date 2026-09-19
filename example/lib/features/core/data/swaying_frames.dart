@@ -4,21 +4,19 @@ import 'dart:ui' as ui;
 
 /// Turns a still image into a gently drifting camera feed.
 ///
-/// A fixed scene proves nothing about live tracking, since the boxes would sit still whether or not
-/// the overlay updated. Drifting means every tick is a different image, so the recognizer runs again
-/// and the boxes have to follow.
+/// A fixed scene proves nothing: the boxes would sit still whether the overlay updated or not.
+/// Drifting makes every tick a different image, so the boxes have to follow.
 final class SwayingFrames(final ui.Image _source) {
-  /// Drift in source pixels and tilt in radians, tuned to read as a held camera rather than a pan.
-  /// The three periods are deliberately unequal, so the motion never retraces a straight line.
+  /// Drift in source pixels and tilt in radians, tuned to read as a held camera, not a pan.
   static const _driftX = 12.0;
   static const _driftY = 9.0;
   static const _tilt = 0.021;
 
-  /// Has to cover the drift and the tilt together, or a frame would show past the image's edge.
-  /// A tilt of [_tilt] alone needs about 1.6% on a 4:3 frame, the drift another 4%.
+  /// Has to cover drift and tilt together or a frame shows past the image's edge. [_tilt] alone
+  /// needs about 1.6% on a 4:3 frame, the drift another 4%.
   static const _overscale = 1.12;
 
-  /// Decodes an encoded image. Takes bytes rather than an asset key so a test needs no bundle.
+  /// Bytes rather than an asset key, so a test needs no bundle.
   static Future<SwayingFrames> fromBytes(Uint8List bytes) async {
     final codec = await ui.instantiateImageCodec(bytes);
     final frame = await codec.getNextFrame();
@@ -28,13 +26,13 @@ final class SwayingFrames(final ui.Image _source) {
 
   ui.Size get size => ui.Size(_source.width.toDouble(), _source.height.toDouble());
 
-  /// The source drifted and tilted for [elapsed], encoded as a PNG.
-  ///
-  /// PNG because the recognizer takes encoded bytes and `toByteData` offers nothing cheaper.
+  /// The source drifted and tilted for [elapsed]. PNG because the recognizer wants encoded bytes
+  /// and `toByteData` offers nothing cheaper.
   Future<Uint8List> frameAt(Duration elapsed) async {
     final seconds = elapsed.inMilliseconds / Duration.millisecondsPerSecond;
     final (width, height) = (size.width, size.height);
 
+    // The three periods are deliberately unequal, so the motion never retraces a straight line.
     final recorder = ui.PictureRecorder();
     ui.Canvas(recorder)
       ..translate(

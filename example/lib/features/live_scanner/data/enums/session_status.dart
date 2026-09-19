@@ -1,15 +1,24 @@
-/// Lifecycle of the live camera session, surfaced to the view as one switchable state.
-///
-/// [preparingModel] comes first: the model is fetched (a no-op on iOS and with the bundled ML Kit
-/// model) before the camera is requested. A refused permission splits into [denied] (retry re-asks)
-/// and [permanentlyDenied] (settings only). [paused], and a [failed] after scanning began, come
-/// from the controller's `sessionState`.
+/// Lifecycle of the live camera session, as one switchable state for the view.
 enum SessionStatus() {
+  /// Fetching the model, which happens before the camera is touched. A no-op on iOS and with the
+  /// bundled ML Kit model.
   preparingModel,
+
+  /// Asking for camera permission.
   requesting,
+
+  /// Refused, but a retry can still ask.
   denied,
+
+  /// Refused for good, so it's the settings app now.
   permanentlyDenied,
+
+  /// Scanning.
   ready,
+
+  /// The controller reported a pause.
   paused,
+
+  /// The controller reported a failure after scanning had started.
   failed,
 }

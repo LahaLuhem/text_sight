@@ -13,9 +13,8 @@ import 'text_sight_session_state.dart';
 
 /// Configures and drives a live camera recognition session.
 ///
-/// A [ChangeNotifier] exposing configuration and session state through individual getters that a
-/// `TextSightView` (or any listener) rebuilds from. Per-frame results arrive on [captures], and
-/// the preview renders [textureId].
+/// A [ChangeNotifier], so a `TextSightView` or any other listener rebuilds off it. Per-frame
+/// results are not part of that, they arrive on [captures].
 final class TextSightController({
   TextSightOptions options = const TextSightOptions(),
 
@@ -30,8 +29,8 @@ final class TextSightController({
   TextSightSessionState _sessionState = const SessionIdle();
   StreamSubscription<TextSightSessionState>? _stateSubscription;
 
-  /// Creates a controller from [options], a [resolution] and an initial torch state. Nothing opens
-  /// the camera until [start]. [resolution] cannot change after, it rebuilds the capture graph.
+  /// Nothing opens the camera until [start]. [resolution] can't change afterwards, that would mean
+  /// rebuilding the capture graph.
   this
     : assert(
         options.roi.isNormalizedRoi,
@@ -41,28 +40,24 @@ final class TextSightController({
   /// The recognizer settings in force. Change them with [updateOptions].
   TextSightOptions get options => _options;
 
-  /// Whether the torch is currently requested on.
+  /// Whether the torch is asked to be on.
   bool get isTorchEnabled => _isTorchEnabled;
 
-  /// Whether recognition is requested on. Intent, not a readback: it flips with [start] and
-  /// [pauseRecognition] and nothing else, so it says what was asked for, not what the camera is doing.
+  /// What you asked for, not what the camera is doing. Only [start] and [pauseRecognition] move it.
   bool get isRecognizing => _isRecognizing;
 
-  /// The preview texture id, or `null` before [start] has acquired one.
-  /// Read by `TextSightView` to mount the camera preview.
+  /// The preview texture id, or `null` until [start] gets one.
   int? get textureId => _textureId;
 
-  /// The capture session's state as native last reported it: [SessionIdle] until [start] and
-  /// again after [dispose]. Listeners are notified on change only.
+  /// What native last reported. [SessionIdle] until [start], and again after [dispose].
   TextSightSessionState get sessionState => _sessionState;
 
-  /// The live per-frame results stream. Subscribers must cancel their own subscription.
-  /// The controller does not own it. Frames are recognized only while this has a listener.
+  /// One event per recognized frame. Nothing gets recognized while nobody listens, and cancelling
+  /// is yours to do.
   Stream<TextSightCapture> get captures => TextSightPlatform.instance.captures;
 
-  /// Opens the camera if needed and begins recognition. Idempotent on the texture:
-  /// a session acquired once is reused across [pauseRecognition] and [start]. Also the way back
-  /// from [SessionFailed].
+  /// Opens the camera if it isn't already and starts recognizing. Reuses the session across a
+  /// [pauseRecognition], and it's also the way back from [SessionFailed].
   Future<void> start() async {
     // Before initialize, so the first state of this session is never missed.
     _stateSubscription ??= TextSightPlatform.instance.sessionStates.listen(_onSessionState);
@@ -72,32 +67,26 @@ final class TextSightController({
     notifyListeners();
   }
 
-  /// Pauses recognition while keeping the session (and texture) alive. [start] resumes it.
+  /// Stops recognizing but keeps the session and texture alive. [start] picks it up again.
   Future<void> pauseRecognition() async {
     await TextSightPlatform.instance.pauseRecognition();
     _isRecognizing = false;
     notifyListeners();
   }
 
-  /// Reports the current camera-permission status without prompting the user.
-  ///
-  /// A cheap status read. Use it to decide whether to show a priming or
-  /// rationale screen before [requestCameraPermission]. Does not open the camera.
+  /// Reads the permission status without prompting, so you can show a rationale screen before
+  /// [requestCameraPermission].
   Future<CameraPermissionStatus> checkCameraPermission() =>
       TextSightPlatform.instance.checkCameraPermission();
 
-  /// Requests camera permission, prompting when the choice is undecided, and resolves to the
-  /// resulting [CameraPermissionStatus].
+  /// Prompts when the user hasn't decided yet. Call it before [start], which never asks by itself.
   ///
-  /// Call it before [start], which never requests on its own. You must still declare
-  /// `NSCameraUsageDescription` on iOS, or iOS terminates the app on first camera use. Android's
-  /// manifest entry ships with the plugin.
+  /// You still have to declare `NSCameraUsageDescription` or iOS kills the app the first time it
+  /// touches the camera. The Android manifest entry ships with the plugin.
   Future<CameraPermissionStatus> requestCameraPermission() =>
       TextSightPlatform.instance.requestCameraPermission();
 
-  /// Replaces the recognizer settings on the open session.
-  ///
-  /// Every setting goes at once, so read [options] first when you only mean to change one.
+  /// Replaces every setting at once, so start from [options] when you only mean to change one.
   Future<void> updateOptions(TextSightOptions settings) async {
     assert(
       settings.roi.isNormalizedRoi,
@@ -109,27 +98,25 @@ final class TextSightController({
     notifyListeners();
   }
 
-  /// Requests the camera torch on or off (no-op on devices without one).
+  /// Asks for the torch on or off. No-op on a device without one.
   Future<void> updateTorchEnabled({required bool enabled}) async {
     await TextSightPlatform.instance.updateTorchEnabled(enabled: enabled);
     _isTorchEnabled = enabled;
     notifyListeners();
   }
 
-  /// Releases the native session along with the controller. Safe even when [start] never
-  /// succeeded, since a hot restart can leave a session running that this controller never saw.
+  /// Takes the native session down with the controller. Safe even if [start] never succeeded.
   @override
   void dispose() {
     _stateSubscription?.cancel().ignore();
     _sessionState = const SessionIdle();
-    // Unconditional: native can be holding a session this controller never learned about, which is
-    // what a hot restart leaves behind. Its dispose is idempotent, so an extra call costs nothing.
+    // Unconditional: a hot restart leaves native holding a session this controller never saw.
     unawaited(TextSightPlatform.instance.dispose());
 
     super.dispose();
   }
 
-  /// The only dedupe in the system: natives report every transition, equal reports are dropped here.
+  /// The only dedupe in the system. Native reports every transition, equal ones stop here.
   void _onSessionState(TextSightSessionState state) {
     if (state == _sessionState) return;
     _sessionState = state;
@@ -137,9 +124,8 @@ final class TextSightController({
   }
 }
 
-/// A stable copy. `preferredLanguages` can arrive lazy or growable and is read more than once, and
-/// a repeat means nothing in a preference order, so drop repeats but keep the order given. A `const`
-/// constructor cannot do any of that itself.
+/// `preferredLanguages` can arrive lazy or growable and gets read more than once, and a repeat means
+/// nothing in a preference order. A `const` constructor can't do any of that itself.
 extension on TextSightOptions {
   TextSightOptions _stable() => TextSightOptions(
     roi: roi,

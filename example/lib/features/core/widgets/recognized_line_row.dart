@@ -3,8 +3,7 @@ import 'package:text_sight/text_sight.dart';
 
 import 'confidence_chip.dart';
 
-/// One recognized line, its text filling the row, with a trailing [ConfidenceChip].
-/// Shared by the live scanner's panel, the one-shot result, and the playground.
+/// One recognized line with a trailing [ConfidenceChip].
 class const RecognizedLineRow({required final RecognizedLine line, super.key})
     extends StatelessWidget {
   @override

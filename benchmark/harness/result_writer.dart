@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-/// Writes results as a JSON array, one record per (candidate, payload, iteration).
-///
-/// Schema mirrors the sibling suites: header, `samples`, `summary`. One writer per process:
-/// [open], a [writeRecord] per measurement, then [close].
+/// A JSON array, one record per (candidate, payload, iteration), in the sibling suites' schema.
+/// One writer per process: [open], a [writeRecord] each, then [close].
 final class ResultWriter._(
   final IOSink _sink, {
   required final String benchmark,
@@ -26,8 +24,7 @@ final class ResultWriter._(
   }) async {
     final file = File(outputPath);
     await file.parent.create(recursive: true);
-    // Held for the writer's lifetime and closed by [close]. The lint can't
-    // trace ownership across the factory boundary.
+    // Closed by [close]. The lint can't trace ownership across the factory boundary.
     // ignore: close_sinks
     final sink = file.openWrite()..write('[\n');
 

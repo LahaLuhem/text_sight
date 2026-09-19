@@ -11,14 +11,13 @@ import '../recognition/text_sight_options.dart';
 import '../recognition/text_sight_readiness_state.dart';
 import 'pigeon_text_sight_platform.dart';
 
-/// The platform-facing contract both drivers delegate to: the federation seam.
+/// The seam both drivers delegate to, so nothing above it ever sees Pigeon and splitting into
+/// per-platform packages later stays mechanical.
 ///
-/// Drivers talk only to [instance], never to the native channel, so splitting into per-platform
-/// packages later is mechanical, and Pigeon never appears here. Methods throw [UnimplementedError]
-/// by default rather than being abstract, so adding one is non-breaking. [instance] defaults to
-/// [PigeonTextSightPlatform].
+/// Methods throw [UnimplementedError] instead of being abstract, so adding one doesn't break an
+/// implementation that already exists.
 abstract class TextSightPlatform() extends PlatformInterface {
-  /// Constructs the interface, passing the verification token to [PlatformInterface].
+  /// Passes the verification token up.
   this : super(token: _token);
 
   static final _token = Object();
@@ -28,35 +27,32 @@ abstract class TextSightPlatform() extends PlatformInterface {
   /// The active implementation, [PigeonTextSightPlatform] by default.
   static TextSightPlatform get instance => _instance;
 
-  /// Registers [value] as the platform implementation after verifying it `extends` this class
-  /// (the token guards against an `implements`-based fake).
+  /// The token check rejects an `implements`-based fake, so [value] has to `extend` this class.
   static set instance(TextSightPlatform value) {
     PlatformInterface.verify(value, _token);
     _instance = value;
   }
 
-  /// Opens the camera with [options] and returns the texture id the preview renders into.
-  /// Recognition waits for [start]. Reopening an open session is fine, the old one is released
-  /// first and this id replaces it.
+  /// Opens the camera and returns the texture id the preview renders into. Recognition waits for
+  /// [start]. Reopening is fine, the old session is released first and this id replaces it.
   Future<int> initialize(TextSightOptions options, CaptureResolution resolution) =>
       throw UnimplementedError('initialize() has not been implemented.');
 
-  /// Begins delivering frames to the recognizer and emitting on [captures].
+  /// Starts feeding frames to the recognizer and emitting on [captures].
   Future<void> start() => throw UnimplementedError('start() has not been implemented.');
 
-  /// Pauses recognition but keeps the session open for a later [start].
+  /// Stops recognizing but keeps the session open for a later [start].
   Future<void> pauseRecognition() =>
       throw UnimplementedError('pauseRecognition() has not been implemented.');
 
-  /// Tears the session down and releases the camera and texture. Idempotent, so calling it with
-  /// nothing open is fine.
+  /// Tears the session down and releases the camera and texture. Idempotent.
   Future<void> dispose() => throw UnimplementedError('dispose() has not been implemented.');
 
-  /// Reports the current camera-permission status without prompting.
+  /// Reads the camera-permission status without prompting.
   Future<CameraPermissionStatus> checkCameraPermission() =>
       throw UnimplementedError('checkCameraPermission() has not been implemented.');
 
-  /// Prompts for camera permission when it is still undecided and resolves to the resulting status.
+  /// Prompts for camera permission when it's still undecided.
   Future<CameraPermissionStatus> requestCameraPermission() =>
       throw UnimplementedError('requestCameraPermission() has not been implemented.');
 
@@ -72,7 +68,7 @@ abstract class TextSightPlatform() extends PlatformInterface {
   Future<void> updateTorchEnabled({required bool enabled}) =>
       throw UnimplementedError('updateTorchEnabled() has not been implemented.');
 
-  /// The live per-frame results stream, backed by a plain `EventChannel`.
+  /// One event per recognized frame, over a plain `EventChannel`.
   Stream<TextSightCapture> get captures =>
       throw UnimplementedError('captures has not been implemented.');
 
@@ -80,26 +76,25 @@ abstract class TextSightPlatform() extends PlatformInterface {
   Stream<TextSightSessionState> get sessionStates =>
       throw UnimplementedError('sessionStates has not been implemented.');
 
-  // Model readiness, mode-agnostic and shared by both drivers. Decoupled from the camera
-  // session: a still image and a live preview both need the model, neither needs the other.
+  // Readiness is camera-free on purpose: a still image and a live preview both need the model,
+  // neither needs the other.
 
-  /// Ensures the recognition model is present and resolves to the terminal readiness state.
+  /// Makes sure the model is there, resolving to the terminal readiness state.
   Future<TextSightReadinessState> ensureModelReady() =>
       throw UnimplementedError('ensureModelReady() has not been implemented.');
 
-  /// The model-readiness state stream, backed by a plain `EventChannel`.
+  /// Model readiness as it changes, over a plain `EventChannel`.
   Stream<TextSightReadinessState> get modelReadiness =>
       throw UnimplementedError('modelReadiness has not been implemented.');
 
-  // Static one-shot driver, no camera session, texture, or permission. Both return a capture
-  // whose `quarterTurns` is 0 (a still is upright), built from the same recognizer and models
-  // as the live path.
+  // The one-shot pair below needs no session, texture or permission, and both come back with
+  // `quarterTurns` 0, since a still is already upright.
 
-  /// Recognizes text in the encoded still-image [bytes] using [options].
+  /// Recognizes text in encoded still-image [bytes].
   Future<TextSightCapture> recognizeImage(Uint8List bytes, TextSightOptions options) =>
       throw UnimplementedError('recognizeImage() has not been implemented.');
 
-  /// Recognizes text in the still image at [path] using [options].
+  /// Recognizes text in the still image at [path].
   Future<TextSightCapture> recognizePath(String path, TextSightOptions options) =>
       throw UnimplementedError('recognizePath() has not been implemented.');
 }

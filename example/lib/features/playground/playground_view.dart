@@ -129,9 +129,8 @@ class const _RoiControls({required final PlaygroundViewModel viewModel}) extends
   );
 }
 
-/// The sample image with a directly-manipulated region-of-interest box: drag the interior to move
-/// it, drag a corner handle to resize. Inert (just the image) while recognition is unrestricted.
-/// The box itself is view-model-owned state. Only the in-progress drag is view-local.
+/// The sample image with a draggable region-of-interest box. Drag the middle to move it, a corner
+/// to resize. Just the image while recognition is unrestricted.
 class const _RoiEditor({
   required final RoiConfig config,
   required final Color color,
@@ -142,9 +141,8 @@ class const _RoiEditor({
 }
 
 class _RoiEditorState() extends State<_RoiEditor> {
-  /// The drag in progress: the grabbed corner (null ⇒ moving the whole box), with the box and
-  /// pointer captured at touch-down. Pure presentation state, observed by nothing but the
-  /// gesture handlers (the box is painted from the view model), so it never triggers a rebuild.
+  /// The drag in progress, `null` corner meaning the whole box is moving. Only the gesture
+  /// handlers read it, so it never needs a rebuild.
   ({_Corner? corner, Rect startRect, Offset startPointer})? _drag;
 
   /// Slop around a corner, in logical pixels, that still grabs its resize handle.
@@ -173,8 +171,8 @@ class _RoiEditorState() extends State<_RoiEditor> {
     },
   );
 
-  /// Hit-tests the touch-down point, done here rather than in `onPanStart`, because by the time a pan is
-  /// recognized the finger has drifted off a small corner handle, so the resize grab would miss.
+  /// Here rather than in `onPanStart`, because by the time a pan is recognized the finger has
+  /// drifted off a small corner handle and the resize grab would miss.
   void _onPanDown(Offset localPosition, Size size) {
     final rect = PlaygroundViewModel.roiOf(widget.config);
     if (rect == null) return; // Unrestricted: the box is hidden and inert.
@@ -241,8 +239,7 @@ enum _Corner() {
   bottomRight,
 }
 
-/// Strokes the active region-of-interest over the sample image, with a dot at each draggable
-/// corner. Draws nothing when [roi] is null (recognition unrestricted).
+/// Strokes the region-of-interest over the sample image, with a dot on each draggable corner.
 class _RoiPainter(final Rect? roi, final Color color) extends CustomPainter {
   static const _handleRadius = 6.0;
 

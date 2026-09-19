@@ -2,25 +2,21 @@ import 'dart:ui' show Size;
 
 import 'recognized_line.dart';
 
-/// The result of one recognition pass: every [RecognizedLine] found plus the size of the image they were located in.
-///
-/// The same type comes from the live stream and the one-shot, with no hint of where the pixels
-/// came from. Map a normalized [RecognizedLine.boundingBox] into widget space with [imageSize] and
-/// whatever fit shows the preview.
+/// Everything one recognition pass found. Comes back the same from the live stream and from the
+/// one-shot.
 final class const TextSightCapture({
-  /// The recognized lines, in the recognizer's emission order.
+  /// In the order the recognizer emitted them.
   required final List<RecognizedLine> lines,
 
-  /// Pixel size of the analyzed image, in the same orientation as the lines' normalized boxes (post-rotation).
+  /// Pixel size of the image that was analyzed, already turned the same way up as [lines].
   required final Size imageSize,
 
-  /// Clockwise quarter-turns to rotate the *raw preview texture* so it aligns with the
-  /// display-upright orientation [lines] and [imageSize] are already in. Live preview frames are
-  /// delivered unrotated (cheaper, and avoids leaning on native buffer rotation). `TextSightView`
-  /// applies this turn. `0` for an already-upright source such as the static one-shot.
+  /// Clockwise turns to get the raw preview texture upright, which [lines] and [imageSize] already
+  /// are. `TextSightView` applies it for you. `0` when the source was upright to start with, like
+  /// the one-shot.
   final int quarterTurns = 0,
 }) {
-  /// Creates a capture.
+  /// Creates it.
   this;
 
   @override

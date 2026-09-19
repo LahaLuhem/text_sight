@@ -7,9 +7,8 @@ import 'confidence_scale_note.dart';
 import 'platform/platform_card.dart';
 import 'recognized_line_row.dart';
 
-/// Renders a [RecognitionResult]: an [idleHint] before the first run, the recognized lines (with
-/// a one-line summary) on success (or [emptyHint] when the capture has no lines), and the error
-/// message on failure. Shared by the one-shot and playground demos.
+/// Renders a [RecognitionResult]: [idleHint] before the first run, the lines on success,
+/// [emptyHint] when there were none, the error message on failure.
 class const RecognitionResultView({
   required final RecognitionResult? result,
   required final String idleHint,
@@ -29,8 +28,7 @@ class const RecognitionResultView({
   }
 }
 
-/// The recognized lines plus a one-line summary (count, image size, quarter-turns), or [emptyHint]
-/// when recognition succeeded but matched no lines.
+/// The lines plus a summary, or [emptyHint] when recognition worked but matched nothing.
 class const _CaptureCard({required final TextSightCapture capture, required final String emptyHint})
     extends StatelessWidget {
   @override

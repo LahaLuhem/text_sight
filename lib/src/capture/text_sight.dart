@@ -7,18 +7,16 @@ import '../recognition/recognition_level.dart';
 import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
 
-/// One-shot, still-image text recognition: the static counterpart to the live `TextSightController`.
+/// Text recognition on a still image. No camera, no session, no permission.
 ///
-/// Same recognizer and result models as the live driver, but no camera, session, texture, or
-/// permission. Defaults to [RecognitionLevel.accurate], having no per-frame budget to protect,
-/// and `quarterTurns` is always `0`.
+/// Same recognizer and same result models as the live `TextSightController`. Defaults to
+/// [RecognitionLevel.accurate], with no frame budget to protect, and `quarterTurns` on the result
+/// is always `0`.
 // Nothing to construct here, so a primary constructor would only add a public member.
 // ignore: use_primary_constructors
 abstract final class TextSight {
-  /// Recognizes text in the encoded image [bytes] (PNG, JPEG, …) at [options].
-  ///
-  /// Resolves to a [TextSightCapture] of every recognized line.
-  /// Throws a `PlatformException` if [bytes] cannot be decoded as an image.
+  /// Recognizes text in an encoded image (PNG, JPEG, …). Throws a `PlatformException` when [bytes]
+  /// won't decode.
   static Future<TextSightCapture> recognizeImage(
     Uint8List bytes, {
     TextSightOptions options = const TextSightOptions(
@@ -33,10 +31,8 @@ abstract final class TextSight {
     return TextSightPlatform.instance.recognizeImage(bytes, options);
   }
 
-  /// Recognizes text in the image file at [path] at [options].
-  ///
-  /// Resolves to a [TextSightCapture] of every recognized line.
-  /// Throws a `PlatformException` if no readable image exists at [path].
+  /// Recognizes text in the image file at [path]. Throws a `PlatformException` when there's no
+  /// readable image there.
   static Future<TextSightCapture> recognizePath(
     String path, {
     TextSightOptions options = const TextSightOptions(

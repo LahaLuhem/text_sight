@@ -1,17 +1,16 @@
 import 'package:meta/meta.dart';
 
-/// The live capture session's state, as native reports it. Sealed for exhaustive switches,
-/// value-equal so a repeated report is a no-op. Recognition is a separate axis, see
-/// `TextSightController.isRecognizing`.
+/// What the live capture session is doing, as native reports it. Whether recognition is actually
+/// running is a separate thing, see `TextSightController.isRecognizing`.
 @immutable
 sealed class const TextSightSessionState() {
-  /// Const base constructor for the sealed hierarchy.
+  /// Const base constructor.
   this;
 }
 
-/// No capture session: before `start()`, after `dispose()`, or while a re-initialize swaps sessions.
+/// No session: before `start()`, after `dispose()`, or mid-swap while a re-initialize runs.
 final class const SessionIdle() extends TextSightSessionState {
-  /// Creates the idle state.
+  /// Creates it.
   this;
 
   @override
@@ -24,10 +23,10 @@ final class const SessionIdle() extends TextSightSessionState {
   String toString() => 'SessionIdle()';
 }
 
-/// The capture session is running. Frames are recognized only while `isRecognizing` is on and
-/// something listens to `captures`.
+/// Running. Frames are only recognized while `isRecognizing` is on and something listens to
+/// `captures`.
 final class const SessionActive() extends TextSightSessionState {
-  /// Creates the active state.
+  /// Creates it.
   this;
 
   @override
@@ -40,15 +39,15 @@ final class const SessionActive() extends TextSightSessionState {
   String toString() => 'SessionActive()';
 }
 
-/// The session exists but is not delivering. The plugin resumes it itself once the cause lifts.
+/// Alive but not delivering. The plugin picks it back up itself once the cause lifts.
 final class const SessionPaused({
-  /// What paused the session.
+  /// What paused it.
   required final SessionPauseReason reason,
 
   /// The platform's own wording, for logs only.
   final String? details,
 }) extends TextSightSessionState {
-  /// Creates the paused state.
+  /// Creates it.
   this;
 
   @override
@@ -63,13 +62,13 @@ final class const SessionPaused({
   String toString() => 'SessionPaused(reason: $reason, details: $details)';
 }
 
-/// The session stopped on an error and stays parked until `start()`. Failures of your own calls
-/// throw at the call site instead.
+/// Stopped on an error and parked there until `start()`. Failures of your own calls throw at the
+/// call site instead.
 final class const SessionFailed({
   /// The platform's own wording, for logs only.
   final String? details,
 }) extends TextSightSessionState {
-  /// Creates the failed state.
+  /// Creates it.
   this;
 
   @override
@@ -85,7 +84,7 @@ final class const SessionFailed({
 
 /// Why a [SessionPaused] session is paused.
 enum SessionPauseReason() {
-  /// The app left the foreground. The plugin restarts the camera on return.
+  /// The app left the foreground. The plugin restarts the camera on the way back.
   appBackgrounded,
 
   /// The OS took the camera (a call, another app). Delivery resumes when it hands it back.

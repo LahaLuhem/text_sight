@@ -1,13 +1,10 @@
 import 'dart:ui' show Rect;
 
-/// Range validation for a region-of-interest [Rect] in the unified normalized
-/// `[0, 1]`, top-left coordinate space.
+/// Range checking for a region-of-interest rect.
 extension NormalizedRoi on Rect? {
-  /// Whether this is a valid region-of-interest: `null` (the whole frame), or a
-  /// normalized `[0, 1]` rect with positive extent.
-  ///
-  /// Both drivers `assert` against this in debug. The check lives here, not in the `const`
-  /// `TextSightOptions` constructor, which cannot run one.
+  /// `null` means the whole frame. Anything else has to sit inside `[0, 1]` from the top-left and
+  /// have some size. Lives here rather than in `TextSightOptions`, whose `const` constructor can't
+  /// run a check.
   bool get isNormalizedRoi {
     final roi = this;
 

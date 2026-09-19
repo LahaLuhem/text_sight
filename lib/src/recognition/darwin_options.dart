@@ -9,38 +9,34 @@ import 'recognition_level.dart';
 
 part 'darwin_options.g.dart';
 
-/// Recognizer settings that only Apple Vision has, so iOS and macOS honour them and Android does
-/// nothing with them.
+/// Settings only Apple Vision has. Android ignores the lot.
 ///
-/// Grouped rather than prefixed one by one, so a new Vision knob is a field here instead of a
-/// change to [TextSightOptions]. `copyWith` is generated, so adding one cannot leave the copy
-/// behind.
+/// Grouped instead of prefixed one by one, so a new Vision knob is a field here rather than a
+/// change to [TextSightOptions].
 @CopyWith()
 final class const DarwinOptions({
-  /// The accuracy/latency trade-off. The one-shot raises it to [RecognitionLevel.accurate], having
-  /// no per-frame budget to protect.
+  /// Speed against accuracy. The one-shot raises it to [RecognitionLevel.accurate], with no frame
+  /// budget to protect.
   final RecognitionLevel recognitionLevel = .fast,
 
   /// Whether the recognizer fixes likely misreads against a lexicon.
   ///
-  /// Helps ordinary prose, hurts serials and part numbers, which it happily "corrects" into words.
-  /// Independent of [recognitionLevel], so turn it off when latency matters more.
+  /// Helps ordinary prose, wrecks serials and part numbers, which it cheerfully "corrects" into
+  /// words.
   final bool usesLanguageCorrection = true,
 
-  /// Recognition languages, most-preferred first. Repeats are dropped, empty means no preference.
-  ///
-  /// A [Locale] rather than a raw tag, passed to Vision as its BCP-47 tag (`en-US`, `zh-Hans`).
+  /// Most-preferred first. Repeats get dropped, empty means no preference. Goes to Vision as a
+  /// BCP-47 tag (`en-US`, `zh-Hans`).
   final Iterable<Locale> preferredLanguages = const [
     .fromSubtags(languageCode: 'en', countryCode: 'US'),
   ],
 
-  /// Smallest text to read, as a fraction of the frame height, in `[0, 1]`.
-  ///
-  /// Higher is faster and blind to small print, `0` keeps every pixel. Always measured against the
-  /// frame, so narrowing [TextSightOptions.roi] never changes what is readable.
+  /// Smallest text to read, as a fraction of the frame height. Higher is faster and blind to small
+  /// print, `0` keeps every pixel. Measured against the whole frame, so narrowing
+  /// [TextSightOptions.roi] doesn't change what's readable.
   final double minimumTextHeight = 0,
 }) {
-  /// Creates Vision-only options. Every field has a live-oriented default.
+  /// Defaults suit live capture.
   this;
 
   @override

@@ -13,26 +13,23 @@ import 'package:text_sight/text_sight.dart';
 import 'constants/assets/assets.gen.dart';
 import 'swaying_frames.dart';
 
-/// One frame standing in for the camera, and whether it came from the Mac's webcam or the bundled
-/// sample. The two always move together, so they share one notifier.
+/// One stand-in frame plus where it came from. They always move together, so one notifier does.
 typedef SimulatedFrame = ({Uint8List bytes, bool isBridged});
 
 /// Stands in for the camera on the iOS Simulator, which has no capture hardware.
 ///
-/// Frames come from the Mac's webcam over a localhost bridge when one is running, else the bundled
-/// sample drifted by [SwayingFrames]. Every frame is a different image put through the wrapped
-/// platform's one-shot path, so the overlay's boxes are genuine recognizer output. Only the session
-/// is fake: [simulateInterruption] and [simulateFailure] stand in for what needs hardware.
+/// Frames come off the Mac's webcam over a localhost bridge when one is running, else the bundled
+/// sample drifted by [SwayingFrames]. Each one goes through the wrapped platform's one-shot path,
+/// so the overlay's boxes are real recognizer output. Only the session is fake.
 final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightPlatform {
-  /// How long a simulated interruption holds before the camera comes back on its own, as a real
-  /// one does. Long enough to read the paused screen, short enough that nothing feels stuck.
+  /// Long enough to read the paused screen, short enough that nothing feels stuck.
   static const _interruptionHold = Duration(seconds: 6);
 
-  /// Paces the drifting fallback. Bridged frames arrive at the webcam's own rate instead. Composing
-  /// and encoding one frame measures about 8 ms, so the recognizer is what sets the real ceiling.
+  /// Paces the drifting fallback, since bridged frames come at the webcam's own rate. Composing one
+  /// measures about 8 ms, so the recognizer is what sets the real ceiling.
   static const _sampleInterval = Duration(milliseconds: 150);
 
-  /// Nothing registers a texture here, so any id will do. `TextSightView` only needs a non-null one.
+  /// Nothing registers a texture here, and `TextSightView` only needs a non-null id.
   static const _textureId = 0;
 
   static FakeCameraPlatform? _installed;
@@ -58,17 +55,16 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
   var _isRecognizing = false;
 
   this {
-    // Native drops the session when the app backgrounds, so mirror it. The binding owns the
-    // listener once constructed, so it needs no field.
+    // Native drops the session on background, so mirror it. The binding owns the listener, so it
+    // needs no field here.
     AppLifecycleListener(onHide: _reportBackgrounded, onShow: _reportForegrounded);
   }
 
   /// The installed stand-in, or `null` when the app is driving a real camera.
   static FakeCameraPlatform? get installed => _installed;
 
-  /// Takes over the platform seam on the iOS Simulator, keeping the real implementation for the
-  /// one-shot and model paths, which need no camera. A no-op anywhere else, so a device or an
-  /// Android emulator still exercises the plugin end to end.
+  /// Simulator only, and the real implementation still handles the one-shot and model paths. A
+  /// no-op elsewhere, so a device or an Android emulator exercises the plugin end to end.
   static void installWhenSimulated() {
     if (!_isSimulated) return;
 
@@ -77,8 +73,8 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
     _installed = fake;
   }
 
-  /// The Simulator runs out of a `CoreSimulator` container, which a real device never does.
-  /// `Platform.environment` is empty on iOS, so the sandbox path is the signal that is there.
+  /// `Platform.environment` is empty on iOS, so the `CoreSimulator` sandbox path is the only tell
+  /// there is.
   static bool get _isSimulated =>
       Platform.isIOS && Directory.systemTemp.path.contains('/CoreSimulator/Devices/');
 
@@ -157,7 +153,7 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
   Future<TextSightCapture> recognizePath(String path, TextSightOptions options) =>
       _real.recognizePath(path, options);
 
-  /// Stands in for the OS taking the camera and handing it back, which needs real hardware to see.
+  /// Stands in for the OS taking the camera and handing it back.
   void simulateInterruption() {
     _stopStreaming();
     _report(const SessionPaused(reason: .interrupted, details: 'Simulated interruption'));
@@ -256,8 +252,8 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
   void _report(TextSightSessionState state) => _sessionStates.add(state);
 }
 
-/// Reads a webcam bridge on the host Mac: per frame a 4-byte big-endian length, then that many
-/// bytes of JPEG. The Simulator shares the Mac's loopback, so `127.0.0.1` reaches it.
+/// Reads a webcam bridge on the host Mac: a 4-byte big-endian length per frame, then that many
+/// bytes of JPEG. The Simulator shares the Mac's loopback, so `127.0.0.1` gets there.
 ///
 /// Retries quietly and forever, so starting the bridge late, or never, is fine.
 final class _BridgeClient({
@@ -270,8 +266,8 @@ final class _BridgeClient({
   static const _retryDelay = Duration(seconds: 2);
   static const _connectTimeout = Duration(seconds: 2);
 
-  /// A length past this means the stream is out of sync, so drop the connection rather than try to
-  /// allocate it.
+  /// A length past this means the stream is out of sync, so drop the connection instead of trying
+  /// to allocate it.
   static const _maxFrameBytes = 8 * 1024 * 1024;
 
   Socket? _socket;

@@ -2,32 +2,23 @@ import 'dart:ui' show Rect;
 
 import 'recognized_element.dart';
 
-/// A single recognized line of text with its location and confidence.
-///
-/// The unit the recognizer emits per detection. Capture-agnostic: it carries no
-/// notion of whether the pixels came from a live frame or a still image.
+/// One line of recognized text. Same shape whether the pixels came from a live frame or a still.
 final class const RecognizedLine({
-  /// The recognized text of this line.
+  /// What it reads.
   required final String text,
 
-  /// Bounding box normalized to `[0, 1]` with a top-left origin (the unified
-  /// coordinate contract, converted natively), as a [Rect] for an overlay
-  /// painter to map onto the preview.
+  /// Normalized to `[0, 1]` from the top-left, so an overlay painter can map it straight onto the
+  /// preview.
   required final Rect boundingBox,
 
-  /// How sure the engine is about this line, in `[0, 1]`.
-  ///
-  /// Engine-relative, not an absolute quality score: what it means depends on
-  /// `TextSightEngine.confidenceScale`, and different scales are never comparable. Never null.
+  /// How sure the engine is, in `[0, 1]`. Not an absolute quality score, so read
+  /// `TextSightEngine.confidenceScale` for what the number is worth here.
   required final double confidence,
 
-  /// Word-level [RecognizedElement]s, or `null` when not provided.
-  ///
-  /// Reserved: `null` in v1 on every platform. Population is a future additive
-  /// change.
+  /// Reserved, always `null` for now. See [RecognizedElement].
   final List<RecognizedElement>? elements,
 }) {
-  /// Creates a recognized line.
+  /// Creates it.
   this;
 
   @override

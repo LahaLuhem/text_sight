@@ -8,9 +8,8 @@ import 'package:text_sight/text_sight.dart';
 import '/features/core/data/constants/core_constants.dart';
 import '/features/core/data/recognition_result.dart';
 
-/// Recognizes a bundled sample image through both static entry points, with no camera,
-/// session, or permission. The in-flight gate lives on the view's
-/// `AsyncIconActionButton`, so there is no busy flag here.
+/// Runs a bundled sample through both static entry points. The in-flight gate lives on the view's
+/// `AsyncIconActionButton`, so there's no busy flag here.
 final class OneShotViewModel() extends ViewModel {
   final _resultNotifier = ValueNotifier<RecognitionResult?>(null);
 
