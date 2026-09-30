@@ -1,0 +1,180 @@
+name: Plugin checks
+
+# No `paths:` filter: a run it skips never reports, which leaves the required check waiting.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  detekt:
+    name: detekt (Kotlin)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          java-package: jdk
+          set-default: true
+      # detekt reads the Kotlin sources directly, so no Gradle or Android SDK.
+      - run: >-
+          curl -fsSL -o detekt-cli.jar
+          https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8-all.jar
+      - run: >-
+          java -jar detekt-cli.jar --build-upon-default-config --config android/detekt.yml
+          --input android/src --excludes '**/Messages.g.kt'
+
+  kotlin-tests:
+    name: Kotlin unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+          java-package: jdk
+          set-default: true
+          cache: gradle
+      - uses: LahaLuhem/dartender/actions/setup-flutter@main
+        with:
+          working-directory: example
+      # The Gradle setup the tests need, without building an APK.
+      - working-directory: example
+        run: flutter build apk --config-only
+      # In the example's Gradle build, where the Flutter Gradle plugin supplies io.flutter.
+      - working-directory: example/android
+        run: ./gradlew :text_sight:testDebugUnitTest
+
+  ios-build:
+    name: iOS release build + no-bundling
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: LahaLuhem/dartender/actions/setup-flutter@main
+        with:
+          working-directory: example
+      # The only release-mode device compile in CI.
+      - working-directory: example
+        run: flutter build ios --release --no-codesign
+      # grep, not rg, so the gitignored SPM manifest gets searched too (APPENDIX.md#no-bundling).
+      - name: No ML Kit under example/ios
+        run: "! grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios"
+
+  ios-tests:
+    name: iOS unit tests + SwiftLint
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: LahaLuhem/dartender/actions/setup-flutter@main
+        with:
+          working-directory: example
+      # Xcode config only, so xcodebuild below compiles once, where the test host expects it.
+      - working-directory: example
+        run: flutter build ios --config-only --debug --simulator
+      # The first iPhone simulator, so no device name is hardcoded across runner images.
+      - id: simulator
+        run: >-
+          echo "id=$(xcrun simctl list devices available --json
+          | jq -r '[.devices[][] | select(.name | startswith("iPhone"))][0].udid // empty')"
+          >> "$GITHUB_OUTPUT"
+      - name: An iPhone simulator is available
+        env:
+          SIMULATOR: ${{ steps.simulator.outputs.id }}
+        run: test -n "$SIMULATOR"
+      # -quiet trims the log, and no parallel testing saves cloning the simulator.
+      - id: xctest
+        working-directory: example/ios
+        env:
+          SIMULATOR: ${{ steps.simulator.outputs.id }}
+        run: >-
+          xcodebuild test -quiet -parallel-testing-enabled NO
+          -resultBundlePath "$RUNNER_TEMP/RunnerTests.xcresult"
+          -workspace Runner.xcworkspace -scheme Runner -only-testing:RunnerTests
+          -destination "platform=iOS Simulator,id=$SIMULATOR,arch=$(uname -m)"
+          CODE_SIGNING_ALLOWED=NO
+      # -quiet drops the per-test lines, so the tally comes from the result bundle.
+      - if: ${{ !cancelled() && steps.xctest.outcome != 'skipped' }}
+        run: >-
+          xcrun xcresulttool get test-results summary --path "$RUNNER_TEMP/RunnerTests.xcresult"
+          | jq -r '"result=\(.result) total=\(.totalTestCount) passed=\(.passedTests)
+          failed=\(.failedTests)", (.testFailures[]? | "FAILED \(.testName): \(.failureText)")'
+      - run: >-
+          curl -fsSL -o "$RUNNER_TEMP/swiftlint.zip"
+          https://github.com/realm/SwiftLint/releases/download/0.63.3/portable_swiftlint.zip
+      - run: unzip -oq "$RUNNER_TEMP/swiftlint.zip" -d "$RUNNER_TEMP/swiftlint"
+      - run: echo "$RUNNER_TEMP/swiftlint" >> "$GITHUB_PATH"
+      - id: swiftlint-plugin
+        run: swiftlint lint --strict --config ios/.swiftlint.yml
+      # Also after the plugin's lint fails, so both configs report.
+      - if: ${{ !cancelled() && steps.swiftlint-plugin.outcome != 'skipped' }}
+        run: swiftlint lint --strict --config example/ios/.swiftlint.yml
+
+  codegen:
+    name: Codegen freshness (Pigeon + build_runner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: LahaLuhem/dartender/actions/setup-flutter@main
+      - run: dart run pigeon --input pigeons/text_sight.dart
+      - run: dart run build_runner build --force-aot
+      # Both generators write ~80-column Dart, and the format gate is 100.
+      - run: dart format lib
+      # So git diff also sees a file a generator made from scratch.
+      - run: git add --intent-to-add .
+      - run: git diff --exit-code
+
+  bench-app:
+    name: Analyze (benchmark/app)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: LahaLuhem/dartender/actions/setup-flutter@main
+        with:
+          working-directory: benchmark/app
+      # The root's analysis excludes benchmark/app, so this is its only one.
+      - working-directory: benchmark/app
+        run: dart analyze --fatal-infos .
+
+  # The ruleset requires this job's id, so it gets no `name:`.
+  plugin-ok:
+    needs:
+      - detekt
+      - kotlin-tests
+      - ios-build
+      - ios-tests
+      - codegen
+      - bench-app
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - env:
+          RESULTS: >-
+            detekt=${{ needs.detekt.result }}
+            kotlin-tests=${{ needs.kotlin-tests.result }}
+            ios-build=${{ needs.ios-build.result }}
+            ios-tests=${{ needs.ios-tests.result }}
+            codegen=${{ needs.codegen.result }}
+            bench-app=${{ needs.bench-app.result }}
+        run: echo "$RESULTS"
+      - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
