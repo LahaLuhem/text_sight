@@ -1,4 +1,5 @@
-[![Package checks](https://github.com/LahaLuhem/text_sight/actions/workflows/package.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/text_sight/actions/workflows/package.yml)
+[![CI](https://github.com/LahaLuhem/text_sight/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/text_sight/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/LahaLuhem/text_sight/badge.svg?branch=main)](https://coveralls.io/github/LahaLuhem/text_sight?branch=main)
 [![Pub Version](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/text_sight/pulls)
 [![Pub Package](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)

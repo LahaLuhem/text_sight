@@ -58,7 +58,7 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
   Pigeon `@FlutterApi`. Pigeon is a dev dependency, so it costs consumers nothing at runtime.
 - **Two generators, one freshness gate.** Pigeon writes the wire types, `copy_with_extension_gen`
   writes `copyWith` for the public value types. Both outputs are committed, and CI's
-  `codegen-freshness` job regenerates and fails if anything differs, so neither can drift from its
+  `codegen` job regenerates and fails if anything differs, so neither can drift from its
   source.
 - **`flutter analyze`** for pedantic static analysis, and the lint posture is deliberately
   strict (`strict-casts` / `strict-inference` / `strict-raw-types` + the `errors:`-promoted
@@ -104,7 +104,7 @@ text_sight/
 ├── .pubignore               Files excluded from `flutter pub publish`
 ├── .editorconfig            Text-file conventions (Dart 2 / Swift 2 / Kotlin 4 / shell 2 / …)
 ├── .fvmrc                   FVM channel pin
-├── .github/workflows/       CI: pr-conventions, changelog, package, example, repo, publish
+├── .github/workflows/       CI: dartender's ci, conventions, changelog, publish, local plugin
 ├── scripts/                 release.sh + README (cider-driven release flow)
 ├── CHANGELOG.md             Release log (bot-appended on merge, hand-finalised at release)
 ├── README.md                pub.dev landing page (hook line + topics)
@@ -181,13 +181,13 @@ rule 13).
 
 ## PR conventions
 
-The `.github/workflows/pr-conventions.yml` workflow enforces branch-name, PR-label, and
+The `.github/workflows/conventions.yml` workflow enforces branch-name, PR-label, and
 commit-subject rules on every PR. On merge, `.github/workflows/changelog.yml` auto-appends
 to `CHANGELOG.md` based on the PR's `sem-*` label (via `cider log`). **PRs that don't
 comply are blocked by CI.**
 
 - **Branch name**: `<type>/#<issue>-<slug>`, where `<type>` is one of `feature`,
-  `bugfix`, `chore`, `refactor`, `hotfix`. Example: `chore/#12-tidy-readme`.
+  `bugfix`, `chore` or `refactor`. Example: `chore/#12-tidy-readme`.
 - **Exactly one `sem-*` label per PR**, mapped to a CHANGELOG section:
 
   | Label           | CHANGELOG section | When to use                                     |

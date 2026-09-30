@@ -169,7 +169,8 @@ is **not** in the routine-edit list. All move together only when the user explic
   Generated `Messages.g.*` is excluded, and for a new deviation, tune the config (not the
   generated code).
 - **Shell + workflow lint clean via the [`linterpol`](https://github.com/LahaLuhem/linterpol)
-  image** (run as `repo.yml` CI jobs, pulled anonymously from public GHCR): `shellcheck
+  image** (CI runs the checks in `.github/lint-checks.json`, rumdl and ryl too, the image pulled
+  anonymously from public GHCR): `shellcheck
   scripts/*.sh` (also gated in the `scripts/release.sh` preflight) and `actionlint` over
   `.github/workflows/`. Locally:
   `docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest <tool> …`.
