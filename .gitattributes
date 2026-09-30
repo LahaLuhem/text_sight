@@ -40,3 +40,7 @@
 # Swift gitattributes
 *.pbxproj merge=union
 *.swift   text diff=swift
+
+### Custom
+# Dependabot commits .bat files as CRLF, drop once fixed: https://github.com/dependabot/dependabot-core/issues/8693
+*.bat             -text
