@@ -257,9 +257,10 @@ Map-based, not positional, so adding a key is non-breaking and frames stay legib
 **Generated code is committed and never hand-edited.** `messages.g.dart` is checked in (so
 consumers and CI need no codegen step) and regenerated from the schema, never patched. See
 [hard rule 7 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules). Regeneration is **two steps**,
-`dart run pigeon --input pigeons/text_sight.dart` then
-`dart format lib/src/platform/messages.g.dart`, because Pigeon emits ~80-column Dart while the
-project's formatter gate (`page_width: 100`, applied tree-wide) would otherwise flag the output.
+`dart run tool/pigeon.dart` then `dart format lib/src/platform/messages.g.dart`, because Pigeon
+emits ~80-column Dart while the project's formatter gate (`page_width: 100`, applied tree-wide)
+would otherwise flag the output. Not plain `dart run pigeon`, which stamps its version into the
+headers and fails the codegen check.
 
 **`copyWith` is generated too, and that is why one runtime dependency was accepted.** A
 hand-written `copyWith` compiles fine while silently missing a field added later, and no test can
@@ -638,17 +639,27 @@ lib/
     │   ├── text_sight_capture.dart
     │   ├── recognized_line.dart
     │   ├── recognized_element.dart
+    │   ├── confidence_scale.dart
     │   ├── recognition_level.dart
-    │   └── text_sight_options.dart
-    ├── capture/                       the two DRIVERS over the one recognizer
-    │   ├── text_sight_controller.dart    live-camera driver (v1)
-    │   ├── text_sight_session_state.dart the camera session's state, as native reports it
-    │   └── text_sight.dart               TextSight one-shot static driver
+    │   ├── text_sight_options.dart
+    │   ├── darwin_options.dart
+    │   ├── darwin_options.g.dart            generated copyWith
+    │   ├── normalized_roi.dart
+    │   └── text_sight_readiness_state.dart
+    ├── capture/                      the two DRIVERS over the one recognizer
+    │   ├── text_sight_controller.dart       live-camera driver (v1)
+    │   ├── text_sight_session_state.dart    the camera session's state, as native reports it
+    │   ├── camera_permission_status.dart    the camera-permission state
+    │   ├── capture_resolution.dart          how many pixels the camera feeds the recognizer
+    │   ├── text_sight.dart                  TextSight one-shot static driver
+    │   ├── text_sight_engine.dart           facts about the device's recognition engine
+    │   └── text_sight_model.dart            controls and observes model readiness
     ├── view/
-    │   └── text_sight_view.dart          Texture-backed widget (+ overlay painter later)
+    │   └── text_sight_view.dart             Texture-backed widget (+ overlay builder)
     └── platform/
-        ├── text_sight_platform.dart      the federation seam
-        └── messages.g.dart               generated control channel (later; never hand-edited)
+        ├── text_sight_platform.dart         the federation seam
+        ├── pigeon_text_sight_platform.dart  the default implementation (Pigeon + EventChannel)
+        └── messages.g.dart                  generated control channel (never hand-edited)
 ```
 
 `recognition/` holds only capture-agnostic types, and `capture/` puts both drivers

@@ -76,8 +76,8 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 
 ```text
 text_sight/
-├── pubspec.yaml             Deps: flutter, plugin_platform_interface, NO recognition lib
-│                            (dev: flutter_test; Pigeon to be added for codegen)
+├── pubspec.yaml             Deps: flutter, plugin_platform_interface, meta, copy_with_extension,
+│                            NO recognition lib (dev: Pigeon + build_runner codegen, test tooling)
 ├── pigeons/text_sight.dart  Pigeon schema for the typed control API (@HostApi)
 ├── lib/
 │   ├── text_sight.dart            Public entry; `export 'src/…';` only
@@ -153,7 +153,7 @@ rule 13).
    `lib/src/`, and the `src/` subtree is private by convention. Don't make users import
    `package:text_sight/src/…`. See
    [`APPENDIX.md#public-api-via-single-export-file`](../APPENDIX.md#public-api-via-single-export-file).
-7. **Generated code is never hand-edited.** `lib/src/messages.g.dart` is Pigeon's output,
+7. **Generated code is never hand-edited.** `lib/src/platform/messages.g.dart` is Pigeon's output,
    regenerate it from `pigeons/text_sight.dart`, don't patch it.
 8. **No `print()` in library code.** Diagnostic output is the caller's responsibility.
    `avoid_print` is a warning in `analysis_options.yaml`.
