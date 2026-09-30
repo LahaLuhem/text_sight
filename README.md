@@ -1,10 +1,13 @@
 [![Package checks](https://github.com/LahaLuhem/text_sight/actions/workflows/package.yml/badge.svg?branch=main)](https://github.com/LahaLuhem/text_sight/actions/workflows/package.yml)
 [![Pub Version](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/text_sight/pulls) [![Pub Package](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/text_sight/pulls)
+[![Pub Package](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
 [![Pub Points](https://img.shields.io/pub/points/text_sight?logo=dart)](https://pub.dev/packages/text_sight/score)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/LahaLuhem/text_sight/blob/main/LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/issues) [![GitHub closed issues](https://img.shields.io/github/issues-closed/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/issues?q=is%3Aissue+is%3Aclosed)
-[![GitHub pull requests](https://img.shields.io/github/issues-pr/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/pulls) [![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/pulls?q=is%3Apr+is%3Aclosed)
+[![GitHub issues](https://img.shields.io/github/issues/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/issues)
+[![GitHub closed issues](https://img.shields.io/github/issues-closed/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/issues?q=is%3Aissue+is%3Aclosed)
+[![GitHub pull requests](https://img.shields.io/github/issues-pr/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/pulls)
+[![GitHub closed pull requests](https://img.shields.io/github/issues-pr-closed/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/pulls?q=is%3Apr+is%3Aclosed)
 
 **Live, on-device text recognition for Flutter.** Apple Vision on iOS, ML Kit on Android. Like
 [`mobile_scanner`](https://pub.dev/packages/mobile_scanner), but for text instead of barcodes.

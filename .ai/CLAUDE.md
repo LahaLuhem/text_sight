@@ -15,6 +15,7 @@ user. Breakage is expensive and slow to walk back (unpublished versions stay res
 for 7 days, and a tag push triggers an automated publish).
 
 ## Communication
+
 - **Concise.** No "here's what I just did" recap. The diff speaks.
 - **Explain the *why*** when recommending. The *what* is in the diff.
 - Reference code as `file.dart:42` (markdown links if you can), native too
@@ -22,6 +23,7 @@ for 7 days, and a tag push triggers an automated publish).
 - Flag breaking-API or lint-violation implications loudly and early.
 
 ## Technical choices: always ask first
+
 - **Do not silently pick between reasonable alternatives.** Whenever a task admits more
   than one defensible approach (the iOS strategy, roll-your-own AVCapture+Vision vs
   wrapping `DataScannerViewController`, Pigeon vs Golubets, bundled vs unbundled ML Kit on
@@ -38,6 +40,7 @@ for 7 days, and a tag push triggers an automated publish).
   error), just do them.
 
 ## Tool preferences
+
 - **Read / Edit / Grep / Glob** over `cat` / `sed` / `grep` / `find`. Always.
 - **Bash** only for things without a dedicated tool: `flutter`, `dart`, `git`, and the
   native toolchains when needed (`pod`, `xcodebuild`, `gradlew`). The user's shell aliases
@@ -52,6 +55,7 @@ for 7 days, and a tag push triggers an automated publish).
   context. Not for trivial lookups.
 
 ## Scope awareness
+
 - **Public-API edits** (anything in `lib/text_sight.dart` or re-exported from it, the
   `TextSight*` classes, the result models, enums) are pub.dev-visible. Treat them with
   care, and flag patch / minor / major under semver before landing.
@@ -76,6 +80,7 @@ for 7 days, and a tag push triggers an automated publish).
   forbidden (hard rule 1). Changing `topics:` or `platforms:` is also pub.dev-visible.
 
 ## Auto-memory conventions for this project
+
 - **`project` memories**: scope/constraints the user states aloud (e.g. "ship v0.1 before
   the sprint ends", "minimum Flutter bumps to X on date Y", "DataScanner path is on hold").
   Convert relative dates to absolute.
@@ -89,6 +94,7 @@ for 7 days, and a tag push triggers an automated publish).
 - **Before acting on a memory**, verify the named file / symbol still exists.
 
 ## Plan before editing when
+
 - The change touches the public API (anything re-exported from `lib/text_sight.dart`).
 - You're editing `pigeons/text_sight.dart` (the control-channel schema), so plan the shape
   against the channel topology in [`APPENDIX.md#channel-topology`](../APPENDIX.md#channel-topology)
@@ -107,6 +113,7 @@ is **not** in the routine-edit list. All move together only when the user explic
 "cut a release". See *Forbidden / confirm-first actions* below.
 
 ## Commit / PR etiquette
+
 - **Never commit without being asked.** Not after a fix, not as a "checkpoint".
 - **Never push without being asked.** Especially not to `main`, and especially not a semver
   tag (which triggers pub.dev publish via `.github/workflows/publish.yml`).
@@ -119,6 +126,7 @@ is **not** in the routine-edit list. All move together only when the user explic
 
 <a id="forbidden-confirm-first-actions"></a>
 ## Forbidden / confirm-first actions
+
 - **Never** `flutter pub publish` or `dart pub publish`. Publishing is effectively one-way,
   pub.dev reserves the version for 7 days after retraction. Releases happen through the
   tag-triggered workflow at `.github/workflows/publish.yml`, and pushing a matching `X.Y.Z` git
@@ -144,6 +152,7 @@ is **not** in the routine-edit list. All move together only when the user explic
 - **Destructive git** (`reset --hard`, `push --force`, `branch -D`, `clean -fd`) → ask first.
 
 ## Definition of done
+
 - `flutter analyze` clean (the `errors:` block promotes many lints to errors,
   non-negotiable).
 - `dart format --output=none --set-exit-if-changed .` clean (100-column width matches
@@ -157,7 +166,8 @@ is **not** in the routine-edit list. All move together only when the user explic
   + system-frameworks-only, Kotlin 4-space + built-in-Kotlin + mandatory `imageProxy.close()`).
 - **detekt + SwiftLint clean**: native lint gates (`android/detekt.yml`, `ios/.swiftlint.yml` +
   `example/ios/.swiftlint.yml`, run in CI).
-  Generated `Messages.g.*` is excluded, and for a new deviation, tune the config (not the generated code).
+  Generated `Messages.g.*` is excluded, and for a new deviation, tune the config (not the
+  generated code).
 - **Shell + workflow lint clean via the [`linterpol`](https://github.com/LahaLuhem/linterpol)
   image** (run as `repo.yml` CI jobs, pulled anonymously from public GHCR): `shellcheck
   scripts/*.sh` (also gated in the `scripts/release.sh` preflight) and `actionlint` over

@@ -13,9 +13,8 @@ complexity:
 
 naming:
   PackageNaming:
-    # Package is lowercase now (com.lahaluhem.text_sight), so keep this rule ACTIVE so it stays that
-    # way. The pattern only adds `_` to detekt's default allowed segment chars, since the
-    # `text_sight` segment deliberately mirrors the pub package name (the default forbids underscores).
+    # Kept on so the package stays lowercase (com.lahaluhem.text_sight). The pattern only adds `_`
+    # to the default's segment chars, since the `text_sight` segment mirrors the pub package name.
     packagePattern: '[a-z]+(\.[a-z][A-Za-z0-9_]*)*'
 
 style:
@@ -26,11 +25,10 @@ style:
 
 exceptions:
   SwallowedException:
-    # The control methods convert a CameraX / ML Kit failure into the FlutterError code the Dart side
-    # switches on. Pigeon's generated FlutterError has no `cause` slot, so forwarding the message is
-    # the only channel there is, so the rule's fix is unavailable, not declined.
+    # Control methods turn a CameraX / ML Kit failure into the FlutterError code Dart switches on,
+    # and Pigeon's FlutterError has no `cause` slot, so the rule's fix isn't available.
     active: false
   TooGenericExceptionCaught:
-    # The camera init converts any native failure into a `FlutterError` at the channel boundary, a
-    # deliberate broad catch. (Re-enable and `@Suppress` that single site if stricter checking is wanted.)
+    # Camera init turns any native failure into a `FlutterError` at the channel boundary, a broad
+    # catch on purpose. For stricter checks, re-enable this and `@Suppress` that one site.
     active: false

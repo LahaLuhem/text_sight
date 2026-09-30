@@ -1,6 +1,7 @@
 # `text_sight` benchmarks
 
-Reproducible benchmarks used to decide perf questions with data, not vibes. Specifically: **is changing the per-frame result wire representation worth it?**
+Reproducible benchmarks used to decide perf questions with data, not vibes. Specifically: **is changing
+the per-frame result wire representation worth it?**
 
 > **Layers built:** the Dart codec micro-benchmark (emits JSON), the on-device
 > scenario layer (`app/`, driven by `flutter drive`), and the Python `report`
@@ -53,7 +54,7 @@ sweep (`1, 5, 10, 25, 50, 100`) plus realistic profiles (`sign`, `receipt`,
 
 ## Layout
 
-```
+```text
 benchmark/
 ├── README.md                  this file
 ├── harness/                   bench_capture · payloads · capture_codec · result_writer · scenario_args

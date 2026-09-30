@@ -6,6 +6,7 @@ code style (MVVM, naming, widget composition, …) lives in
 [`CODESTYLE.md`](../CODESTYLE.md). Read both before working in this subdirectory.
 
 ## Scope
+
 - Runnable showcase of `text_sight`, exercising live camera OCR and the static
   one-shot recognizer against a real device, and demonstrates recommended usage.
 - **The camera is faked on the iOS Simulator**, which has no capture hardware.
@@ -15,8 +16,8 @@ code style (MVVM, naming, widget composition, …) lives in
   big-endian length, then JPEG) when one is running, and from the bundled sample otherwise. The
   sample is redrawn each tick with a small drift by `SwayingFrames`, so the fallback exercises live
   tracking instead of a fixed scene. Recognition is always real. It is a no-op on a device and on
-  Android, so those still exercise the plugin end to end. This is the one place the example imports from the
-  package's `src/`, since the federation seam is not on the public barrel.
+  Android, so those still exercise the plugin end to end. This is the one place the example imports
+  from the package's `src/`, since the federation seam is not on the public barrel.
 - **Confidence tiers are conditional.** `EngineConfidence` resolves
   `TextSightEngine.confidenceScale` once at startup, and `ConfidenceChip`, `ConfidenceScaleNote`
   and the live overlay's box strokes all branch on `isRankable`. Vision on iOS 18+ is coarse, so

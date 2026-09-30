@@ -7,9 +7,9 @@ excluded:
   - text_sight/Sources/text_sight/Messages.g.swift  # Pigeon-generated
 
 disabled_rules:
-  - file_length       # the camera/Vision file is one cohesive unit; Dart enforces no file-length cap
+  - file_length       # the camera/Vision file is one cohesive unit, and Dart caps no file length
   - type_body_length  # likewise the camera controller type
   - trailing_comma    # trailing commas are kept, consistent with the project's Dart style
 
 large_tuple:
-  warning: 3          # displayRotation returns a 3-member named tuple, which is idiomatic. A struct'd be ceremony
+  warning: 3          # displayRotation's named 3-tuple, where a struct would only add ceremony

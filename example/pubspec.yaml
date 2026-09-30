@@ -41,6 +41,7 @@ dev_dependencies:
   bdd_framework: ^4.0.7
   checks: ^0.3.2
   flutter_gen_runner: 5.15.0
+  dependency_validator: ^5.1.0
 
 
 

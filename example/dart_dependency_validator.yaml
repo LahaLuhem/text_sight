@@ -1,5 +1,5 @@
 # dependency_validator config for the example app (the example.yml CI gate). Kept in this dedicated
 # file rather than pubspec.yaml, which the tool now deprecates.
-allow_pins: true # flutter_gen_runner is pinned to an exact version on purpose (reproducible asset codegen).
+allow_pins: true # flutter_gen_runner's exact pin is on purpose, for reproducible asset codegen
 ignore:
-  - cupertino_icons # asset glyph only (iOS back chevron via PlatformApp), never imported, so it reads as "unused".
+  - cupertino_icons # used for its glyphs (PlatformApp's iOS back chevron), never imported

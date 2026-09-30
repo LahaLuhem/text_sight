@@ -72,8 +72,8 @@ own, so the conventions below are applied by hand, the way the [DCM rules](#dcm-
 - **Pick the narrowest collection type. `List` is the last resort, not the default.** `Set` for
   membership/uniqueness, `Iterable` for a sequence only walked (never indexed, added to, or
   re-materialized), `List` only when you genuinely index or need a materialized result. Inputs
-  lean `Iterable` (`preferredLanguages` is walked once in priority order), and outputs consumers index and
-  count stay `List` (`TextSightCapture.lines`, `RecognizedLine.elements`). Exception: channel
+  lean `Iterable` (`preferredLanguages` is walked once in priority order), and outputs consumers index
+  and count stay `List` (`TextSightCapture.lines`, `RecognizedLine.elements`). Exception: channel
   transport: the platform codec carries only `List`/`Map`, so Pigeon message fields stay `List`.
 - **No Java ceremony.** No getter-only abstract base classes, no `AbstractFooFactory`,
   no interface-per-class. Use mixins / sealed classes / records / extension types where
@@ -97,7 +97,7 @@ style.
   indistinguishable from a typo:
 
   | Don't write | Write instead             |
-    |-------------|---------------------------|
+  |-------------|---------------------------|
   | `cb`        | `callback` (with the type-suffix rule below: `<context>Callback` if shared scope makes bare `callback` ambiguous) |
   | `fn`        | `function` / `handler` / spell out the semantic role |
   | `cfg`       | `config` |
@@ -200,8 +200,8 @@ style.
   `max_line_length = 100` mirrors it for every other text file. Markdown and **dartdoc
   comments** follow the same cap manually, since `dart format` does *not* reflow doc-comment
   prose, so a `///`-block hand-wrapped at 70 / 80 columns stays narrow forever unless
-  someone refactors it. Default to ~95 columns of content (the leading `/// ` counts
-  toward the limit) so a single trailing word doesn't push the line over. Reflow
+  someone refactors it. Default to ~95 columns of content (the leading `///` and its space
+  count toward the limit) so a single trailing word doesn't push the line over. Reflow
   opportunistically when touching a doc block, and don't churn unrelated files just to
   widen them.
 - **Blank lines separate logical chunks within a method.** Group guard checks, setup,
@@ -307,15 +307,15 @@ style.
 <a id="source-file-organization"></a>
 ## Source-file organization
 
-- **One responsibility per file, and the filename names it.** A file holds one public/primary type, or
-  one cohesive cluster of free functions. `FrameEncoding.kt` is the per-frame wire map,
+- **One responsibility per file, and the filename names it.** A file holds one public/primary type,
+  or one cohesive cluster of free functions. `FrameEncoding.kt` is the per-frame wire map,
   `RegionOfInterest.kt` the ROI geometry. Don't let helper functions or a second helper class pile up
   at the bottom of a driver file, so extract them and each file's path advertises its job. **Why:**
   findability, and a one-responsibility diff when that concern changes. (`lib/src/` already does this,
   one public type per file behind the barrel.)
 - **But keep a cohesive stateful unit whole.** The capture/session class (`TextSightCamera`, both
-  platforms) stays one file even when long, since splitting one stateful lifecycle across files costs more
-  than it saves. The native file-length caps are relaxed for exactly this (`ios/.swiftlint.yml`,
+  platforms) stays one file even when long, since splitting one stateful lifecycle across files costs
+  more than it saves. The native file-length caps are relaxed for exactly this (`ios/.swiftlint.yml`,
   `android/detekt.yml`). Extract the *standalone* helpers around the class, never the class itself.
 - **Group by responsibility into sub-dirs.** iOS folders are free (one module, no namespace shift):
   `Enums/`, `Models/`, feature folders (`TextRecognizer/` + `Engines/`, `Factories/`). A Kotlin
@@ -325,8 +325,8 @@ style.
   because those types are hand-written. On Android the enums and data models are **Pigeon-generated**
   (all in `Messages.g.kt`, unmovable), so Android groups by responsibility instead. Don't create
   empty `enums/` / `models/` packages there.
-- **Two things never leave the root package/dir:** the plugin entry class (`TextSightPlugin`, whose FQN
-  pinned by `pubspec.yaml`'s `pluginClass`/`package`) and Pigeon's generated `Messages.g.*` (the
+- **Two things never leave the root package/dir:** the plugin entry class (`TextSightPlugin`, whose
+  FQN pinned by `pubspec.yaml`'s `pluginClass`/`package`) and Pigeon's generated `Messages.g.*` (the
   generator owns its output path). Everything else is free to move into a responsibility sub-dir.
 
 ---
@@ -349,10 +349,12 @@ the leading type name in *all* of these positions, not just the obvious enum cas
   `margin: .zero`.
 - **Constructor field defaults**: when the field's declared type pins the context, the
   default literal drops its prefix:
+
   ```dart
   final RecognitionLevel recognitionLevel;
   const DarwinOptions({this.recognitionLevel = .fast});   // not RecognitionLevel.fast
   ```
+
   Top-level / `static const` initializations are the exception, since without an explicit
   type annotation on the LHS, Dart infers the constant's type from the RHS, so the
   prefix has to stay (`const kDefaultLevel = RecognitionLevel.fast;`).
@@ -799,6 +801,7 @@ these.
   ```bash
   docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest shellcheck scripts/*.sh
   ```
+
 - **Prefer `# shellcheck disable=SC<code>` + a one-line "why" comment over refactoring
   for simple cases.** Refactor when the warning points at a real bug or the rewrite is
   genuinely clearer. Reach for the directive when the code is correct as-is and
