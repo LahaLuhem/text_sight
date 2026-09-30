@@ -60,8 +60,8 @@ for 7 days, and a tag push triggers an automated publish).
   `TextSight*` classes, the result models, enums) are pub.dev-visible. Treat them with
   care, and flag patch / minor / major under semver before landing.
 - **`lib/src/` edits** are private. Refactor freely as long as the public re-exports stay
-  stable. `lib/src/messages.g.dart` is **generated**, so change `pigeons/text_sight.dart` and
-  regenerate, never hand-edit the output.
+  stable. `lib/src/platform/messages.g.dart` is **generated**, so change
+  `pigeons/text_sight.dart` and regenerate, never hand-edit the output.
 - **Native edits (`ios/`, `android/`)** carry the no-bundling contract. Bundling ML Kit (or
   any lib that duplicates a system framework) on the Apple side, dragging in a CocoaPods
   graph, or a non-gradle path to ML Kit, breaks the package's reason to exist. See
@@ -143,7 +143,7 @@ is **not** in the routine-edit list. All move together only when the user explic
   `scripts/release.sh <bump>`, but don't invoke it for them (it pushes to `origin/main` and
   triggers publish). The `cider:` block in `pubspec.yaml` is static config, so hand-edit it
   freely.
-- **Never** hand-edit generated code (`lib/src/messages.g.dart`). Regenerate from the
+- **Never** hand-edit generated code (`lib/src/platform/messages.g.dart`). Regenerate from the
   Pigeon schema.
 - **Never** edit `pubspec.lock` directly (root or `example/`). It's `flutter pub get`'s
   output.

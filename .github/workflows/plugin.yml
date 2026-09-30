@@ -132,7 +132,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: LahaLuhem/dartender/actions/setup-flutter@main
-      - run: dart run pigeon --input pigeons/text_sight.dart
+      - run: dart run tool/pigeon.dart
       - run: dart run build_runner build --force-aot
       # Both generators write ~80-column Dart, and the format gate is 100.
       - run: dart format lib
