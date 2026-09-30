@@ -96,18 +96,18 @@ jobs:
         env:
           SIMULATOR: ${{ steps.simulator.outputs.id }}
         run: test -n "$SIMULATOR"
-      # -quiet trims the log, and no parallel testing saves cloning the simulator.
+      # Parallel testing stays on: serial is no faster here and lists no tests under -quiet.
       - id: xctest
         working-directory: example/ios
         env:
           SIMULATOR: ${{ steps.simulator.outputs.id }}
         run: >-
-          xcodebuild test -quiet -parallel-testing-enabled NO
+          xcodebuild test -quiet
           -resultBundlePath "$RUNNER_TEMP/RunnerTests.xcresult"
           -workspace Runner.xcworkspace -scheme Runner -only-testing:RunnerTests
           -destination "platform=iOS Simulator,id=$SIMULATOR,arch=$(uname -m)"
           CODE_SIGNING_ALLOWED=NO
-      # -quiet drops the per-test lines, so the tally comes from the result bundle.
+      # -quiet prints no failure messages, so they come from the result bundle.
       - if: ${{ !cancelled() && steps.xctest.outcome != 'skipped' }}
         run: >-
           xcrun xcresulttool get test-results summary --path "$RUNNER_TEMP/RunnerTests.xcresult"
