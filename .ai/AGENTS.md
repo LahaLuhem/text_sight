@@ -74,7 +74,7 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 
 ## Repo layout
 
-```
+```text
 text_sight/
 ├── pubspec.yaml             Deps: flutter, plugin_platform_interface, NO recognition lib
 │                            (dev: flutter_test; Pigeon to be added for codegen)

@@ -14,7 +14,7 @@ The committed xcconfigs carry a bundle id and no team, which is all a simulator 
 device, drop your own `ios/Flutter/LocalSigning.xcconfig` (gitignored, same mechanism as the example
 app):
 
-```
+```text
 DEVELOPMENT_TEAM = YOURTEAMID
 PRODUCT_BUNDLE_IDENTIFIER = com.yourteam.textsight.bench
 ```

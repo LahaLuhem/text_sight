@@ -23,10 +23,10 @@ technical trade-offs.
 READMEs, [`CODESTYLE.md`](./CODESTYLE.md), and [`.ai/AGENTS.md`](./.ai/AGENTS.md)
 reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
-> **Status:** the symlink, dependabot-automerge, primary-constructors, channel-topology, coordinate-normalization, iOS-capture-strategy,
-> model-readiness, known-limitations, taskqueue-rejected, and public-API sections are written. `#no-bundling` and
-> `#federation-deferred` stay stubs, locked decisions whose rationale is filled in when the
-> corresponding code lands. Anchors are stable, and only stub bodies grow.
+> **Status:** the symlink, dependabot-automerge, primary-constructors, channel-topology, coordinate-normalization,
+> iOS-capture-strategy, model-readiness, known-limitations, taskqueue-rejected, and public-API sections
+> are written. `#no-bundling` and `#federation-deferred` stay stubs, locked decisions whose rationale
+> is filled in when the corresponding code lands. Anchors are stable, and only stub bodies grow.
 
 ---
 
@@ -79,8 +79,8 @@ and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos ru
   would ship with no release note.
 - **`/android` gradle automerges anyway, unlike the siblings.** Its deps ride the AAR's POM to every
   downstream Android consumer (ML Kit, Play Services, CameraX), so these bumps *are*
-  publish-relevant, and `Android example build + unit tests` stands in for the read-through. The cost is
-  the missing changelog entry, not the build, so check the Android deps before a release if one landed.
+  publish-relevant, and `Android example build + unit tests` stands in for the read-through. The cost
+  is the missing changelog entry, not the build, so check the Android deps before a release if one landed.
 - **`uv` is the easy one.** `benchmark/python` is chart and orchestration tooling that reaches no
   published byte, and `benchmark.yml`'s Ruff and Pytest jobs cover it. Both siblings that run a
   Python benchmark ([`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager),
@@ -97,8 +97,8 @@ and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos ru
   `publish.yml`'s tag-only OIDC path.
 - **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks, so this is
   safe only while `main`'s ruleset is **active** and requires `repo-ok`, `package-ok`, `example-ok`,
-  `benchmark-ok`, `conventions-ok`. Keep `required_signatures` off it: rebase-merge emits unsigned commits, so it
-  would block every automerge.
+  `benchmark-ok`, `conventions-ok`. Keep `required_signatures` off it: rebase-merge emits unsigned commits,
+  so it would block every automerge.
 - **`GITHUB_TOKEN` enables the merge, not the changelog App.** The App sits in the ruleset's bypass
   list, and a bypass covers status checks too, so merging as it would skip the gate this rests on.
   Its merges also trigger no further workflows, which costs nothing here: `package.yml`'s `gate`
@@ -236,13 +236,13 @@ funnelled through one channel:
 
 - **Control + the one-shot recognize → typed codegen `@HostApi`.** The control surface
   (`initialize` / `start` / `pauseRecognition` / `setOptions` / `setTorchEnabled` /
-  `checkCameraPermission` / `requestCameraPermission` / `dispose`) is request/response and benefits from a generated, type-checked Dart↔native
-  boundary. The static one-shot (`recognizeImage` /
+  `checkCameraPermission` / `requestCameraPermission` / `dispose`) is request/response and benefits
+  from a generated, type-checked Dart↔native boundary. The static one-shot (`recognizeImage` /
   `recognizePath`) is *also* request/response, so it rides the **same** `@HostApi` as two
   `@async` methods that return the same self-describing per-frame map the results stream uses
   (decoded Dart-side into a `TextSightCapture`), not the results stream below. This is why the
   result models need no Pigeon twin. Natively each allocates a transient image handler and touches
-  no camera session, texture, or event sink. _(The codegen tool is **Pigeon**, see below.)_
+  no camera session, texture, or event sink. *(The codegen tool is **Pigeon**, see below.)*
 - **Live per-frame results → a plain `EventChannel` stream.** A camera delivers ~30 captures a
   second, and modelling that as a Pigeon `@FlutterApi` callback fights the codegen's
   request/response grain. An `EventChannel` is Flutter's idiomatic transport for a
@@ -402,10 +402,10 @@ orientation, since rotating frames natively is either costly or unreliable acros
 `AVCaptureVideoDataOutput` connection rotation is fiddly). Each frame therefore carries
 `quarterTurns`: the clockwise quarter-turns `TextSightView` applies via a `RotatedBox` to bring the
 texture into the same display orientation the boxes already use, so the overlay aligns **without a
-per-platform branch in Dart**. On Android `quarterTurns` is the `ImageProxy` rotation ÷ 90, kept live by mirroring the display
-rotation into `ImageAnalysis.targetRotation` (a headless plugin session gets no automatic
-orientation updates, so a `DisplayManager.DisplayListener` drives it, and without it only portrait is
-right). On iOS it comes from `AVCaptureDevice.RotationCoordinator`, which also selects the
+per-platform branch in Dart**. On Android `quarterTurns` is the `ImageProxy` rotation ÷ 90, kept live
+by mirroring the display rotation into `ImageAnalysis.targetRotation` (a headless plugin session gets
+no automatic orientation updates, so a `DisplayManager.DisplayListener` drives it, and without it only
+portrait is right). On iOS it comes from `AVCaptureDevice.RotationCoordinator`, which also selects the
 `CGImagePropertyOrientation` handed to Vision so recognition stays upright. A still image is read in
 its EXIF orientation natively (iOS via `CGImageSource`, Android decodes the bitmap and reads
 `ExifInterface`, passing the rotation to `InputImage`), so it is already upright and the static
@@ -489,10 +489,10 @@ blocking the cooperative pool.
 also exposed `AVCaptureDevice.RotationCoordinator` (iOS 17+) in the *capture* pipeline, and the earlier
 "only the recognizer-construction site branches" guess was wrong. Rather than carry a second rotation
 pipeline (the pre-17 `UIDevice` / `videoOrientation` path) for a device population we **do not expect
-in practice**: iOS 15-16 is a vanishing slice by 2026, and most iOS-17-capable devices also run 18, so
-the coordinator is gated `@available(iOS 17, *)` and on iOS 15-16 rotation is **not tracked**
-(`currentRotationAngle` stays 0): basic, un-rotated *live* capture (the one-shot is unaffected, since it
-reads EXIF). Recognition still works, and the live preview just won't follow device rotation. This
+in practice**: iOS 15-16 is a vanishing slice by 2026, and most iOS-17-capable devices also run 18,
+so the coordinator is gated `@available(iOS 17, *)` and on iOS 15-16 rotation is **not tracked**
+(`currentRotationAngle` stays 0): basic, un-rotated *live* capture (the one-shot is unaffected, since
+it reads EXIF). Recognition still works, and the live preview just won't follow device rotation. This
 degraded fallback (**option C**) was chosen for near-free 15-16 reach at low maintenance. The full
 pre-17 rotation path (**option A**) is **deferred until real bug reports from actual 15-16 users
 justify it** (caveated in the [README](./README.md)). Cross-ref: [#channel-topology](#channel-topology).
@@ -561,7 +561,7 @@ never reaches the Dart `pubspec.yaml`.
 <a id="federation-deferred"></a>
 ## Federation deferred: one plugin package for v1
 
-> _Stub, to be written if/when federation is reconsidered._
+> *Stub, to be written if/when federation is reconsidered.*
 >
 > Will document why v1 is a **single plugin package** declaring all platforms, rather than
 > a federated set (`text_sight_platform_interface` + `text_sight_ios` +
@@ -649,7 +649,7 @@ if a partial export ever becomes necessary.
 
 **Layering.** Both drivers funnel down through one federation seam:
 
-```
+```text
 PUBLIC   barrel re-exports: TextSightController · TextSightView · TextSight (one-shot)
          · TextSightCapture · RecognizedLine · RecognizedElement
          · RecognitionLevel · TextSightOptions · DarwinOptions · TextSightSessionState
@@ -667,7 +667,7 @@ one-shot delegate to `TextSightPlatform.instance`, so a later split into a
 **Module layout (`lib/src/`).** The recognizer is the core, and capture is a seam, not a mode flag.
 The directories make that physical:
 
-```
+```text
 lib/
 ├── text_sight.dart                   barrel: export 'src/…'; only
 └── src/

@@ -3,6 +3,7 @@ formatter:
 
 analyzer:
   exclude:
+    - benchmark/app/** # its own package, whose deps the root doesn't resolve
     - "bin/cache/**"
     - "**/*.chopper.dart"
     - "**/*.g.dart"
@@ -72,8 +73,7 @@ analyzer:
     use_key_in_widget_constructors: warning
 
     # linter ignores
-    # `todo` is `ignore` (not `info`) so CI's `flutter analyze --fatal-infos` does not fail on TODO
-    # comments. TODOs stay allowed in the code, and --fatal-infos still fails on every other info-level lint.
+    # `ignore`, so TODOs pass `--fatal-infos`, which still fails every other info-level lint.
     todo: ignore
     lines_longer_than_80_chars: ignore
     always_use_package_imports: ignore

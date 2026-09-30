@@ -8,7 +8,7 @@ untracked override.
 
 Create `ios/Flutter/LocalSigning.xcconfig` (gitignored) with your own values:
 
-```
+```text
 DEVELOPMENT_TEAM = ABCDE12345
 PRODUCT_BUNDLE_IDENTIFIER = com.yourname.example.textSightExample
 ```
