@@ -1,7 +1,7 @@
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
 - [`AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`](#agentsmd-and-claudemd-are-symlinks-into-ai)
-- [Dependabot automerges the boring tier, behind five aggregate checks](#dependabot-automerge)
+- [Dependabot's PRs auto-merge through dartender, behind the required checks](#dependabot-automerge)
 - [`use_primary_constructors` is on, with four narrow opt-outs](#primary-constructors)
 - [No-bundling: native dependencies never touch the Dart `pubspec.yaml`](#no-bundling-native-dependencies-never-touch-the-dart-pubspecyaml)
 - [Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview](#channel-topology-pigeon-control-api--eventchannel-results--texture-preview)
@@ -64,55 +64,18 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 ---
 
 <a id="dependabot-automerge"></a>
-## Dependabot automerges the boring tier, behind five aggregate checks
-[`dependabot-automerge.yml`](./.github/workflows/dependabot-automerge.yml) arms GitHub's native
-auto-merge (rebase) for patch and minor bumps in `github-actions`, `gradle` (both `/android` and
-`/example/android`), `uv`, and `pub` under `/example`, plus `github-actions` **majors**. Root `pub`,
-and gradle / pub / uv majors, wait for a human.
-Dependabot has no `automerge` config key the way Renovate does, so the mechanism is a workflow. The
-sibling
-[`better_internet_connectivity_checker`](https://github.com/LahaLuhem/better_internet_connectivity_checker)
-and [`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager) repos run the same shape.
+## Dependabot's PRs auto-merge through dartender, behind the required checks
 
-- **Root `pub` stays manual.** It reaches every consumer's resolution and is semver-relevant, and
-  bots are exempt from [`changelog.yml`](./.github/workflows/changelog.yml), so an automerged bump
-  would ship with no release note.
-- **`/android` gradle automerges anyway, unlike the siblings.** Its deps ride the AAR's POM to every
-  downstream Android consumer (ML Kit, Play Services, CameraX), so these bumps *are*
-  publish-relevant, and `Android example build + unit tests` stands in for the read-through. The cost
-  is the missing changelog entry, not the build, so check the Android deps before a release if one landed.
-- **`uv` is the easy one.** `benchmark/python` is chart and orchestration tooling that reaches no
-  published byte, and `benchmark.yml`'s Ruff and Pytest jobs cover it. Both siblings that run a
-  Python benchmark ([`hive_box_manager`](https://github.com/LahaLuhem/hive_box_manager),
-  [`list_smith`](https://github.com/LahaLuhem/list_smith)) automerge it on the same terms. Pytest
-  runs in `strict` mode, so a bump that adds a new strictness option can turn this red. That is the
-  point: the bump PR is where you want to find out.
-- **Minor, not just patch,** because `dependabot.yml` groups both and `fetch-metadata` reports a
-  group's *highest* semver step, and patch-only would skip most batches.
-- **`github-actions` majors automerge too.** Actions reach no consumer, and a bad bump breaks the
-  very CI that gates the merge. It is also the only shape this ecosystem produces: the `actions`
-  group covers minor and patch, so majors always arrive alone, and #17, #18, #19 and #41 were all
-  merged by hand under the patch/minor-only gate. Not covered by the gate, check these by hand:
-  `actions/create-github-app-token` (only in `changelog.yml`, whose cider job skips bot PRs) and
-  `publish.yml`'s tag-only OIDC path.
-- **The ruleset is the load-bearing half.** Auto-merge waits only on *required* checks, so this is
-  safe only while `main`'s ruleset is **active** and requires `repo-ok`, `package-ok`, `example-ok`,
-  `benchmark-ok`, `conventions-ok`. Keep `required_signatures` off it: rebase-merge emits unsigned commits,
-  so it would block every automerge.
-- **`GITHUB_TOKEN` enables the merge, not the changelog App.** The App sits in the ruleset's bypass
-  list, and a bypass covers status checks too, so merging as it would skip the gate this rests on.
-  Its merges also trigger no further workflows, which costs nothing here: `package.yml`'s `gate`
-  already skips post-merge pushes to `main`.
-- **Aggregates, not the real job names.** `Dart format` and `Flutter analyze` each appear in two
-  workflows, so a required list of real contexts is ambiguous, and a renamed one leaves every PR
-  waiting forever. Each workflow instead closes with one `*-ok` job that `needs` its siblings and
-  fails on `failure` or `cancelled`. They read `needs.*.result` by hand because a skipped job
-  reports success, which is what keeps `conventions-ok` green on bot PRs and `package-ok` green on
-  a post-merge push. Corollary: a cancelled `pr-conventions` run strands a red `conventions-ok` on
-  the SHA, so `cancel-in-progress` skips `labeled` / `unlabeled` (Dependabot labels its own PR
-  seconds after opening, which hit every bot PR) and stays on for a force-push.
-- **`pull_request_target`** because Dependabot's `pull_request` runs get a read-only token and
-  enabling auto-merge needs write. Safe as `changelog.yml`: PR code is never checked out.
+dartender's `ci.yml` arms GitHub's auto-merge (rebase) on every Dependabot PR, majors included, and
+the merge then waits only on the checks the rulesets require. What that means here:
+
+- **`plugin-ok` has to stay required.** The `dartender` ruleset requires only `ci / ok` and
+  `conventions / ok`, so without the repo's own `Protected` requiring `plugin-ok`, a bump would
+  merge without waiting on the native, codegen and `benchmark/app` checks.
+- **`/android` gradle bumps reach consumers** through the AAR's POM (ML Kit, Play Services,
+  CameraX), but get no changelog line, so check the Android deps before a release if one landed.
+- **Keep `required_signatures` off every ruleset.** A rebase merge on GitHub is unsigned, so it
+  would block every merge.
 
 ---
 
@@ -310,9 +273,9 @@ declaring one needs `const DarwinOptions._(...)`, which `unnecessary_type_name_i
 (enabled here, and fatal under CI's `--fatal-infos`) rejects, while the `._(...)` form the lint asks
 for does not parse on Dart 3.13. It would have cost a permanent lint suppression.
 
-**CI regenerates and diffs.** The `codegen-freshness` job runs both generators and asserts
-`git status --porcelain` is empty. `--porcelain` rather than `git diff`, so a generator emitting a
-brand-new untracked file counts as stale too.
+**CI regenerates and diffs.** The `codegen` job runs both generators, then
+`git add --intent-to-add .` and `git diff --exit-code`, so a generator emitting a brand-new file
+counts as stale too.
 The `dart format` pass is deterministic and mechanical, not a hand-edit, so it does not breach the
 never-patch rule, and a freshness check (regenerate-and-diff) must run the same format step before
 comparing. The bounding-box geometry these channels carry is specified in
