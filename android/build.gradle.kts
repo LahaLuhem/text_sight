@@ -123,13 +123,13 @@ dependencies {
     // ResolvableFuture, a settable ListenableFuture for the Await.kt tests. No POM impact.
     testImplementation("androidx.concurrent:concurrent-futures:1.1.0")
     // mockito-core also carries the inline mock-maker agent that testOptions points -javaagent at.
-    testImplementation("org.mockito:mockito-core:5.23.0")
+    testImplementation("org.mockito:mockito-core:5.24.0")
     // Real android.graphics.Rect (and friends) on the JVM, so the box-geometry helpers test
     // in place without extracting the arithmetic off Android types.
     testImplementation("org.robolectric:robolectric:4.17")
     // mockito-kotlin's whenever/mock DSL over the already-present mockito-core, for stubbing the
     // ML Kit Text/Text.Line value graph that the frame encoder reads.
-    testImplementation("org.mockito.kotlin:mockito-kotlin:6.3.0")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
     // Robolectric runs under its JUnit 4 runner, and the vintage engine executes those tests on the
     // JUnit Platform configured above (useJUnitPlatform).
     testImplementation("junit:junit:4.13.2")
