@@ -57,14 +57,6 @@ updates:
       pub:
         patterns: ['*']
         update-types: [minor, patch]
-  - package-ecosystem: swift
-    directory: /ios/text_sight
-    schedule:
-      interval: weekly
-    groups:
-      swift:
-        patterns: ['*']
-        update-types: [minor, patch]
   - package-ecosystem: uv
     directory: /benchmark/python
     schedule:
