@@ -138,9 +138,9 @@ is **not** in the routine-edit list. All move together only when the user explic
 - **Never** run `cider` commands or hand-edit `CHANGELOG.md`, the `version:` field in
   `pubspec.yaml`, or `example/pubspec.lock` without an explicit instruction to cut a
   release. Version bumps, CHANGELOG finalisation, and the example-lockfile resync are owned
-  by [`scripts/release.sh`](../scripts/release.sh), and the running `## [Unreleased]` buffer is
-  bot-appended by `.github/workflows/changelog.yml`. If the user asks for a release, suggest
-  `scripts/release.sh <bump>`, but don't invoke it for them (it pushes to `origin/main` and
+  by the release run, and the running `## [Unreleased]` buffer is bot-appended by
+  `.github/workflows/changelog.yml`. If the user asks for a release, point them at the
+  **Release** workflow in the Actions tab, but don't start it for them (it pushes to `main` and
   triggers publish). The `cider:` block in `pubspec.yaml` is static config, so hand-edit it
   freely.
 - **Never** hand-edit generated code (`lib/src/platform/messages.g.dart`). Regenerate from the
@@ -168,11 +168,9 @@ is **not** in the routine-edit list. All move together only when the user explic
   `example/ios/.swiftlint.yml`, run in CI).
   Generated `Messages.g.*` is excluded, and for a new deviation, tune the config (not the
   generated code).
-- **Shell + workflow lint clean via the [`linterpol`](https://github.com/LahaLuhem/linterpol)
+- **Workflow lint clean via the [`linterpol`](https://github.com/LahaLuhem/linterpol)
   image** (CI runs the checks in `.github/lint-checks.json`, rumdl and ryl too, the image pulled
-  anonymously from public GHCR): `shellcheck
-  scripts/*.sh` (also gated in the `scripts/release.sh` preflight) and `actionlint` over
-  `.github/workflows/`. Locally:
+  anonymously from public GHCR): `actionlint` over `.github/workflows/`. Locally:
   `docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest <tool> …`.
 - When native capture/recognition changed: build and run the example on **both** an Android
   emulator and an iOS simulator, or explicitly call out what you did NOT verify (e.g.
@@ -182,5 +180,5 @@ is **not** in the routine-edit list. All move together only when the user explic
   Package Manager (no `Podfile.lock`), and the generated iOS SPM manifest must list no ML Kit package.
 - `flutter pub publish --dry-run` clean if the change is publish-relevant. Do **not** bump
   the version or add a CHANGELOG entry to make the dry-run happy, since those are release-time
-  edits owned by `scripts/release.sh`.
+  edits owned by the release run.
 - Public API additions documented with `///` dartdoc and reflected in the README.

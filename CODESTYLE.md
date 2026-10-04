@@ -33,7 +33,6 @@ own, so the conventions below are applied by hand, the way the [DCM rules](#dcm-
 - [Testing](#testing)
 - [Swift (iOS)](#swift-ios)
 - [Kotlin (Android)](#kotlin-android)
-- [Shell scripts](#shell-scripts)
 - [Documentation conventions (Markdown)](#documentation-conventions-markdown)
 
 <!-- TOC end -->
@@ -790,27 +789,6 @@ these.
 
 ---
 
-<a id="shell-scripts"></a>
-## Shell scripts
-
-- **`shellcheck` is the lint contract** for `scripts/*.sh`, mirroring `flutter analyze` for
-  Dart. It runs through the prebuilt [`linterpol`](https://github.com/LahaLuhem/linterpol) image,
-  so Docker is the only thing to install. Both the `scripts/release.sh` preflight and CI's
-  ShellCheck job, from `.github/lint-checks.json`, run it the same way:
-
-  ```bash
-  docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest shellcheck scripts/*.sh
-  ```
-
-- **Prefer `# shellcheck disable=SC<code>` + a one-line "why" comment over refactoring
-  for simple cases.** Refactor when the warning points at a real bug or the rewrite is
-  genuinely clearer. Reach for the directive when the code is correct as-is and
-  ShellCheck's analysis is just over-conservative (e.g. SC2154 inside a quoted trap body).
-  Always pair the directive with a comment so the next reader knows it's intentional, not
-  a TODO.
-
----
-
 <a id="documentation-conventions-markdown"></a>
 ## Documentation conventions (Markdown)
 
@@ -828,7 +806,4 @@ these.
   is a local implementation detail, since `.fvmrc` pins the channel. Docs (this file,
   README.md, AGENTS.md, CLAUDE.md, APPENDIX.md) stay tool-agnostic so external
   contributors aren't forced into FVM. The maintainer's shell aliases `flutter` / `dart`
-  to the pinned toolchain for interactive use, and scripts under `scripts/` prepend
-  `.fvm/flutter_sdk/bin` to `PATH` if the symlink exists (so FVM users get the project
-  pin) and fall back to whatever is on `PATH` otherwise, so non-FVM contributors run the
-  scripts unchanged.
+  to the pinned toolchain for interactive use.
