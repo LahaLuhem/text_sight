@@ -25,7 +25,7 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 ## Stack
 
 > **Freshly scaffolded.** Today the repo has `ios/`, `android/`, and the root meta-files.
-> `lib/`, `pigeons/`, `example/`, `.github/`, and `scripts/` are the planned structure the
+> `lib/`, `pigeons/`, `example/` and `.github/` are the planned structure the
 > build order populates. The *Repo layout* below is the target shape, not a claim that
 > every path exists yet.
 
@@ -68,9 +68,9 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 - **Published to pub.dev.** `.pubignore` controls the tarball. `CHANGELOG.md`, the
   `version:` field in `pubspec.yaml`, and the release tag move in lockstep. CHANGELOG
   entries are bot-appended on merge (`.github/workflows/changelog.yml` via `cider`, driven
-  by the PR's `sem-*` label and the `cider:` block in `pubspec.yaml`). Cutting a release is
-  one command: `scripts/release.sh [patch|minor|major]` (see `scripts/README.md`). No
-  manual `flutter pub publish`.
+  by the PR's `sem-*` label and the `cider:` block in `pubspec.yaml`). A release starts from
+  the Actions tab, see [dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing).
+  No manual `flutter pub publish`.
 
 ## Repo layout
 
@@ -105,11 +105,10 @@ text_sight/
 ├── .editorconfig            Text-file conventions (Dart 2 / Swift 2 / Kotlin 4 / shell 2 / …)
 ├── .fvmrc                   FVM channel pin
 ├── .github/workflows/       CI: dartender's ci, conventions, changelog, publish, local plugin
-├── scripts/                 release.sh + README (cider-driven release flow)
 ├── CHANGELOG.md             Release log (bot-appended on merge, hand-finalised at release)
 ├── README.md                pub.dev landing page (hook line + topics)
 ├── APPENDIX.md              Design rationale (anchor-keyed)
-├── CODESTYLE.md             Plugin-package code style (Dart + Swift + Kotlin + shell)
+├── CODESTYLE.md             Plugin-package code style (Dart + Swift + Kotlin)
 └── .ai/                     This file + CLAUDE.md (symlinked at root)
 ```
 
@@ -174,7 +173,7 @@ rule 13).
     another platform target (web, desktop) without an explicit conversation.
 14. **`CHANGELOG.md`, `version:`, and the release tag move together, and are
     pipeline-owned.** Routine CHANGELOG appends are bot-driven (`changelog.yml` + `cider`).
-    cutting a release is `scripts/release.sh`. Don't hand-edit `CHANGELOG.md`, the
+    cutting a release is the **Release** run. Don't hand-edit `CHANGELOG.md`, the
     `version:` field, or `example/pubspec.lock` without an explicit instruction to cut a
     release. See [*Forbidden / confirm-first actions* in CLAUDE.md](./CLAUDE.md#forbidden-confirm-first-actions).
     The `cider:` block in `pubspec.yaml` is static config and may be hand-edited.
@@ -204,8 +203,9 @@ comply are blocked by CI.**
 - PR body must not be empty, no merge commits in the PR range (rebase to integrate
   `main`), and commit subjects ≤ 82 characters.
 
-Cutting a release is one command: `scripts/release.sh [patch|minor|major]`. See
-`scripts/README.md` for usage, preflight, and the pipeline-owned-files contract.
+Cutting a release is one run: **Release** in the Actions tab, then the bump. It runs CI, moves the
+version, the CHANGELOG and `example/pubspec.lock` together, and pushes the tag `publish.yml` picks
+up. [dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing) has the rest.
 
 ## Testing
 
@@ -245,7 +245,7 @@ transitive closure, so they don't touch the no-bundling contract (hard rule 1).
 
 ## Style
 
-Full guide: [`../CODESTYLE.md`](../CODESTYLE.md) (covers Dart, Swift, Kotlin, and shell).
+Full guide: [`../CODESTYLE.md`](../CODESTYLE.md) (covers Dart, Swift and Kotlin).
 The lint posture is deliberately strict (see `analysis_options.yaml`). Top-level rules to
 keep in working memory:
 
