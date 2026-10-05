@@ -62,7 +62,8 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
   source.
 - **`flutter analyze`** for pedantic static analysis, and the lint posture is deliberately
   strict (`strict-casts` / `strict-inference` / `strict-raw-types` + the `errors:`-promoted
-  block in `analysis_options.yaml`). Pedantic mode is intentional, not negotiable.
+  block in [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
+  which `analysis_options.yaml` includes). Pedantic mode is intentional, not negotiable.
   **`flutter_test`** for Dart unit/widget tests. The native sides have no analyzer gate,
   their conventions are applied by hand ([`CODESTYLE.md`](../CODESTYLE.md)).
 - **Published to pub.dev.** `.pubignore` controls the tarball. `CHANGELOG.md`, the
@@ -100,7 +101,7 @@ text_sight/
 │   ├── detekt.yml                detekt config (deviations only; --input android/src from repo root)
 │   └── src/main/kotlin/com/lahaluhem/text_sight/   CameraX + ML Kit, grouped by responsibility (camera/ recognition/ permission/ readiness/)
 ├── example/                 Runnable demo, also the no-bundling test harness
-├── analysis_options.yaml    Strict-mode + opinionated lints
+├── analysis_options.yaml    Includes dartender's shared lints
 ├── .pubignore               Files excluded from `flutter pub publish`
 ├── .editorconfig            Text-file conventions (Dart 2 / Swift 2 / Kotlin 4 / shell 2 / …)
 ├── .fvmrc                   FVM channel pin
@@ -155,7 +156,7 @@ rule 13).
 7. **Generated code is never hand-edited.** `lib/src/platform/messages.g.dart` is Pigeon's output,
    regenerate it from `pigeons/text_sight.dart`, don't patch it.
 8. **No `print()` in library code.** Diagnostic output is the caller's responsibility.
-   `avoid_print` is a warning in `analysis_options.yaml`.
+   `avoid_print` is a warning in the shared lints.
 9. **No `dynamic` escape hatches.** `strict-casts`, `strict-inference`, and
    `strict-raw-types` are all on. If you reach for `dynamic` or unconstrained `Object?`,
    stop and reconsider.
@@ -246,7 +247,7 @@ transitive closure, so they don't touch the no-bundling contract (hard rule 1).
 ## Style
 
 Full guide: [`../CODESTYLE.md`](../CODESTYLE.md) (covers Dart, Swift and Kotlin).
-The lint posture is deliberately strict (see `analysis_options.yaml`). Top-level rules to
+The lint posture is deliberately strict (see the shared lints). Top-level rules to
 keep in working memory:
 
 - Type-annotate every public symbol, and `final` by default for fields and locals.
@@ -290,7 +291,7 @@ sections, markdown conventions) go to [`../CODESTYLE.md`](../CODESTYLE.md).
 - **Document new user-facing API in the README.** Any new public class, widget, method, or
   configuration option must be added to the README in the same change. Rationale + design
   trade-offs belong in `APPENDIX.md`, and the README is the user-facing entry point.
-- **Read `analysis_options.yaml` before writing Dart.** The lint posture is far stricter
+- **Read the shared lints before writing Dart.** The lint posture is far stricter
   than the Dart default, and code that fails lint won't pass review.
 - **Surface semver implications loudly.** If a change touches anything re-exported from
   `lib/text_sight.dart`, call out whether it's patch / minor / major before the diff lands.

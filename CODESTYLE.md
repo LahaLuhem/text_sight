@@ -3,8 +3,9 @@ stack, repo layout, hard rules) live in [`.ai/AGENTS.md`](./.ai/AGENTS.md). Desi
 rationale lives in [`APPENDIX.md`](./APPENDIX.md).
 
 The lint posture is deliberately strict (see
-[`analysis_options.yaml`](./analysis_options.yaml), where the `errors:` block promotes many
-lints to errors). The house style values explicit types, no ambient mutability, and
+[dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
+which [`analysis_options.yaml`](./analysis_options.yaml) includes, where the `errors:` block
+promotes many lints to errors). The house style values explicit types, no ambient mutability, and
 small focused classes. The native sides (Swift, Kotlin) have no analyzer gate of their
 own, so the conventions below are applied by hand, the way the [DCM rules](#dcm-rules-applied-by-hand) are.
 
@@ -195,7 +196,7 @@ style.
 ## Formatting
 
 - **Wrap text-file content at 100 columns.** `formatter.page_width: 100` in
-  `analysis_options.yaml` is authoritative for Dart code, and `.editorconfig`'s
+  the shared lints is authoritative for Dart code, and `.editorconfig`'s
   `max_line_length = 100` mirrors it for every other text file. Markdown and **dartdoc
   comments** follow the same cap manually, since `dart format` does *not* reflow doc-comment
   prose, so a `///`-block hand-wrapped at 70 / 80 columns stays narrow forever unless
@@ -630,7 +631,7 @@ does not fire when a docImport is present.
 ## DCM rules (applied by hand)
 
 `flutter analyze` does not run them, and they're declared in the `dart_code_metrics:` block
-of `analysis_options.yaml` and treated as non-negotiable. Apply by hand (or via the
+of the shared lints and treated as non-negotiable. Apply by hand (or via the
 `dcm` CLI if installed: `dcm analyze lib`):
 
 - **`no-empty-block`**: every block (function literal, `if`, `for`, `try`…) must

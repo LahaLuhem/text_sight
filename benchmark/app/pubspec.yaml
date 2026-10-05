@@ -18,6 +18,11 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
+  dartender_lints:
+    git:
+      url: https://github.com/LahaLuhem/dartender.git
+      path: lints
+      ref: main
   flutter_driver:
     sdk: flutter
   # The codec scenario imports benchmark/harness/capture_codec.dart directly, which needs this.

@@ -152,7 +152,7 @@ jobs:
           working-directory: benchmark/app
       # The root's analysis excludes benchmark/app, so this is its only one.
       - working-directory: benchmark/app
-        run: dart analyze --fatal-infos .
+        run: dart analyze --fatal-infos --fatal-warnings .
 
   # The ruleset requires this job's id, so it gets no `name:`.
   plugin-ok:

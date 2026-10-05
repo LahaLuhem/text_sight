@@ -46,8 +46,8 @@ for 7 days, and a tag push triggers an automated publish).
   native toolchains when needed (`pod`, `xcodebuild`, `gradlew`). The user's shell aliases
   `flutter` / `dart` to whatever toolchain manager serves the `.fvmrc`-pinned channel,
   invoke plain `flutter` / `dart`, not the manager directly.
-- **Lint with `flutter analyze`**: the project promotes many lints to `error:` in
-  `analysis_options.yaml`, and those are the contract, not suggestions. The Swift/Kotlin sides are
+- **Lint with `flutter analyze --fatal-infos --fatal-warnings`**: the shared lints promote many lints
+  to `error:`, and those are the contract, not suggestions. The Swift/Kotlin sides are
   gated by detekt (`android/detekt.yml`) and SwiftLint (per-tree `.swiftlint.yml` under `ios/`
   and `example/ios/`) in CI. Still apply
   [`../CODESTYLE.md`](../CODESTYLE.md)'s native conventions by hand for what those don't cover.
@@ -73,8 +73,8 @@ for 7 days, and a tag push triggers an automated publish).
   `messages.g.dart` in the same change and treat signature changes as public-API-class.
 - **`example/` edits** are local, with no publish impact. The demo app is the living usage
   reference *and* the no-bundling test harness, so keep it building on both Android and iOS.
-- **`analysis_options.yaml` edits** affect every Dart file. Surface lint-posture changes
-  loudly and add a written reason in `APPENDIX.md`.
+- **`analysis_options.yaml` edits** override dartender's shared lints, which every repo gets.
+  Surface them loudly and add a written reason in `APPENDIX.md`.
 - **`pubspec.yaml` edits** that touch `dependencies` add to every downstream user's
   transitive closure, so treat as public-API-class. Adding a recognition/camera dep is
   forbidden (hard rule 1). Changing `topics:` or `platforms:` is also pub.dev-visible.
@@ -103,8 +103,8 @@ for 7 days, and a tag push triggers an automated publish).
   iOS, CameraX + ML Kit on Android), texture lifecycle, or threading, since the backpressure and
   texture-release invariants are subtle and leak-prone (hard rule 5).
 - You're adding or removing a dependency in `pubspec.yaml`, or any native dependency.
-- You're changing `analysis_options.yaml`. Lint posture is project-wide, so any toggle deserves
-  a written reason in APPENDIX.
+- You're overriding a shared lint in `analysis_options.yaml`. Lint posture is project-wide, so any
+  toggle deserves a written reason in APPENDIX.
 
 For single-file, single-concern fixes inside `lib/src/`: just do it.
 
@@ -153,10 +153,10 @@ is **not** in the routine-edit list. All move together only when the user explic
 
 ## Definition of done
 
-- `flutter analyze` clean (the `errors:` block promotes many lints to errors,
-  non-negotiable).
+- `flutter analyze --fatal-infos --fatal-warnings` clean (the shared `errors:` block promotes
+  many lints to errors, non-negotiable).
 - `dart format --output=none --set-exit-if-changed .` clean (100-column width matches
-  `analysis_options.yaml`'s `formatter.page_width`).
+  the shared lints' `formatter.page_width`).
 - DCM rules applied by hand (`flutter analyze` doesn't run them): `no-empty-block`,
   `newline-before-return`, `prefer-commenting-analyzer-ignores`, `avoid-returning-widgets`,
   `prefer-correct-edge-insets-constructor`. The `dcm` CLI (`dcm analyze lib`) covers them if

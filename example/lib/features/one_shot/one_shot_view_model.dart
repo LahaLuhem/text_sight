@@ -19,7 +19,7 @@ final class OneShotViewModel() extends ViewModel {
   Future<void> onRecognizeBytesPressed() => _run(() async {
     final bytes = (await rootBundle.load(ConstMedia.sampleText.keyName)).buffer.asUint8List();
 
-    return TextSight.recognizeImage(bytes);
+    return await TextSight.recognizeImage(bytes);
   });
 
   Future<void> onRecognizePathPressed() => _run(() async {
@@ -27,7 +27,7 @@ final class OneShotViewModel() extends ViewModel {
     final file = File('${Directory.systemTemp.path}/text_sight_sample.png');
     await file.writeAsBytes(bytes);
 
-    return TextSight.recognizePath(file.path);
+    return await TextSight.recognizePath(file.path);
   });
 
   Future<void> _run(Future<TextSightCapture> Function() recognize) async {
