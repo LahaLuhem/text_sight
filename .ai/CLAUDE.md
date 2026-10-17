@@ -11,8 +11,9 @@ recognition: Apple Vision on iOS, ML Kit on Android, the text-scanning sibling t
 `mobile_scanner`. The whole point is that **iOS links zero third-party ML libraries**
 (no GoogleMLKit), so the no-bundling discipline is sacred. Treat the user as technical and
 direct. The package is published on pub.dev, so changes are visible to every downstream
-user. Breakage is expensive and slow to walk back (unpublished versions stay reserved
-for 7 days, and a tag push triggers an automated publish).
+user. Breakage is expensive and slow to walk back (pub.dev never unpublishes a version, it
+only lets you retract one within 7 days of publishing, and a tag push triggers an automated
+publish).
 
 ## Communication
 
@@ -127,10 +128,10 @@ is **not** in the routine-edit list. All move together only when the user explic
 <a id="forbidden-confirm-first-actions"></a>
 ## Forbidden / confirm-first actions
 
-- **Never** `flutter pub publish` or `dart pub publish`. Publishing is effectively one-way,
-  pub.dev reserves the version for 7 days after retraction. Releases go through the Release
-  run, whose tag push starts `.github/workflows/publish.yml`. Pushing a matching `X.Y.Z` git
-  tag by hand starts it too, so that's a confirm-first action.
+- **Never** `flutter pub publish` or `dart pub publish`. Publishing is one-way, since pub.dev
+  never unpublishes a version and only lets you retract one within 7 days. Releases go through
+  the Release run, whose tag push starts `.github/workflows/publish.yml`. Pushing a matching
+  `X.Y.Z` git tag by hand starts it too, so that's a confirm-first action.
 - **Never** push a semver tag (`git push origin <tag>` or `git push --tags`) without
   explicit instruction. The tag triggers `publish.yml`, which authenticates to pub.dev via
   OIDC (configured by `dart-lang/setup-dart`), and there is no manual confirmation step on the
