@@ -46,11 +46,11 @@ for 7 days, and a tag push triggers an automated publish).
   native toolchains when needed (`pod`, `xcodebuild`, `gradlew`). The user's shell aliases
   `flutter` / `dart` to whatever toolchain manager serves the `.fvmrc`-pinned channel,
   invoke plain `flutter` / `dart`, not the manager directly.
-- **Lint with `flutter analyze --fatal-infos --fatal-warnings`**: the shared lints promote many lints
-  to `error:`, and those are the contract, not suggestions. The Swift/Kotlin sides are
-  gated by detekt (`android/detekt.yml`) and SwiftLint (per-tree `.swiftlint.yml` under `ios/`
-  and `example/ios/`) in CI. Still apply
-  [`../CODESTYLE.md`](../CODESTYLE.md)'s native conventions by hand for what those don't cover.
+- **Lint with `dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it: the shared lints
+  promote many lints to `error:`, and those are the contract, not suggestions. The Swift/Kotlin
+  sides are gated by detekt (`android/detekt.yml`) and SwiftLint (per-tree `.swiftlint.yml` under
+  `ios/` and `example/ios/`) in CI. Still apply [`../CODESTYLE.md`](../CODESTYLE.md)'s native
+  conventions by hand for what those don't cover.
 - **Agent tool** for wide / open-ended searches or to keep large outputs out of main
   context. Not for trivial lookups.
 
@@ -128,21 +128,21 @@ is **not** in the routine-edit list. All move together only when the user explic
 ## Forbidden / confirm-first actions
 
 - **Never** `flutter pub publish` or `dart pub publish`. Publishing is effectively one-way,
-  pub.dev reserves the version for 7 days after retraction. Releases happen through the
-  tag-triggered workflow at `.github/workflows/publish.yml`, and pushing a matching `X.Y.Z` git
-  tag is the trigger and is itself a confirm-first action.
+  pub.dev reserves the version for 7 days after retraction. Releases go through the Release
+  run, whose tag push starts `.github/workflows/publish.yml`. Pushing a matching `X.Y.Z` git
+  tag by hand starts it too, so that's a confirm-first action.
 - **Never** push a semver tag (`git push origin <tag>` or `git push --tags`) without
   explicit instruction. The tag triggers `publish.yml`, which authenticates to pub.dev via
   OIDC (configured by `dart-lang/setup-dart`), and there is no manual confirmation step on the
   pub.dev side.
 - **Never** run `cider` commands or hand-edit `CHANGELOG.md`, the `version:` field in
-  `pubspec.yaml`, or `example/pubspec.lock` without an explicit instruction to cut a
-  release. Version bumps, CHANGELOG finalisation, and the example-lockfile resync are owned
-  by the release run, and the running `## [Unreleased]` buffer is bot-appended by
-  `.github/workflows/changelog.yml`. If the user asks for a release, point them at the
-  **Release** workflow in the Actions tab, but don't start it for them (it pushes to `main` and
-  triggers publish). The `cider:` block in `pubspec.yaml` is static config, so hand-edit it
-  freely.
+  `pubspec.yaml`, or `example/pubspec.lock`. Version bumps, CHANGELOG finalisation, and the
+  example-lockfile resync are owned by the release run, the running `## [Unreleased]` buffer is
+  bot-appended by `.github/workflows/changelog.yml`, and Dependabot bumps
+  `example/pubspec.lock` too. After changing `example/pubspec.yaml`, run `flutter pub get` in
+  `example/`. If the user asks for a release, point them at the **Release** workflow in the
+  Actions tab, but don't start it for them (it pushes to `main` and triggers publish). The
+  `cider:` block in `pubspec.yaml` is static config, so hand-edit it freely.
 - **Never** hand-edit generated code (`lib/src/platform/messages.g.dart`). Regenerate from the
   Pigeon schema.
 - **Never** edit `pubspec.lock` directly (root or `example/`). It's `flutter pub get`'s
@@ -153,32 +153,27 @@ is **not** in the routine-edit list. All move together only when the user explic
 
 ## Definition of done
 
-- `flutter analyze --fatal-infos --fatal-warnings` clean (the shared `errors:` block promotes
-  many lints to errors, non-negotiable).
-- `dart format --output=none --set-exit-if-changed .` clean (100-column width matches
-  the shared lints' `formatter.page_width`).
-- DCM rules applied by hand (`flutter analyze` doesn't run them): `no-empty-block`,
-  `newline-before-return`, `prefer-commenting-analyzer-ignores`, `avoid-returning-widgets`,
-  `prefer-correct-edge-insets-constructor`. The `dcm` CLI (`dcm analyze lib`) covers them if
-  installed.
-- `flutter test` green (where tests exist).
+- Every check `ci / ok` waits on passes on your tree: the `needs:` of the `ok` job in
+  [dartender's `ci.yml`](https://github.com/LahaLuhem/dartender/blob/main/.github/workflows/ci.yml),
+  run with this repo's inputs from [`ci.yml`](../.github/workflows/ci.yml). So does every job in
+  this repo's own [`plugin.yml`](../.github/workflows/plugin.yml), detekt and SwiftLint among
+  them. Generated `Messages.g.*` is excluded from those, and for a new deviation, tune the config
+  (not the generated code).
+- DCM rules applied by hand (`dart analyze` doesn't run them, and CI runs no DCM):
+  `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`,
+  `avoid-returning-widgets`, `prefer-correct-edge-insets-constructor`. The `dcm` CLI
+  (`dcm analyze lib`) covers them if installed.
 - **Native conventions hand-applied** per [`../CODESTYLE.md`](../CODESTYLE.md) (Swift 2-space
   + system-frameworks-only, Kotlin 4-space + built-in-Kotlin + mandatory `imageProxy.close()`).
-- **detekt + SwiftLint clean**: native lint gates (`android/detekt.yml`, `ios/.swiftlint.yml` +
-  `example/ios/.swiftlint.yml`, run in CI).
-  Generated `Messages.g.*` is excluded, and for a new deviation, tune the config (not the
-  generated code).
-- **Workflow lint clean via the [`linterpol`](https://github.com/LahaLuhem/linterpol)
-  image** (CI runs the checks in `.github/lint-checks.json`, rumdl and ryl too, the image pulled
-  anonymously from public GHCR): `actionlint` over `.github/workflows/`. Locally:
-  `docker run --rm -v "$PWD:/work:ro" ghcr.io/lahaluhem/linterpol:latest <tool> …`.
 - When native capture/recognition changed: build and run the example on **both** an Android
   emulator and an iOS simulator, or explicitly call out what you did NOT verify (e.g.
   "didn't exercise on iOS, only ran the Android emulator").
 - **No-bundling verified** when the dependency surface could have shifted:
-  `rg -i 'mlkit|googlemlkit|MLImage' example/ios` returns no matches. The example uses Swift
-  Package Manager (no `Podfile.lock`), and the generated iOS SPM manifest must list no ML Kit package.
-- `flutter pub publish --dry-run` clean if the change is publish-relevant. Do **not** bump
-  the version or add a CHANGELOG entry to make the dry-run happy, since those are release-time
-  edits owned by the release run.
+  `grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios` returns no matches (grep, since rg skips
+  the gitignored SPM manifest). The example uses Swift Package Manager (no `Podfile.lock`), and
+  the generated iOS SPM manifest must list no ML Kit package.
+- `flutter pub publish --dry-run` clean if the change is publish-relevant, apart from its
+  warning about uncommitted files, which fails it until you commit. Do **not** bump the version
+  or add a CHANGELOG entry to make the dry-run happy, since those are release-time edits owned by
+  the release run.
 - Public API additions documented with `///` dartdoc and reflected in the README.
