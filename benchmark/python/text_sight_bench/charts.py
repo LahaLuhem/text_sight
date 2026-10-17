@@ -48,7 +48,7 @@ def render_decode_vs_lines(agg: pl.DataFrame, out_path: Path) -> Path:
     """Decode µs against lines-per-frame, one line per candidate."""
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.lineplot(
-        data=agg,
+        data=agg.to_pandas(),
         x="line_count",
         y="decode_microseconds",
         hue="candidate",
@@ -80,7 +80,7 @@ def render_wire_bytes_vs_lines(agg: pl.DataFrame, out_path: Path) -> Path:
     """Wire size in KB against lines-per-frame, one line per candidate."""
     fig, ax = plt.subplots(figsize=(8, 5))
     sns.lineplot(
-        data=agg,
+        data=agg.to_pandas(),
         x="line_count",
         y="wire_kb",
         hue="candidate",
@@ -112,7 +112,7 @@ def render_profile_decode_bars(agg: pl.DataFrame, out_path: Path) -> Path:
     """Decode µs per profile, grouped bars per candidate."""
     fig, ax = plt.subplots(figsize=(9, 5))
     sns.barplot(
-        data=agg,
+        data=agg.to_pandas(),
         x="payload",
         y="decode_microseconds",
         order=PROFILE_ORDER,
