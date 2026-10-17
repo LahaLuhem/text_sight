@@ -24,11 +24,6 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 
 ## Stack
 
-> **Freshly scaffolded.** Today the repo has `ios/`, `android/`, and the root meta-files.
-> `lib/`, `pigeons/`, `example/` and `.github/` are the planned structure the
-> build order populates. The *Repo layout* below is the target shape, not a claim that
-> every path exists yet.
-
 - **It's a plugin, not a pure package**: it needs native code (Swift/Vision,
   Kotlin/ML Kit). For v1 a **single plugin package** declares both platforms. Full
   federation is deferred ([`APPENDIX.md#federation-deferred`](../APPENDIX.md#federation-deferred)).
@@ -60,18 +55,21 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
   writes `copyWith` for the public value types. Both outputs are committed, and CI's
   `codegen` job regenerates and fails if anything differs, so neither can drift from its
   source.
-- **`flutter analyze`** for pedantic static analysis, and the lint posture is deliberately
+- **`dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it, for pedantic static
+  analysis, and the lint posture is deliberately
   strict (`strict-casts` / `strict-inference` / `strict-raw-types` + the `errors:`-promoted
   block in [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
   which `analysis_options.yaml` includes). Pedantic mode is intentional, not negotiable.
-  **`flutter_test`** for Dart unit/widget tests. The native sides have no analyzer gate,
-  their conventions are applied by hand ([`CODESTYLE.md`](../CODESTYLE.md)).
+  **`flutter_test`** for Dart unit/widget tests. On the native sides, detekt and SwiftLint gate
+  the Kotlin and the Swift in `plugin.yml`, and the rest of their conventions are applied by hand
+  ([`CODESTYLE.md`](../CODESTYLE.md)).
 - **Published to pub.dev.** `.pubignore` controls the tarball. `CHANGELOG.md`, the
-  `version:` field in `pubspec.yaml`, and the release tag move in lockstep. CHANGELOG
-  entries are bot-appended on merge (`.github/workflows/changelog.yml` via `cider`, driven
-  by the PR's `sem-*` label and the `cider:` block in `pubspec.yaml`). A release starts from
-  the Actions tab, see [dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing).
-  No manual `flutter pub publish`.
+  `version:` field in `pubspec.yaml`, and the release tag move together in the Release run,
+  which the user starts from the Actions tab (see
+  [dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing)). It also adds
+  Dependabot's CHANGELOG lines. Every other line is bot-appended on merge
+  (`.github/workflows/changelog.yml` via `cider`), one per PR with a `sem-*` label other than
+  `sem-skip`. No manual `flutter pub publish`.
 
 ## Repo layout
 
@@ -105,8 +103,9 @@ text_sight/
 ├── .pubignore               Files excluded from `flutter pub publish`
 ├── .editorconfig            Text-file conventions (Dart 2 / Swift 2 / Kotlin 4 / shell 2 / …)
 ├── .fvmrc                   FVM channel pin
-├── .github/workflows/       CI: dartender's ci, conventions, changelog, publish, local plugin
-├── CHANGELOG.md             Release log (bot-appended on merge, hand-finalised at release)
+├── .github/workflows/       CI: dartender's ci, conventions, changelog, release, publish,
+│                            local plugin
+├── CHANGELOG.md             Release log (bot-appended on merge, finalised by the Release run)
 ├── README.md                pub.dev landing page (hook line + topics)
 ├── APPENDIX.md              Design rationale (anchor-keyed)
 ├── CODESTYLE.md             Plugin-package code style (Dart + Swift + Kotlin)
@@ -174,9 +173,10 @@ rule 13).
     another platform target (web, desktop) without an explicit conversation.
 14. **`CHANGELOG.md`, `version:`, and the release tag move together, and are
     pipeline-owned.** Routine CHANGELOG appends are bot-driven (`changelog.yml` + `cider`).
-    cutting a release is the **Release** run. Don't hand-edit `CHANGELOG.md`, the
-    `version:` field, or `example/pubspec.lock` without an explicit instruction to cut a
-    release. See [*Forbidden / confirm-first actions* in CLAUDE.md](./CLAUDE.md#forbidden-confirm-first-actions).
+    Cutting a release is the **Release** run. Don't hand-edit `CHANGELOG.md`, the `version:`
+    field, or `example/pubspec.lock`, which Dependabot bumps too. After changing
+    `example/pubspec.yaml`, run `flutter pub get` in `example/`. See
+    [*Forbidden / confirm-first actions* in CLAUDE.md](./CLAUDE.md#forbidden-confirm-first-actions).
     The `cider:` block in `pubspec.yaml` is static config and may be hand-edited.
 
 ## PR conventions
@@ -216,12 +216,12 @@ not unit-tested.
 
 - **Dart** (`test/`): `flutter test`. Pigeon control-channel, captures-stream and session-state
   decode against a mocked host.
-- **Android native** (`android/src/test/`):
-  `example/android/gradlew :text_sight:testDebugUnitTest`. Robolectric supplies a real
-  `android.graphics.Rect` so the box-geometry helpers test in place (no arithmetic extraction),
-  ML Kit's `Text` graph is Mockito-mocked. Robolectric runs under its JUnit 4 runner, executed on
-  the JUnit Platform via `junit-vintage-engine`. Mockito's inline mock-maker loads as a
-  `-javaagent` (JDK 21+ forbids self-attach). See the `mockitoAgent` configuration in
+- **Android native** (`android/src/test/`): `flutter build apk --config-only` in `example/`,
+  then `./gradlew :text_sight:testDebugUnitTest` in `example/android/`, as CI does. Robolectric
+  supplies a real `android.graphics.Rect` so the box-geometry helpers test in place (no arithmetic
+  extraction), ML Kit's `Text` graph is Mockito-mocked. Robolectric runs under its JUnit 4
+  runner, executed on the JUnit Platform via `junit-vintage-engine`. Mockito's inline mock-maker
+  loads as a `-javaagent` (JDK 21+ forbids self-attach). See the `mockitoAgent` configuration in
   `build.gradle.kts`. Covers `toPixelRect`, `centerWithin`, and the per-frame wire-map encoder
   (`encodeFrame`/`encodeLine`, kept as file-level `internal` functions for this).
 - **iOS native** (`example/ios/RunnerTests/`): `xcodebuild test -workspace
@@ -283,8 +283,9 @@ sections, markdown conventions) go to [`../CODESTYLE.md`](../CODESTYLE.md).
   technical choice: propose it first the same way you would any other (above), keep it
   behavior-preserving, and scope it to what the change rests on.
 - **Verify the no-bundling actually held.** After adding `text_sight` to the example and
-  building iOS, `rg -i 'mlkit|googlemlkit|MLImage' example/ios` must return **no matches**, and
-  no ML Kit package may appear in the iOS Swift Package Manager graph (the example is SPM-based,
+  building iOS, `grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios` must return **no matches**
+  (grep, since rg skips the gitignored SPM manifest), and no ML Kit package may appear in the iOS
+  Swift Package Manager graph (the example is SPM-based,
   so there is no `Podfile.lock`, and the generated `FlutterGeneratedPluginSwiftPackage` manifest is
   the authoritative iOS dependency list). This is the package's core acceptance check, so run it
   whenever the native dependency surface could have shifted.

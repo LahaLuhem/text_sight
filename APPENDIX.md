@@ -96,8 +96,8 @@ declarations out of the class body, and a primary constructor leaves that body e
 
 The second row is the one to worry about. Codegen passes and every message then crosses the
 channel carrying nothing. That is why `pigeons/text_sight.dart` opts out for the whole file.
-CI's freshness job in [#channel-topology](#channel-topology) catches the drift, but only once
-somebody regenerates.
+CI's freshness job in [#channel-topology](#channel-topology) regenerates on every run, so it
+catches a schema committed without its output, but not an empty class committed with it.
 
 **Namespaces have nothing to construct.** `TextSight`, `TextSightEngine` and `TextSightModel`
 are static-only and documented as never instantiated. The lint offers them a primary
@@ -123,8 +123,10 @@ suppressions pointless, analyze will say so.
 > warnings that motivated this package cannot arise. Includes the rejected path
 > (`flutter_scalable_ocr` → `google_mlkit_text_recognition` as a *Dart* dep, which drags
 > GoogleMLKit into the iOS build), the "no `camera` Dart dep either, native capture per
-> platform" corollary, and the verification recipe (`rg -i 'mlkit' example/ios` → no
-> matches, and the example is SPM-based, so there is no `Podfile.lock`). Cross-refs: [`CODESTYLE.md#swift-ios`](./CODESTYLE.md#swift-ios),
+> platform" corollary, and the verification recipe
+> (`grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios` → no matches, grep since rg skips the
+> gitignored SPM manifest, and the example is SPM-based, so there is no `Podfile.lock`).
+> Cross-refs: [`CODESTYLE.md#swift-ios`](./CODESTYLE.md#swift-ios),
 > [`CODESTYLE.md#kotlin-android`](./CODESTYLE.md#kotlin-android), and the hard rules in
 > [`.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules).
 

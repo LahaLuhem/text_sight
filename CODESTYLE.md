@@ -6,8 +6,9 @@ The lint posture is deliberately strict (see
 [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
 which [`analysis_options.yaml`](./analysis_options.yaml) includes, where the `errors:` block
 promotes many lints to errors). The house style values explicit types, no ambient mutability, and
-small focused classes. The native sides (Swift, Kotlin) have no analyzer gate of their
-own, so the conventions below are applied by hand, the way the [DCM rules](#dcm-rules-applied-by-hand) are.
+small focused classes. On the native sides, SwiftLint and detekt gate the Swift and the Kotlin in
+CI, and the conventions below that they don't check are applied by hand, the way the
+[DCM rules](#dcm-rules-applied-by-hand) are.
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
@@ -315,8 +316,9 @@ style.
   one public type per file behind the barrel.)
 - **But keep a cohesive stateful unit whole.** The capture/session class (`TextSightCamera`, both
   platforms) stays one file even when long, since splitting one stateful lifecycle across files costs
-  more than it saves. The native file-length caps are relaxed for exactly this (`ios/.swiftlint.yml`,
-  `android/detekt.yml`). Extract the *standalone* helpers around the class, never the class itself.
+  more than it saves. The native caps are relaxed for exactly this (SwiftLint's file and type
+  lengths in `ios/.swiftlint.yml`, detekt's `TooManyFunctions` in `android/detekt.yml`). Extract
+  the *standalone* helpers around the class, never the class itself.
 - **Group by responsibility into sub-dirs.** iOS folders are free (one module, no namespace shift):
   `Enums/`, `Models/`, feature folders (`TextRecognizer/` + `Engines/`, `Factories/`). A Kotlin
   sub-dir *is* a sub-package (it adds a `package` line + imports), so group the same way by
@@ -690,10 +692,9 @@ of the shared lints and treated as non-negotiable. Apply by hand (or via the
 <a id="swift-ios-macos"></a>
 ## Swift (iOS)
 
-The iOS side is Swift (Vision + AVFoundation). There is **no Swift
-analyzer gate** in CI, so these conventions are applied by hand, like the DCM rules above.
-If a linter is ever wired, SwiftLint/`swift-format` should encode these rather than
-replace them.
+The iOS side is Swift (Vision + AVFoundation). SwiftLint gates it in CI (`ios/.swiftlint.yml`, and
+`example/ios/.swiftlint.yml` for the tests), and what it doesn't check below is applied by hand,
+like the DCM rules above.
 
 - **Two-space indentation.** Matches the Flutter plugin template this repo was scaffolded
   from and `.editorconfig`'s `[*.swift]` block. Don't reformat to 4.
@@ -745,9 +746,8 @@ replace them.
 <a id="kotlin-android"></a>
 ## Kotlin (Android)
 
-The Android side (CameraX + ML Kit) is Kotlin. No Kotlin analyzer gate runs in CI,
-conventions are applied by hand. If `ktlint`/`detekt` is ever wired, it should encode
-these.
+The Android side (CameraX + ML Kit) is Kotlin. detekt gates it in CI (`android/detekt.yml`), and
+what it doesn't check below is applied by hand.
 
 - **Four-space indentation.** Matches the scaffold, the official Kotlin style guide, and
   `.editorconfig`'s `[{*.kt,*.kts,*.gradle.kts}]` block.
