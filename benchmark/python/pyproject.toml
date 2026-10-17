@@ -11,8 +11,7 @@ description = "Benchmark orchestration + reporting for the text_sight captures-t
 requires-python = ">=3.10"
 
 # polars (Rust-backed) for analysis, seaborn/matplotlib for the committed
-# README charts. pyarrow is what lets seaborn read a polars frame directly. Drop
-# it and seaborn falls back to a path pandas has deprecated.
+# README charts. pyarrow bridges polars -> pandas at the seaborn boundary.
 # No scipy/jinja2, since there is no `compare` (Mann-Whitney) layer yet and the
 # markdown is plain f-strings.
 dependencies = [
