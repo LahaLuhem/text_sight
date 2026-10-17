@@ -27,9 +27,9 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 - **It's a plugin, not a pure package**: it needs native code (Swift/Vision,
   Kotlin/ML Kit). For v1 a **single plugin package** declares both platforms. Full
   federation is deferred ([`APPENDIX.md#federation-deferred`](../APPENDIX.md#federation-deferred)).
-- **Flutter ≥ 3.44, Dart ≥ 3.12** (pinned in `pubspec.yaml`, and `.fvmrc` pins the Flutter
-  channel for local use). Dart 3.12 comfortably clears the 3.10 static-dot-shorthand floor
-  the code style leans on.
+- **Flutter and Dart floors** are pinned in `pubspec.yaml`, and `.fvmrc` pins the Flutter
+  channel for local use. They comfortably clear the Dart 3.10 static-dot-shorthand floor the
+  code style leans on.
 - **iOS, Swift**, using the system frameworks Vision + AVFoundation (+ CoreMedia /
   CoreVideo). `AVCaptureSession` → a `TextRecognizer` hybrid: Vision's Swift
   `RecognizeTextRequest` (the WWDC 2024 API) on iOS 18+, the legacy `VNRecognizeTextRequest`
@@ -120,10 +120,11 @@ rule 13).
 
 1. **No-bundling: recognition libraries never enter the Dart `pubspec.yaml`.** This is the
    load-bearing rule. ML Kit + CameraX are declared **only** in `android/build.gradle.kts`.
-   the iOS side imports **only system frameworks** (`Vision`, `AVFoundation`). The Dart
-   `pubspec.yaml` declares **no** recognition library, only `flutter` +
-   `plugin_platform_interface`. **Do not add `camera`, `google_mlkit_*`, or any recognition
-   package as a Dart dependency**. That's the exact mistake (`flutter_scalable_ocr`'s
+   The iOS side imports **only system frameworks** (`Vision`, `AVFoundation`). The Dart
+   `pubspec.yaml` declares **no** recognition library, only `flutter`,
+   `plugin_platform_interface` and pure-Dart helpers (`meta`, `copy_with_extension`). **Do not
+   add `camera`, `google_mlkit_*`, or any recognition package as a Dart dependency**. That's the
+   exact mistake (`flutter_scalable_ocr`'s
    iOS podspec dragging in GoogleMLKit) this package exists to avoid. Native capture +
    native recognition per platform, always. See
    [`APPENDIX.md#no-bundling`](../APPENDIX.md#no-bundling).
@@ -251,8 +252,8 @@ The lint posture is deliberately strict (see the shared lints). Top-level rules 
 keep in working memory:
 
 - Type-annotate every public symbol, and `final` by default for fields and locals.
-- Nullability is explicit (no `as T` on `T?`), and `RecognizedLine.confidence` is nullable by
-  contract (Vision supplies it, ML Kit doesn't).
+- Nullability is explicit (no `as T` on `T?`), and `RecognizedLine.confidence` is never null,
+  since both engines supply it.
 - 100-column line width (`formatter.page_width: 100`), and `.editorconfig` mirrors it for every
   other text file.
 - No magic numbers in `lib/` code, so pull to named `static const`s.

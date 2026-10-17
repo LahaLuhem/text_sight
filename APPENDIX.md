@@ -671,7 +671,7 @@ seam shows in the tree. Each public type gets its own file (per
 
 **Result-model contracts.** The capture-agnostic types the barrel exposes:
 
-- **`RecognizedLine.confidence` is `double?`, range `[0,1]`.** Both engines supply a per-line
+- **`RecognizedLine.confidence` is `double`, range `[0,1]`.** Both engines supply a per-line
   confidence: Apple Vision, and (re-verified for the pinned `play-services-mlkit-text-recognition`
   19.0.1) ML Kit v2 via `Text.Line.getConfidence()`, so it is never null and the type says so.
   The scales are **not comparable**, across platforms or across iOS versions: the modern
