@@ -1,4 +1,0 @@
-# Root package only. Each entry is a sub-package with its own pubspec.yaml.
-exclude:
-  - "example/**" # the example app
-  - "benchmark/app/**" # benchmark host. Not benchmark/**: harness/ + micro/ justify our dev deps
