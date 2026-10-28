@@ -55,7 +55,7 @@ dev_dependencies:
   build_runner: ^2.16.1
   copy_with_extension_gen: ">=17.1.0 <19.0.0"
   # Exact: no root lockfile, and tool/pigeon.dart uses Pigeon internals, so bumps get their own PR.
-  pigeon: 29.0.8
+  pigeon: 29.0.11
 
   # Testing
   bdd_framework: ^4.0.7
