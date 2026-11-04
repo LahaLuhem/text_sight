@@ -94,7 +94,7 @@ dependencies {
         implementation("com.google.mlkit:text-recognition:16.0.1")
     } else {
         // Unbundled (default): model fetched via Google Play Services, ~260 KB/script/arch.
-        implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+        implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.2")
     }
     // ModuleInstallClient, the app-controlled fetch + download progress behind
     // TextSightModel.ensureReady(). The readiness code references it regardless of `useBundled`
