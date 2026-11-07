@@ -1,18 +1,59 @@
 name: Plugin checks
 
-# No `paths:` filter: a run it skips never reports, which leaves the required check waiting.
+# No `paths:` filter: a run it skips never reports, which leaves the required check waiting. The
+# `changes` job skips the native jobs a change can't reach instead.
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  changes:
+    name: Changed paths
+    runs-on: ubuntu-latest
+    # paths-filter asks the API for a PR's changed files.
+    permissions:
+      contents: read
+      pull-requests: read
+    # Only the filter's explicit "false" skips, so any run it doesn't cover runs everything.
+    outputs:
+      ios: ${{ steps.filter.outputs.ios != 'false' }}
+      android: ${{ steps.filter.outputs.android != 'false' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - id: filter
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        uses: dorny/paths-filter@v4
+        with:
+          predicate-quantifier: some-with-excludes
+          # What the jobs read. Reading a new path means editing this file, which runs them all.
+          # Dart stays out, since ci.yml's Analyze and Tests already check it.
+          filters: |
+            ios:
+              - 'ios/**'
+              - 'example/ios/**'
+              - &both
+                - '.github/workflows/plugin.yml'
+                - 'pubspec.yaml'
+                - 'example/pubspec.yaml'
+                - 'example/pubspec.lock'
+                - '!**/*.md'
+            android:
+              - 'android/**'
+              - 'example/android/**'
+              - *both
+
   detekt:
     name: detekt (Kotlin)
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -34,6 +75,8 @@ jobs:
 
   kotlin-tests:
     name: Kotlin unit tests
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -52,6 +95,8 @@ jobs:
 
   ios-build:
     name: iOS release build + no-bundling
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
@@ -69,6 +114,8 @@ jobs:
 
   ios-tests:
     name: iOS unit tests + SwiftLint
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
@@ -151,6 +198,7 @@ jobs:
   # The ruleset requires this job's id, so it gets no `name:`.
   plugin-ok:
     needs:
+      - changes
       - detekt
       - kotlin-tests
       - ios-build
@@ -163,6 +211,7 @@ jobs:
     steps:
       - env:
           RESULTS: >-
+            changes=${{ needs.changes.result }}
             detekt=${{ needs.detekt.result }}
             kotlin-tests=${{ needs.kotlin-tests.result }}
             ios-build=${{ needs.ios-build.result }}
@@ -170,5 +219,6 @@ jobs:
             codegen=${{ needs.codegen.result }}
             bench-app=${{ needs.bench-app.result }}
         run: echo "$RESULTS"
+      # A job skipped by its own `if` counts as a pass. Failed or cancelled doesn't.
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
         run: exit 1
