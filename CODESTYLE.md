@@ -18,19 +18,19 @@ CI, and the conventions below that they don't check are applied by hand, the way
 - [Constants & magic numbers](#constants--magic-numbers)
 - [Class structure](#class-structure)
 - [Idioms](#idioms)
-    * [Static dot shorthands (Dart 3.10+)](#static-dot-shorthands-dart-310)
-    * [Drop redundant `<Type>` on collection literals](#drop-redundant-type-on-collection-literals)
-    * [`Row.spacing` / `Column.spacing` / `Wrap.spacing` over interleaved `SizedBox` gaps](#rowspacing--columnspacing--wrapspacing-over-interleaved-sizedbox-gaps)
-    * [Enhanced enums for per-variant config](#enhanced-enums-for-per-variant-config)
-    * [`Navigator.maybeOf` over `Navigator.of` for fire-and-forget pops](#navigatormaybeof-over-navigatorof-for-fire-and-forget-pops)
-    * [Collection-for / collection-if over `Iterable.map(…).toList()`](#collection-for--collection-if-over-iterablemaptolist)
-    * [Library pipeline methods over hand-rolled loops (for data manipulation)](#library-pipeline-methods-over-hand-rolled-loops-for-data-manipulation)
-    * [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
-    * [`Future.syncValue` over `Future.value` for known values](#futuresyncvalue-over-futurevalue-for-known-values)
-    * [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#listunmodifiable-over-unmodifiablelistview)
-    * [`part` / `part of` only when structurally needed](#part--part-of-only-when-structurally-needed)
+  - [Static dot shorthands (Dart 3.10+)](#static-dot-shorthands-dart-310)
+  - [Drop redundant `<Type>` on collection literals](#drop-redundant-type-on-collection-literals)
+  - [`Row.spacing` / `Column.spacing` / `Wrap.spacing` over interleaved `SizedBox` gaps](#rowspacing--columnspacing--wrapspacing-over-interleaved-sizedbox-gaps)
+  - [Enhanced enums for per-variant config](#enhanced-enums-for-per-variant-config)
+  - [`Navigator.maybeOf` over `Navigator.of` for fire-and-forget pops](#navigatormaybeof-over-navigatorof-for-fire-and-forget-pops)
+  - [Collection-for / collection-if over `Iterable.map(…).toList()`](#collection-for--collection-if-over-iterablemaptolist)
+  - [Library pipeline methods over hand-rolled loops (for data manipulation)](#library-pipeline-methods-over-hand-rolled-loops-for-data-manipulation)
+  - [`dart:async` `wait` extensions over static `Future.wait(...)`](#dartasync-wait-extensions-over-static-futurewait)
+  - [`Future.syncValue` over `Future.value` for known values](#futuresyncvalue-over-futurevalue-for-known-values)
+  - [`List.unmodifiable(…)` over `UnmodifiableListView(…)`](#listunmodifiable-over-unmodifiablelistview)
+  - [`part` / `part of` only when structurally needed](#part--part-of-only-when-structurally-needed)
 - [Comments & dartdoc](#comments--dartdoc)
-    * [`@docImport` for dartdoc-only references](#docimport-for-dartdoc-only-references)
+  - [`@docImport` for dartdoc-only references](#docimport-for-dartdoc-only-references)
 - [DCM rules (applied by hand)](#dcm-rules-applied-by-hand)
 - [Testing](#testing)
 - [Swift (iOS)](#swift-ios)
@@ -40,6 +40,7 @@ CI, and the conventions below that they don't check are applied by hand, the way
 <!-- TOC end -->
 
 <a id="type-safety-nullability"></a>
+
 ## Type safety & nullability
 
 - **Type-annotate every public symbol.** Inference is fine on locals. Public surfaces
@@ -63,17 +64,18 @@ CI, and the conventions below that they don't check are applied by hand, the way
   into an external API that relies on `null` as a sentinel `T`, don't reach for the
   exception speculatively.
 - **Prefer type-pure representations over stringly- or primitively-typed ones.** Use a value's
-  richer domain type, even a built-in one. `preferredLanguages` is `Iterable<Locale>`, not `List<String>`
-  of BCP-47 tags: `Locale` (from `dart:ui`) carries language/script/region and yields the tag via
-  `toLanguageTag()` at the native boundary. Reach for a structured built-in, then a zero-cost
-  `extension type`, before a bare primitive. **But don't force a *closed enum* onto an open,
-  runtime-variable capability**: the recognizable-language set varies by platform, OS version,
-  and bundled recognizers, so type-purity here is *structured but open*, not *enumerated*. A
-  primitive handed straight to a platform API (a `Texture` id `int`) stays primitive.
+  richer domain type, even a built-in one. `preferredLanguages` is `Iterable<Locale>`, not
+  `List<String>` of BCP-47 tags: `Locale` (from `dart:ui`) carries language/script/region and yields
+  the tag via `toLanguageTag()` at the native boundary. Reach for a structured built-in, then a
+  zero-cost `extension type`, before a bare primitive.
+  **But don't force a *closed enum* onto an open, runtime-variable capability**: the
+  recognizable-language set varies by platform, OS version, and bundled recognizers, so type-purity
+  here is *structured but open*, not *enumerated*. A primitive handed straight to a platform API (a
+  `Texture` id `int`) stays primitive.
 - **Pick the narrowest collection type. `List` is the last resort, not the default.** `Set` for
   membership/uniqueness, `Iterable` for a sequence only walked (never indexed, added to, or
-  re-materialized), `List` only when you genuinely index or need a materialized result. Inputs
-  lean `Iterable` (`preferredLanguages` is walked once in priority order), and outputs consumers index
+  re-materialized), `List` only when you genuinely index or need a materialized result. Inputs lean
+  `Iterable` (`preferredLanguages` is walked once in priority order), and outputs consumers index
   and count stay `List` (`TextSightCapture.lines`, `RecognizedLine.elements`). Exception: channel
   transport: the platform codec carries only `List`/`Map`, so Pigeon message fields stay `List`.
 - **No Java ceremony.** No getter-only abstract base classes, no `AbstractFooFactory`,
@@ -87,15 +89,15 @@ style.
 ---
 
 <a id="naming"></a>
+
 ## Naming
 
-- **Prefer abbreviations over initialisms for domain terms.** In code, comments,
-  dartdocs, and log messages alike, expand. Widely-known protocol initialisms (HTTP,
-  DNS, TCP, TLS, …), platform-name initialisms (iOS, OS), and the domain initialisms
-  this package is *about* (OCR, ROI for region-of-interest) stay as-is once introduced.
-  novel project terms get spelt out. The general-programming initialisms below also
-  expand, since shorthand that's "obvious" to the author is opaque to the next reader and
-  indistinguishable from a typo:
+- **Prefer abbreviations over initialisms for domain terms.** In code, comments, dartdocs, and log
+  messages alike, expand. Widely-known protocol initialisms (HTTP, DNS, TCP, TLS, …), platform-name
+  initialisms (iOS, OS), and the domain initialisms this package is *about* (OCR, ROI for
+  region-of-interest) stay as-is once introduced. novel project terms get spelt out. The
+  general-programming initialisms below also expand, since shorthand that's "obvious" to the author
+  is opaque to the next reader and indistinguishable from a typo:
 
   | Don't write | Write instead             |
   |-------------|---------------------------|
@@ -110,10 +112,9 @@ style.
   | `pb` / `sb` | `pixelBuffer` / `sampleBuffer` (recurring in the Vision capture path) |
 
   This rule binds *every* identifier: fields, locals, parameters, pattern bindings
-  (`switch (x) { final cb => … }` is **out**, so spell it). The only carve-outs are the
-  genre conventions: single-letter loop counters (`i`, `j`), `e` in `catch (e)`,
-  `(a, b)` in symmetric comparator pairs, `x`/`y` for coordinates (and these recur in
-  the bounding-box math).
+  (`switch (x) { final cb => … }` is **out**, so spell it). The only carve-outs are the genre
+  conventions: single-letter loop counters (`i`, `j`), `e` in `catch (e)`, `(a, b)` in symmetric
+  comparator pairs, `x`/`y` for coordinates (and these recur in the bounding-box math).
 - **No `get` / `set` method prefixes.** Dart has language-level getters and setters, so a
   `getFoo()` / `setFoo()` *method* reads as a Java-ism. Sync, side-effect-free state is a
   getter (`foo`), or a setter (`set foo(…)`) if writable. A mutation that *can't* be a setter
@@ -126,10 +127,10 @@ style.
   asymmetry, the doc explains it.
 
   **Group, don't prefix per field.** `darwin.recognitionLevel`, not `darwinRecognitionLevel`. The
-  platform is stated once, a new Vision knob is one field inside `DarwinOptions` rather than a change
-  to `TextSightOptions`, and no member repeats the prefix. Vision has six knobs with no ML Kit twin
-  against one genuinely shared option, so a flat scheme would leave the neutral field lost among
-  prefixed ones.
+  platform is stated once, a new Vision knob is one field inside `DarwinOptions` rather than a
+  change to `TextSightOptions`, and no member repeats the prefix. Vision has six knobs with no ML
+  Kit twin against one genuinely shared option, so a flat scheme would leave the neutral field lost
+  among prefixed ones.
 
   **`darwin`, not `ios`.** The constraint is Apple Vision, which a macOS target would share, and it
   matches the shared Apple source directory.
@@ -194,6 +195,7 @@ style.
 ---
 
 <a id="formatting"></a>
+
 ## Formatting
 
 - **Wrap text-file content at 100 columns.** `formatter.page_width: 100` in
@@ -215,6 +217,7 @@ style.
 ---
 
 <a id="constants-magic-numbers"></a>
+
 ## Constants & magic numbers
 
 - **No magic numbers in `lib/` code.** Pull constants to named `static const`s with a
@@ -244,6 +247,7 @@ style.
 ---
 
 <a id="class-structure"></a>
+
 ## Class structure
 
 - **Default to `final class`, and leave a class open only where extension is a designed-in seam.**
@@ -306,27 +310,28 @@ style.
 ---
 
 <a id="source-file-organization"></a>
+
 ## Source-file organization
 
 - **One responsibility per file, and the filename names it.** A file holds one public/primary type,
   or one cohesive cluster of free functions. `FrameEncoding.kt` is the per-frame wire map,
-  `RegionOfInterest.kt` the ROI geometry. Don't let helper functions or a second helper class pile up
-  at the bottom of a driver file, so extract them and each file's path advertises its job. **Why:**
-  findability, and a one-responsibility diff when that concern changes. (`lib/src/` already does this,
-  one public type per file behind the barrel.)
+  `RegionOfInterest.kt` the ROI geometry. Don't let helper functions or a second helper class pile
+  up at the bottom of a driver file, so extract them and each file's path advertises its job.
+  **Why:** findability, and a one-responsibility diff when that concern changes. (`lib/src/` already
+  does this, one public type per file behind the barrel.)
 - **But keep a cohesive stateful unit whole.** The capture/session class (`TextSightCamera`, both
-  platforms) stays one file even when long, since splitting one stateful lifecycle across files costs
-  more than it saves. The native caps are relaxed for exactly this (SwiftLint's file and type
-  lengths in `ios/.swiftlint.yml`, detekt's `TooManyFunctions` in `android/detekt.yml`). Extract
-  the *standalone* helpers around the class, never the class itself.
+  platforms) stays one file even when long, since splitting one stateful lifecycle across files
+  costs more than it saves. The native caps are relaxed for exactly this (SwiftLint's file and type
+  lengths in `ios/.swiftlint.yml`, detekt's `TooManyFunctions` in `android/detekt.yml`). Extract the
+  *standalone* helpers around the class, never the class itself.
 - **Group by responsibility into sub-dirs.** iOS folders are free (one module, no namespace shift):
   `Enums/`, `Models/`, feature folders (`TextRecognizer/` + `Engines/`, `Factories/`). A Kotlin
   sub-dir *is* a sub-package (it adds a `package` line + imports), so group the same way by
   responsibility: `camera/`, `recognition/`, `permission/`, `readiness/`.
 - **Type-named dirs only for hand-written types.** `Enums/` / `Models/` earn their place on iOS
-  because those types are hand-written. On Android the enums and data models are **Pigeon-generated**
-  (all in `Messages.g.kt`, unmovable), so Android groups by responsibility instead. Don't create
-  empty `enums/` / `models/` packages there.
+  because those types are hand-written. On Android the enums and data models are
+  **Pigeon-generated** (all in `Messages.g.kt`, unmovable), so Android groups by responsibility
+  instead. Don't create empty `enums/` / `models/` packages there.
 - **Two things never leave the root package/dir:** the plugin entry class (`TextSightPlugin`, whose
   FQN pinned by `pubspec.yaml`'s `pluginClass`/`package`) and Pigeon's generated `Messages.g.*` (the
   generator owns its output path). Everything else is free to move into a responsibility sub-dir.
@@ -334,9 +339,11 @@ style.
 ---
 
 <a id="idioms"></a>
+
 ## Idioms
 
 <a id="static-dot-shorthands-dart-310"></a>
+
 ### Static dot shorthands (Dart 3.10+)
 
 Use static dot shorthands wherever the context type is known. They resolve from the
@@ -367,6 +374,7 @@ dropping a fully-qualified prefix, the type name often disappears from the file
 entirely, and remove it from any `show` clauses too (`unused_shown_name` flags orphans).
 
 <a id="drop-redundant-collection-literal-type-args"></a>
+
 ### Drop redundant `<Type>` on collection literals
 
 When the surrounding context already pins the element / key / value type of a list,
@@ -388,6 +396,7 @@ Keep `<Type>` when inference would otherwise fall back to `dynamic`:
 - **Top-level / `static const` initialisers without a type annotation on the LHS.**
 
 <a id="flex-spacing-over-sizedbox-gaps"></a>
+
 ### `Row.spacing` / `Column.spacing` / `Wrap.spacing` over interleaved `SizedBox` gaps
 
 Flutter's flex widgets (`Row`, `Column`, `Wrap`, `Flex`) take a `spacing` parameter
@@ -409,6 +418,7 @@ adjacent pairs (fall back to explicit `SizedBox`), or when the gap depends on a
 sibling's resolved size.
 
 <a id="enhanced-enums-for-per-variant-config"></a>
+
 ### Enhanced enums for per-variant config
 
 When a variant enum's values each carry a piece of configuration that diverges *per
@@ -442,6 +452,7 @@ went plain.
 The tell was in the dartdoc: it had to explain what the level *also implied*.
 
 <a id="navigator-maybeof-over-of"></a>
+
 ### `Navigator.maybeOf` over `Navigator.of` for fire-and-forget pops
 
 When dismissing a route from inside a callback whose only job is the pop (a "use this
@@ -464,6 +475,7 @@ the defensive `?` is zero. **When `Navigator.of` is still right:** when you need
 return value of `push` and a missing Navigator is a setup bug you want surfaced loudly.
 
 <a id="collection-for-collection-if-over-iterablemaptolist"></a>
+
 ### Collection-for / collection-if over `Iterable.map(…).toList()`
 
 When *constructing* a data or widget literal, a literal list with embedded control flow
@@ -489,14 +501,15 @@ Drop explicit generic type arguments when the surrounding context already pins t
 keep them when inference would otherwise fall back to `dynamic`.
 
 <a id="library-pipeline-methods-over-hand-rolled-loops"></a>
+
 ### Library pipeline methods over hand-rolled loops (for data manipulation)
 
-The deliberate flip side of the [collection-for rule](#collection-for--collection-if-over-iterablemaptolist).
-That rule is about *constructing* a literal, where `[for (…) …]` reads as data. This
-rule is about *transforming, filtering, flattening, or reducing* data, a genuine
-pipeline, where a stream-style chain reads as exactly what it is, and re-deriving it
-with an imperative loop plus a mutable accumulator obscures the intent (and
-re-implements a method the SDK already ships).
+The deliberate flip side of the
+[collection-for rule](#collection-for--collection-if-over-iterablemaptolist). That rule is about
+*constructing* a literal, where `[for (…) …]` reads as data. This rule is about
+*transforming, filtering, flattening, or reducing* data, a genuine pipeline, where a stream-style
+chain reads as exactly what it is, and re-deriving it with an imperative loop plus a mutable
+accumulator obscures the intent (and re-implements a method the SDK already ships).
 
 Prefer the `dart:core` `Iterable` / `Set` / `Map` methods (`where`, `whereType<T>()`,
 `map`, `expand`, `fold`, `Map.fromEntries`, `followedBy`, `Iterable.generate`) over a
@@ -527,6 +540,7 @@ clothes. **Stay lazy, materialise deliberately.** Don't end a chain with a refle
 requires a `List`. When you do, `.toList(growable: false)` says it won't be mutated.
 
 <a id="dartasync-wait-extensions-over-static-futurewait"></a>
+
 ### `dart:async` `wait` extensions over static `Future.wait(...)`
 
 The extensions (`Iterable<Future<T>>.wait` and the record forms `FutureRecord2`…
@@ -542,6 +556,7 @@ static call. Relevant whenever the controller fans out concurrent platform-chann
   `Future.wait(iterable)`.
 
 <a id="futuresyncvalue-over-futurevalue-for-known-values"></a>
+
 ### `Future.syncValue` over `Future.value` for known values
 
 `Future.syncValue(x)` is the SDK-recommended way to wrap a **known, non-future value**, and it sets
@@ -551,6 +566,7 @@ microtask, so it is *not* a synchronously-completing `SynchronousFuture`). Reach
 only when the input may itself be a `Future`/`FutureOr` (which it unwraps) or may be absent.
 
 <a id="listunmodifiable-over-unmodifiablelistview"></a>
+
 ### `List.unmodifiable(…)` over `UnmodifiableListView(…)`
 
 When you genuinely need to hand out a defensive copy of mutable internal state, say a getter
@@ -565,6 +581,7 @@ deliberate read-through visibility into private mutable state, which is rare her
 [`APPENDIX.md`](./APPENDIX.md#public-api-via-single-export-file).
 
 <a id="part-part-of-only-when-structurally-needed"></a>
+
 ### `part` / `part of` only when structurally needed
 
 Not a smell on its own. Legitimate uses: sealed-class cases across files (Dart 3
@@ -580,6 +597,7 @@ runtime dependency was worth it: [`APPENDIX.md`](./APPENDIX.md#channel-topology)
 ---
 
 <a id="comments-dartdoc"></a>
+
 ## Comments & dartdoc
 
 Public symbols carry `///` dartdoc that explains *why*, not *what*, since types already carry
@@ -630,6 +648,7 @@ does not fire when a docImport is present.
 ---
 
 <a id="dcm-rules-applied-by-hand"></a>
+
 ## DCM rules (applied by hand)
 
 `flutter analyze` does not run them, and they're declared in the `dart_code_metrics:` block
@@ -660,6 +679,7 @@ of the shared lints and treated as non-negotiable. Apply by hand (or via the
 ---
 
 <a id="testing"></a>
+
 ## Testing
 
 - **Assertions use [`package:checks`](https://pub.dev/packages/checks), not `expect` / matchers.**
@@ -690,6 +710,7 @@ of the shared lints and treated as non-negotiable. Apply by hand (or via the
 ---
 
 <a id="swift-ios-macos"></a>
+
 ## Swift (iOS)
 
 The iOS side is Swift (Vision + AVFoundation). SwiftLint gates it in CI (`ios/.swiftlint.yml`, and
@@ -744,6 +765,7 @@ like the DCM rules above.
 ---
 
 <a id="kotlin-android"></a>
+
 ## Kotlin (Android)
 
 The Android side (CameraX + ML Kit) is Kotlin. detekt gates it in CI (`android/detekt.yml`), and
@@ -791,6 +813,7 @@ what it doesn't check below is applied by hand.
 ---
 
 <a id="documentation-conventions-markdown"></a>
+
 ## Documentation conventions (Markdown)
 
 - **Say it once, then stop.** Docs carry the *why* and the surprising bits, with no restating of a

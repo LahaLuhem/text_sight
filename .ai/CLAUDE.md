@@ -6,6 +6,7 @@ live in [AGENTS.md](./AGENTS.md). The full code-style guide lives in
 [`../APPENDIX.md`](../APPENDIX.md). Read AGENTS.md and CODESTYLE.md first.
 
 ## Role & context
+
 You're assisting with **text_sight**: a Flutter plugin for live, on-device text
 recognition: Apple Vision on iOS, ML Kit on Android, the text-scanning sibling to
 `mobile_scanner`. The whole point is that **iOS links zero third-party ML libraries**
@@ -63,13 +64,14 @@ publish).
 - **`lib/src/` edits** are private. Refactor freely as long as the public re-exports stay
   stable. `lib/src/platform/messages.g.dart` is **generated**, so change
   `pigeons/text_sight.dart` and regenerate, never hand-edit the output.
-- **Native edits (`ios/`, `android/`)** carry the no-bundling contract. Bundling ML Kit (or
-  any lib that duplicates a system framework) on the Apple side, dragging in a CocoaPods
-  graph, or a non-gradle path to ML Kit, breaks the package's reason to exist. See
+- **Native edits (`ios/`, `android/`)** carry the no-bundling contract. Bundling ML Kit (or any lib
+  that duplicates a system framework) on the Apple side, dragging in a CocoaPods graph, or a
+  non-gradle path to ML Kit, breaks the package's reason to exist. See
   [hard rules 1-3 in AGENTS.md](./AGENTS.md#hard-rules). The contract is *prefer-native*, not
-  *zero-dependency*: a genuinely useful Apple-side lib with no native equivalent is allowed
-  (prefer SPM-clean), so flag-and-ask rather than assume any new SPM dep is forbidden. The frame-backpressure
-  and off-main-thread invariants (hard rule 5) are the most common source of plugin bugs.
+  *zero-dependency*: a genuinely useful Apple-side lib with no native equivalent is allowed (prefer
+  SPM-clean), so flag-and-ask rather than assume any new SPM dep is forbidden. The
+  frame-backpressure and off-main-thread invariants (hard rule 5) are the most common source of
+  plugin bugs.
 - **`pigeons/text_sight.dart` edits** change the typed control-channel surface, so regenerate
   `messages.g.dart` in the same change and treat signature changes as public-API-class.
 - **`example/` edits** are local, with no publish impact. The demo app is the living usage
@@ -126,6 +128,7 @@ is **not** in the routine-edit list. All move together only when the user explic
   approval.
 
 <a id="forbidden-confirm-first-actions"></a>
+
 ## Forbidden / confirm-first actions
 
 - **Never** `flutter pub publish` or `dart pub publish`. Publishing is one-way, since pub.dev
@@ -165,7 +168,7 @@ is **not** in the routine-edit list. All move together only when the user explic
   `avoid-returning-widgets`, `prefer-correct-edge-insets-constructor`. The `dcm` CLI
   (`dcm analyze lib`) covers them if installed.
 - **Native conventions hand-applied** per [`../CODESTYLE.md`](../CODESTYLE.md) (Swift 2-space
-  + system-frameworks-only, Kotlin 4-space + built-in-Kotlin + mandatory `imageProxy.close()`).
+  - system-frameworks-only, Kotlin 4-space + built-in-Kotlin + mandatory `imageProxy.close()`).
 - When native capture/recognition changed: build and run the example on **both** an Android
   emulator and an iOS simulator, or explicitly call out what you did NOT verify (e.g.
   "didn't exercise on iOS, only ran the Android emulator").

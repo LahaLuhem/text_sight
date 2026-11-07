@@ -30,15 +30,15 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 - **Flutter and Dart floors** are pinned in `pubspec.yaml`, and `.fvmrc` pins the Flutter
   channel for local use. They comfortably clear the Dart 3.10 static-dot-shorthand floor the
   code style leans on.
-- **iOS, Swift**, using the system frameworks Vision + AVFoundation (+ CoreMedia /
-  CoreVideo). `AVCaptureSession` → a `TextRecognizer` hybrid: Vision's Swift
-  `RecognizeTextRequest` (the WWDC 2024 API) on iOS 18+, the legacy `VNRecognizeTextRequest`
-  on iOS 15-17, picked once via a factory, with preview to a `FlutterTexture`. iOS 15.0 deployment
-  floor (Flutter's own floor since 3.47), and iOS 15-16 get degraded, un-rotated capture (no `RotationCoordinator`)
+- **iOS, Swift**, using the system frameworks Vision + AVFoundation (+ CoreMedia / CoreVideo).
+  `AVCaptureSession` → a `TextRecognizer` hybrid: Vision's Swift `RecognizeTextRequest` (the WWDC
+  2024 API) on iOS 18+, the legacy `VNRecognizeTextRequest` on iOS 15-17, picked once via a factory,
+  with preview to a `FlutterTexture`. iOS 15.0 deployment floor (Flutter's own floor since 3.47),
+  and iOS 15-16 get degraded, un-rotated capture (no `RotationCoordinator`)
   ([`APPENDIX.md#ios-capture-strategy`](../APPENDIX.md#ios-capture-strategy)). Ships both
-  `ios/text_sight.podspec` and `ios/text_sight/Package.swift` so host apps on CocoaPods
-  *or* SwiftPM both work, and the SPM path is the cleanliness win. Neither bundles ML Kit or any
-  library that duplicates a system framework, since the no-bundling line is *prefer-native*, not
+  `ios/text_sight.podspec` and `ios/text_sight/Package.swift` so host apps on CocoaPods *or* SwiftPM
+  both work, and the SPM path is the cleanliness win. Neither bundles ML Kit or any library that
+  duplicates a system framework, since the no-bundling line is *prefer-native*, not
   *zero-dependency* (hard rule 2).
 - **Android, Kotlin**, using CameraX + ML Kit text recognition. `ImageAnalysis`
   (`STRATEGY_KEEP_ONLY_LATEST`) → `TextRecognition` client, preview via `Texture`. ML Kit +
@@ -55,13 +55,13 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
   writes `copyWith` for the public value types. Both outputs are committed, and CI's
   `codegen` job regenerates and fails if anything differs, so neither can drift from its
   source.
-- **`dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it, for pedantic static
-  analysis, and the lint posture is deliberately
-  strict (`strict-casts` / `strict-inference` / `strict-raw-types` + the `errors:`-promoted
-  block in [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
+- **`dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it, for pedantic static analysis,
+  and the lint posture is deliberately strict (`strict-casts` / `strict-inference` /
+  `strict-raw-types` + the `errors:`-promoted block in
+  [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
   which `analysis_options.yaml` includes). Pedantic mode is intentional, not negotiable.
-  **`flutter_test`** for Dart unit/widget tests. On the native sides, detekt and SwiftLint gate
-  the Kotlin and the Swift in `plugin.yml`, and the rest of their conventions are applied by hand
+  **`flutter_test`** for Dart unit/widget tests. On the native sides, detekt and SwiftLint gate the
+  Kotlin and the Swift in `plugin.yml`, and the rest of their conventions are applied by hand
   ([`CODESTYLE.md`](../CODESTYLE.md)).
 - **Published to pub.dev.** `.pubignore` controls the tarball. `CHANGELOG.md`, the
   `version:` field in `pubspec.yaml`, and the release tag move together in the Release run,
@@ -140,10 +140,10 @@ rule 13).
 3. **The Android module stays on built-in Kotlin.** Use Flutter's Gradle `plugins {}` DSL,
    never the legacy `apply plugin: 'kotlin-android'` + buildscript classpath, since the legacy
    path emits the KGP deprecation warning this package is fighting.
-4. **Normalize coordinates to top-left `[0,1]` in native code.** Vision gives normalized
-   bottom-left boxes, ML Kit gives pixel rects in rotated space, and Flutter wants top-left
-   normalized. Convert on each native side so the Dart overlay is platform-agnostic and
-   never branches. See [`APPENDIX.md#coordinate-normalization`](../APPENDIX.md#coordinate-normalization).
+4. **Normalize coordinates to top-left `[0,1]` in native code.** Vision gives normalized bottom-left
+   boxes, ML Kit gives pixel rects in rotated space, and Flutter wants top-left normalized. Convert
+   on each native side so the Dart overlay is platform-agnostic and never branches. See
+   [`APPENDIX.md#coordinate-normalization`](../APPENDIX.md#coordinate-normalization).
 5. **Never queue frames, apply backpressure.** iOS: a single in-flight `VNImageRequest` +
    `alwaysDiscardsLateVideoFrames`. Android: `STRATEGY_KEEP_ONLY_LATEST` **and** a mandatory
    `imageProxy.close()` in `addOnCompleteListener` (the next frame isn't delivered until the

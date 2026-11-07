@@ -41,4 +41,3 @@ Not drawn, no data behind them:
 
 - `decode_vs_lines.png` needs the sweep payload
 - `wire_bytes_vs_lines.png` needs the sweep payload
-
