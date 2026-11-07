@@ -26,17 +26,17 @@
 
 - [Why text_sight?](#why-text_sight)
 - [A quick taste](#a-quick-taste)
-    * [Live camera](#live-camera)
-    * [A single image](#a-single-image)
-    * [Tweak it mid-session](#tweak-it-mid-session)
-    * [Know what the camera is doing](#know-what-the-camera-is-doing)
-    * [The example app](#the-example-app)
+  - [Live camera](#live-camera)
+  - [A single image](#a-single-image)
+  - [Tweak it mid-session](#tweak-it-mid-session)
+  - [Know what the camera is doing](#know-what-the-camera-is-doing)
+  - [The example app](#the-example-app)
 - [API at a glance](#api-at-a-glance)
 - [Platform support](#platform-support)
-    * [Gotchas](#gotchas)
+  - [Gotchas](#gotchas)
 - [Install](#install)
-    * [iOS](#ios)
-    * [Android](#android)
+  - [iOS](#ios)
+  - [Android](#android)
 - [The recognition model](#the-recognition-model)
 - [Performance](#performance)
 - [Upgrading to 1.0](#upgrading-to-10)
@@ -159,8 +159,9 @@ empty.
 
 ### The example app
 
-The [`example/`](https://github.com/LahaLuhem/text_sight/tree/main/example) app is the place to look next. Live overlay, torch, region-of-interest,
-permissions, and the one-shot screen, all wired up and ready to crib from.
+The [`example/`](https://github.com/LahaLuhem/text_sight/tree/main/example) app is the place to look
+next. Live overlay, torch, region-of-interest, permissions, and the one-shot screen, all wired up
+and ready to crib from.
 
 <table>
   <tr>
@@ -266,10 +267,12 @@ what sets the pace. Numbers, charts and method:
 
 Coming from 0.2? `stop()` is now `pauseRecognition()`, the three `update*` setters are one
 `updateOptions()`, and the Vision-only settings moved under `darwin`. Full table, plus the two
-behaviour changes the compiler won't catch: [doc/upgrading.md](https://github.com/LahaLuhem/text_sight/blob/main/doc/upgrading.md).
+behaviour changes the compiler won't catch:
+[doc/upgrading.md](https://github.com/LahaLuhem/text_sight/blob/main/doc/upgrading.md).
 
 ## Going deeper
 
 Coordinate handling, the per-line confidence contract, the session state model, how
-region-of-interest differs across platforms, and what's next: all in [APPENDIX.md](https://github.com/LahaLuhem/text_sight/blob/main/APPENDIX.md).
-The longer guides live in [`doc/`](https://github.com/LahaLuhem/text_sight/tree/main/doc).
+region-of-interest differs across platforms, and what's next: all in
+[APPENDIX.md](https://github.com/LahaLuhem/text_sight/blob/main/APPENDIX.md). The longer guides live
+in [`doc/`](https://github.com/LahaLuhem/text_sight/tree/main/doc).

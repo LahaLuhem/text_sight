@@ -9,17 +9,18 @@ heading text, so renames don't break callers.
 - [Imports](#imports)
 - [Reactivity (ValueNotifier-first)](#reactivity-valuenotifier-first)
 - [Naming](#naming)
-    * [Boolean fields: modal verbs](#boolean-fields-modal-verbs)
-    * [Callback methods: view-event suffix](#callback-methods-view-event-suffix)
+  - [Boolean fields: modal verbs](#boolean-fields-modal-verbs)
+  - [Callback methods: view-event suffix](#callback-methods-view-event-suffix)
 - [ViewModel member ordering](#viewmodel-member-ordering)
 - [Separation of concerns](#separation-of-concerns)
 - [Widget composition](#widget-composition)
-    * [Native widget parameters](#native-widget-parameters)
-    * [Spacing: rule of 8](#spacing-rule-of-8)
-    * [Platform-adaptive widgets](#platform-adaptive-widgets)
+  - [Native widget parameters](#native-widget-parameters)
+  - [Spacing: rule of 8](#spacing-rule-of-8)
+  - [Platform-adaptive widgets](#platform-adaptive-widgets)
 - [Async-action buttons](#async-action-buttons)
 
 <a id="mvvm"></a>
+
 ## MVVM architecture
 
 The example uses [pmvvm](https://pub.dev/packages/pmvvm),
@@ -33,6 +34,7 @@ each feature with `Navigator.push(MaterialPageRoute)`.
 ---
 
 <a id="imports"></a>
+
 ## Imports
 
 - **Cross-feature imports use the package-root-absolute form `'/features/…'`, never
@@ -50,6 +52,7 @@ each feature with `Navigator.push(MaterialPageRoute)`.
 ---
 
 <a id="reactivity"></a>
+
 ## Reactivity (ValueNotifier-first)
 
 All observable VM state is exposed as `ValueListenable<T>`, backed by a private
@@ -88,9 +91,11 @@ All observable VM state is exposed as `ValueListenable<T>`, backed by a private
 ---
 
 <a id="naming"></a>
+
 ## Naming
 
 <a id="naming-booleans"></a>
+
 ### Boolean fields: modal verbs
 
 For boolean values and their derivatives (notifiers, listenables, getters), prefix
@@ -111,6 +116,7 @@ match the UI label, so they keep the bare-noun form even when they mutate a `sho
 field, since the event and the state describe different things.
 
 <a id="naming-callbacks"></a>
+
 ### Callback methods: view-event suffix
 
 VM methods invoked from the view are named **from the view's perspective**: what the
@@ -146,6 +152,7 @@ onChanged: (value) => viewModel.onTorchToggled(value: value),
 ---
 
 <a id="vm-member-ordering"></a>
+
 ## ViewModel member ordering
 
 Apply this ordering to every `ViewModel` subclass. It lets a reader scan dependencies
@@ -169,6 +176,7 @@ backtracking.
 ---
 
 <a id="separation-of-concerns"></a>
+
 ## Separation of concerns
 
 - **The view is agnostic to the VM's inner workings.** It reads VM state, invokes VM
@@ -188,9 +196,11 @@ backtracking.
 ---
 
 <a id="widget-composition"></a>
+
 ## Widget composition
 
 <a id="widget-native-params"></a>
+
 ### Native widget parameters
 
 When a widget exposes a native parameter for what you need, use it. Do not reinvent it
@@ -205,6 +215,7 @@ with extra children, padding wrappers, or string tricks.
   genuinely non-uniform sequences.
 
 <a id="widget-spacing"></a>
+
 ### Spacing: rule of 8
 
 All spacing values (`Gap`, `spacing:`, `Padding`, `EdgeInsets`, margins) follow an
@@ -223,6 +234,7 @@ All spacing values (`Gap`, `spacing:`, `Padding`, `EdgeInsets`, margins) follow 
   margin: `16` for screen-edge inset.
 
 <a id="widget-platform-adaptive"></a>
+
 ### Platform-adaptive widgets
 
 The example renders through
@@ -264,6 +276,7 @@ iOS-only (Android's Material `Scaffold` masks them):
 ---
 
 <a id="async-action-buttons"></a>
+
 ## Async-action buttons
 
 Every async button uses `AsyncIconActionButton`

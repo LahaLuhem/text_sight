@@ -38,4 +38,3 @@ Captured: SDK `3.13.2` · package `0.2.2` · git `bf2d478` · N=30 · 2026-09-06
 ![wire_bytes_vs_lines](wire_bytes_vs_lines.png)
 
 ![profile_decode_bars](profile_decode_bars.png)
-

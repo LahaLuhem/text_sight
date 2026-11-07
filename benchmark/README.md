@@ -1,7 +1,7 @@
 # `text_sight` benchmarks
 
-Reproducible benchmarks used to decide perf questions with data, not vibes. Specifically: **is changing
-the per-frame result wire representation worth it?**
+Reproducible benchmarks used to decide perf questions with data, not vibes. Specifically:
+**is changing the per-frame result wire representation worth it?**
 
 > **Layers built:** the Dart codec micro-benchmark (emits JSON), the on-device
 > scenario layer (`app/`, driven by `flutter drive`), and the Python `report`
@@ -98,10 +98,10 @@ uv run python run.py report-device ../results-local/current/one_shot_latency_*.j
 ```
 
 `run-device` finds every attached iOS and Android device, runs the scenario on each in profile mode,
-and writes one JSON per platform. Useful flags: `--platform ios|android`, `--device <id>` to pin one,
-`--scenario <name>`, and `--include-virtual` to allow a simulator or emulator. A virtual iOS target
-falls back to `--debug`, since simulators cannot run profile mode, and the run says so: those timings
-are for checking the plumbing, not for reporting.
+and writes one JSON per platform. Useful flags: `--platform ios|android`, `--device <id>` to pin
+one, `--scenario <name>`, and `--include-virtual` to allow a simulator or emulator. A virtual iOS
+target falls back to `--debug`, since simulators cannot run profile mode, and the run says so: those
+timings are for checking the plumbing, not for reporting.
 
 It runs the devices one after another. To overlap them, start a `--platform android` and a
 `--platform ios` run at once, writing to the same `--out`. They share `app/`'s build tree, but

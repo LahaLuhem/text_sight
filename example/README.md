@@ -17,11 +17,12 @@ PRODUCT_BUNDLE_IDENTIFIER = com.yourname.example.textSightExample
 committed defaults (lowercase id, empty team) without modifying anything tracked. Then `flutter run`
 onto the device.
 
-- Set the team **in that file**, not in Xcode's *Signing & Capabilities* tab, because the Xcode UI writes
-  `DEVELOPMENT_TEAM` straight back into the tracked `project.pbxproj`, which is what this avoids.
-- Apple App IDs are globally unique **and case-insensitive**: if your chosen id (or a case-variant of
-  it) is already registered to another team, you'll get "cannot be registered… not available". Just
-  pick a different, unique string.
+- Set the team **in that file**, not in Xcode's *Signing & Capabilities* tab, because the Xcode UI
+  writes `DEVELOPMENT_TEAM` straight back into the tracked `project.pbxproj`, which is what this
+  avoids.
+- Apple App IDs are globally unique **and case-insensitive**: if your chosen id (or a case-variant
+  of it) is already registered to another team, you'll get "cannot be registered… not available".
+  Just pick a different, unique string.
 
 ## The live scanner on the iOS Simulator
 
