@@ -39,13 +39,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: "17"
-          java-package: jdk
-          set-default: true
-          cache: gradle
+      - uses: LahaLuhem/dartender/actions/setup-java@main
       - uses: LahaLuhem/dartender/actions/setup-flutter@main
         with:
           working-directory: example
