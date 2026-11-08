@@ -544,57 +544,57 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
       129.toByte() -> {
-        return (readValue(buffer) as Long?)?.let {
+        (readValue(buffer) as Long?)?.let {
           RecognitionLevelMessage.ofRaw(it.toInt())
         }
       }
       130.toByte() -> {
-        return (readValue(buffer) as Long?)?.let {
+        (readValue(buffer) as Long?)?.let {
           ConfidenceScaleMessage.ofRaw(it.toInt())
         }
       }
       131.toByte() -> {
-        return (readValue(buffer) as Long?)?.let {
+        (readValue(buffer) as Long?)?.let {
           CaptureResolutionMessage.ofRaw(it.toInt())
         }
       }
       132.toByte() -> {
-        return (readValue(buffer) as Long?)?.let {
+        (readValue(buffer) as Long?)?.let {
           CameraPermissionStatusMessage.ofRaw(it.toInt())
         }
       }
       133.toByte() -> {
-        return (readValue(buffer) as Long?)?.let {
+        (readValue(buffer) as Long?)?.let {
           SessionPauseReasonMessage.ofRaw(it.toInt())
         }
       }
       134.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
+        (readValue(buffer) as? List<Any?>)?.let {
           RegionOfInterestMessage.fromList(it)
         }
       }
       135.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
+        (readValue(buffer) as? List<Any?>)?.let {
           TextSightOptionsMessage.fromList(it)
         }
       }
       136.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
+        (readValue(buffer) as? List<Any?>)?.let {
           SessionIdleMessage.fromList(it)
         }
       }
       137.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
+        (readValue(buffer) as? List<Any?>)?.let {
           SessionActiveMessage.fromList(it)
         }
       }
       138.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
+        (readValue(buffer) as? List<Any?>)?.let {
           SessionPausedMessage.fromList(it)
         }
       }
       139.toByte() -> {
-        return (readValue(buffer) as? List<Any?>)?.let {
+        (readValue(buffer) as? List<Any?>)?.let {
           SessionFailedMessage.fromList(it)
         }
       }

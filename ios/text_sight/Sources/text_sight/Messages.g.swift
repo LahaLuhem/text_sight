@@ -345,7 +345,7 @@ protocol SessionStateMessage {
 /// Twin of `SessionIdle`.
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct SessionIdleMessage: SessionStateMessage {
+struct SessionIdleMessage: SessionStateMessage, Hashable, CustomStringConvertible {
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -377,7 +377,7 @@ struct SessionIdleMessage: SessionStateMessage {
 /// Twin of `SessionActive`.
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct SessionActiveMessage: SessionStateMessage {
+struct SessionActiveMessage: SessionStateMessage, Hashable, CustomStringConvertible {
 
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
@@ -409,7 +409,7 @@ struct SessionActiveMessage: SessionStateMessage {
 /// Twin of `SessionPaused`.
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct SessionPausedMessage: SessionStateMessage {
+struct SessionPausedMessage: SessionStateMessage, Hashable, CustomStringConvertible {
   var reason: SessionPauseReasonMessage
   var details: String? = nil
 
@@ -451,7 +451,7 @@ struct SessionPausedMessage: SessionStateMessage {
 /// Twin of `SessionFailed`.
 ///
 /// Generated class from Pigeon that represents data sent in messages.
-struct SessionFailedMessage: SessionStateMessage {
+struct SessionFailedMessage: SessionStateMessage, Hashable, CustomStringConvertible {
   var details: String? = nil
 
 
