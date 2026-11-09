@@ -82,7 +82,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: LahaLuhem/dartender/actions/setup-java@main
+      - uses: LahaLuhem/dartender/actions/setup-android@main
       - uses: LahaLuhem/dartender/actions/setup-flutter@main
         with:
           working-directory: example
@@ -165,22 +165,6 @@ jobs:
       - if: ${{ !cancelled() && steps.swiftlint-plugin.outcome != 'skipped' }}
         run: swiftlint lint --strict --config example/ios/.swiftlint.yml
 
-  codegen:
-    name: Codegen freshness (Pigeon + build_runner)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: LahaLuhem/dartender/actions/setup-flutter@main
-      - run: dart run tool/pigeon.dart
-      - run: dart run build_runner build --force-aot
-      # Both generators write ~80-column Dart, and the format gate is 100.
-      - run: dart format lib
-      # So git diff also sees a file a generator made from scratch.
-      - run: git add --intent-to-add .
-      - run: git diff --exit-code
-
   bench-app:
     name: Analyze (benchmark/app)
     runs-on: ubuntu-latest
@@ -203,7 +187,6 @@ jobs:
       - kotlin-tests
       - ios-build
       - ios-tests
-      - codegen
       - bench-app
     if: always()
     runs-on: ubuntu-latest
@@ -216,7 +199,6 @@ jobs:
             kotlin-tests=${{ needs.kotlin-tests.result }}
             ios-build=${{ needs.ios-build.result }}
             ios-tests=${{ needs.ios-tests.result }}
-            codegen=${{ needs.codegen.result }}
             bench-app=${{ needs.bench-app.result }}
         run: echo "$RESULTS"
       # A job skipped by its own `if` counts as a pass. Failed or cancelled doesn't.

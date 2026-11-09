@@ -1,0 +1,8 @@
+{
+  "steps": [
+    { "name": "Pigeon", "cmd": "dart run tool/pigeon.dart" },
+    { "name": "build_runner", "cmd": "dart run build_runner build --force-aot" },
+    { "name": "FlutterGen", "folder": "example", "cmd": "dart run build_runner build" },
+    { "name": "Formatting the generated output", "cmd": "dart format ." }
+  ]
+}

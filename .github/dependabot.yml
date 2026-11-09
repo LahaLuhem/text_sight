@@ -41,6 +41,9 @@ updates:
       pub:
         patterns: ['*']
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: copy_with_extension_gen
+      - dependency-name: pigeon
   - package-ecosystem: pub
     directory: /benchmark/app
     schedule:
@@ -57,6 +60,8 @@ updates:
       pub:
         patterns: ['*']
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: flutter_gen_runner
   - package-ecosystem: uv
     directory: /benchmark/python
     schedule:
