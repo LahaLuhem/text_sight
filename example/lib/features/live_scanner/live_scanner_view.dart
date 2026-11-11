@@ -20,82 +20,81 @@ class const LiveScannerView({super.key}) extends StatelessWidget {
     viewModel: LiveScannerViewModel(),
     viewBuilder: (context, viewModel) => PlatformScaffold(
       appBarData: const PlatformAppBar(title: Text('Live scanner')),
-      body: SafeArea(
-        child: ValueListenableBuilder(
-          valueListenable: viewModel.sessionStatusListenable,
-          builder: (context, status, _) => switch (status) {
-            // Readiness arrives as a sealed TextSightReadinessState, so switch over it. The download
-            // path is the interesting one (Android, unbundled model). ensureReady() in the view
-            // model drives the actual gate and flips to .ready / .failed once it resolves.
-            .preparingModel => Center(
-              child: StreamBuilder(
-                stream: TextSightModel.readiness,
-                builder: (context, snapshot) => switch (snapshot.data) {
-                  ModelDownloading(:final progress) => _PreparingModel(
-                    progress: progress,
-                    message: progress == null
-                        ? 'Fetching the recognition model…'
-                        : 'Fetching the recognition model… ${(progress * 100).round()}%',
-                  ),
-                  ModelUnavailable() => const _PreparingModel(
-                    message: 'Recognition model unavailable.',
-                  ),
-                  ModelReady() ||
-                  null => const _PreparingModel(message: 'Preparing the recognition model…'),
-                },
-              ),
-            ),
-            .requesting => const Center(child: PlatformProgressIndicator()),
-            .denied => _MessageView(
-              icon: Icon(
-                context.platformIcon(
-                  material: Icons.no_photography_outlined,
-                  cupertino: CupertinoIcons.camera_circle,
+      useSafeArea: true,
+      body: ValueListenableBuilder(
+        valueListenable: viewModel.sessionStatusListenable,
+        builder: (context, status, _) => switch (status) {
+          // Readiness arrives as a sealed TextSightReadinessState, so switch over it. The download
+          // path is the interesting one (Android, unbundled model). ensureReady() in the view
+          // model drives the actual gate and flips to .ready / .failed once it resolves.
+          .preparingModel => Center(
+            child: StreamBuilder(
+              stream: TextSightModel.readiness,
+              builder: (context, snapshot) => switch (snapshot.data) {
+                ModelDownloading(:final progress) => _PreparingModel(
+                  progress: progress,
+                  message: progress == null
+                      ? 'Fetching the recognition model…'
+                      : 'Fetching the recognition model… ${(progress * 100).round()}%',
                 ),
-                size: 48,
-              ),
-              message: 'Camera permission is required to recognize text.',
-              actionLabel: 'Allow access',
-              onAction: viewModel.onRetryPressed,
-            ),
-            .permanentlyDenied => _MessageView(
-              icon: Icon(
-                context.platformIcon(
-                  material: Icons.no_photography_outlined,
-                  cupertino: CupertinoIcons.camera_circle,
+                ModelUnavailable() => const _PreparingModel(
+                  message: 'Recognition model unavailable.',
                 ),
-                size: 48,
-              ),
-              message: 'Camera access is off. Enable it in Settings, then try again.',
-              actionLabel: 'Try again',
-              onAction: viewModel.onRetryPressed,
+                ModelReady() ||
+                null => const _PreparingModel(message: 'Preparing the recognition model…'),
+              },
             ),
-            .failed => _MessageView(
-              icon: Icon(
-                context.platformIcon(
-                  material: Icons.error_outline,
-                  cupertino: CupertinoIcons.exclamationmark_circle,
-                ),
-                size: 48,
+          ),
+          .requesting => const Center(child: PlatformProgressIndicator()),
+          .denied => _MessageView(
+            icon: Icon(
+              context.platformIcon(
+                material: Icons.no_photography_outlined,
+                cupertino: CupertinoIcons.camera_circle,
               ),
-              message: viewModel.failure,
-              actionLabel: 'Retry',
-              onAction: viewModel.onRetryPressed,
+              size: 48,
             ),
-            // Swapping the scanner out also drops the stale overlay the view would keep painting.
-            .paused => _MessageView(
-              icon: Icon(
-                context.platformIcon(
-                  material: Icons.pause_circle_outline,
-                  cupertino: CupertinoIcons.pause_circle,
-                ),
-                size: 48,
+            message: 'Camera permission is required to recognize text.',
+            actionLabel: 'Allow access',
+            onAction: viewModel.onRetryPressed,
+          ),
+          .permanentlyDenied => _MessageView(
+            icon: Icon(
+              context.platformIcon(
+                material: Icons.no_photography_outlined,
+                cupertino: CupertinoIcons.camera_circle,
               ),
-              message: viewModel.pauseMessage,
+              size: 48,
             ),
-            .ready => _ScannerView(viewModel: viewModel),
-          },
-        ),
+            message: 'Camera access is off. Enable it in Settings, then try again.',
+            actionLabel: 'Try again',
+            onAction: viewModel.onRetryPressed,
+          ),
+          .failed => _MessageView(
+            icon: Icon(
+              context.platformIcon(
+                material: Icons.error_outline,
+                cupertino: CupertinoIcons.exclamationmark_circle,
+              ),
+              size: 48,
+            ),
+            message: viewModel.failure,
+            actionLabel: 'Retry',
+            onAction: viewModel.onRetryPressed,
+          ),
+          // Swapping the scanner out also drops the stale overlay the view would keep painting.
+          .paused => _MessageView(
+            icon: Icon(
+              context.platformIcon(
+                material: Icons.pause_circle_outline,
+                cupertino: CupertinoIcons.pause_circle,
+              ),
+              size: 48,
+            ),
+            message: viewModel.pauseMessage,
+          ),
+          .ready => _ScannerView(viewModel: viewModel),
+        },
       ),
     ),
   );
@@ -151,6 +150,7 @@ class const _ScannerView({required final LiveScannerViewModel viewModel}) extend
 
                 return PlatformButton.icon(
                   onPressed: viewModel.onRecognitionToggled,
+                  emphasis: .medium,
                   icon: Icon(
                     context.platformIcon(
                       material: isRecognizing ? Icons.pause : Icons.play_arrow,
@@ -167,6 +167,7 @@ class const _ScannerView({required final LiveScannerViewModel viewModel}) extend
               valueListenable: viewModel.shouldEnableTorchListenable,
               builder: (context, isTorchOn, _) => PlatformButton.icon(
                 onPressed: viewModel.onTorchToggled,
+                emphasis: .medium,
                 icon: Icon(
                   context.platformIcon(
                     material: isTorchOn ? Icons.flash_on : Icons.flash_off,
@@ -223,8 +224,16 @@ class const _SimulatedCameraControls({
               null => 'Starting…',
             }),
           ),
-          PlatformButton(onPressed: viewModel.onInterruptPressed, child: const Text('Interrupt')),
-          PlatformButton(onPressed: viewModel.onFailPressed, child: const Text('Fail')),
+          PlatformButton(
+            onPressed: viewModel.onInterruptPressed,
+            emphasis: .mediumNeutral,
+            child: const Text('Interrupt'),
+          ),
+          PlatformButton(
+            onPressed: viewModel.onFailPressed,
+            emphasis: .mediumNeutral,
+            child: const Text('Fail'),
+          ),
         ],
       ),
     ),
@@ -289,9 +298,9 @@ class _ConfidenceBoxPainter(
       oldDelegate.lines != lines || oldDelegate.isTiered != isTiered;
 }
 
-/// The model-preparation view: a progress indicator over a short message. The indicator runs
-/// determinate while a download reports [progress] (`MaterialProgressIndicatorData.value`), and as
-/// a plain spinner otherwise (indeterminate, or on iOS where there is nothing to download).
+/// The model-preparation view: a progress indicator over a short message. A bar while a download
+/// reports [progress], a spinner otherwise (indeterminate, or on iOS where there is nothing to
+/// download).
 class const _PreparingModel({required final String message, final double? progress})
     extends StatelessWidget {
   @override
@@ -301,9 +310,10 @@ class const _PreparingModel({required final String message, final double? progre
       mainAxisSize: .min,
       spacing: 16,
       children: [
-        PlatformProgressIndicator(
-          materialProgressIndicatorData: MaterialProgressIndicatorData(value: progress),
-        ),
+        if (progress case final progress?)
+          PlatformProgressBar(value: progress)
+        else
+          const PlatformProgressIndicator(),
         Text(message, textAlign: .center),
       ],
     ),
@@ -331,7 +341,7 @@ class const _MessageView({
             icon,
             Text(message, textAlign: .center),
             if (actionLabel != null && onAction != null)
-              PlatformButton(onPressed: onAction, child: Text(actionLabel)),
+              PlatformButton(onPressed: onAction, emphasis: .high, child: Text(actionLabel)),
           ],
         ),
       ),

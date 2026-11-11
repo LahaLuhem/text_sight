@@ -21,6 +21,7 @@ class const AsyncIconActionButton({
     cooldown: .zero,
     builder: (_, onTap) => PlatformButton.icon(
       onPressed: onTap ?? onPressed,
+      emphasis: .high,
       isEnabled: onTap != null,
       icon: onTap == null
           ? const SizedBox(

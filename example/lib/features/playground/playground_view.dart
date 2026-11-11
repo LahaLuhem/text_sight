@@ -17,41 +17,40 @@ class const PlaygroundView({super.key}) extends StatelessWidget {
     viewModel: PlaygroundViewModel(),
     viewBuilder: (context, viewModel) => PlatformScaffold(
       appBarData: const PlatformAppBar(title: Text('Playground')),
-      body: SafeArea(
-        child: ListView(
-          padding: const .all(16),
-          children: [
-            const DemoIntro(
-              title: 'Recognizer playground',
-              description:
-                  'Tune the recognition level and region-of-interest, then recognize the same '
-                  'still and compare. The ML Kit Latin recognizer ignores level on Android, see '
-                  'Under the hood.',
+      useSafeArea: true,
+      body: ListView(
+        padding: const .all(16),
+        children: [
+          const DemoIntro(
+            title: 'Recognizer playground',
+            description:
+                'Tune the recognition level and region-of-interest, then recognize the same '
+                'still and compare. The ML Kit Latin recognizer ignores level on Android, see '
+                'Under the hood.',
+          ),
+          const Gap(16),
+          _SamplePreview(viewModel: viewModel),
+          const Gap(16),
+          _LevelControl(viewModel: viewModel),
+          const Gap(16),
+          _RoiControls(viewModel: viewModel),
+          const Gap(16),
+          AsyncIconActionButton(
+            onPressed: viewModel.onRecognizePressed,
+            idleIcon: PlatformIcons.wand,
+            idleLabel: 'Recognize',
+            busyLabel: 'Recognizing…',
+          ),
+          const Gap(16),
+          ValueListenableBuilder(
+            valueListenable: viewModel.resultListenable,
+            builder: (context, result, _) => RecognitionResultView(
+              result: result,
+              idleHint: 'Recognize to see what the current settings find.',
+              emptyHint: 'No text found in that region. Try moving the box over some text.',
             ),
-            const Gap(16),
-            _SamplePreview(viewModel: viewModel),
-            const Gap(16),
-            _LevelControl(viewModel: viewModel),
-            const Gap(16),
-            _RoiControls(viewModel: viewModel),
-            const Gap(16),
-            AsyncIconActionButton(
-              onPressed: viewModel.onRecognizePressed,
-              idleIcon: PlatformIcons.wand,
-              idleLabel: 'Recognize',
-              busyLabel: 'Recognizing…',
-            ),
-            const Gap(16),
-            ValueListenableBuilder(
-              valueListenable: viewModel.resultListenable,
-              builder: (context, result, _) => RecognitionResultView(
-                result: result,
-                idleHint: 'Recognize to see what the current settings find.',
-                emptyHint: 'No text found in that region. Try moving the box over some text.',
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     ),
   );
@@ -80,6 +79,8 @@ class const _SamplePreview({required final PlaygroundViewModel viewModel}) exten
 
 /// The recognition-level segmented control.
 class const _LevelControl({required final PlaygroundViewModel viewModel}) extends StatelessWidget {
+  static final _levels = RecognitionLevel.values.toSet();
+
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: .start,
@@ -89,7 +90,7 @@ class const _LevelControl({required final PlaygroundViewModel viewModel}) extend
       ValueListenableBuilder(
         valueListenable: viewModel.levelListenable,
         builder: (context, level, _) => PlatformSegmentButton<RecognitionLevel>(
-          choices: RecognitionLevel.values,
+          choices: _levels,
           segmentBuilder: (choice) => Text(choice.name),
           selectedChoice: level,
           onSelectionChanged: viewModel.onLevelSelected,

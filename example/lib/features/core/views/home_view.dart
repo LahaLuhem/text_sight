@@ -18,55 +18,54 @@ class const HomeView({super.key}) extends StatelessWidget {
     viewModel: HomeViewModel(),
     viewBuilder: (context, _) => PlatformScaffold(
       appBarData: const PlatformAppBar(title: Text('TextSight')),
-      body: SafeArea(
-        child: ListView(
-          padding: const .symmetric(vertical: 8),
-          children: [
-            _DemoTile(
-              icon: Icon(
-                context.platformIcon(material: Icons.camera_alt, cupertino: CupertinoIcons.camera),
-              ),
-              title: 'Live scanner',
-              description:
-                  'Real-time camera OCR with a confidence-coloured overlay, torch, and a '
-                  'recognized-text panel.',
-              pageBuilder: (_) => const LiveScannerView(),
+      useSafeArea: true,
+      body: ListView(
+        padding: const .symmetric(vertical: 8),
+        children: [
+          _DemoTile(
+            icon: Icon(
+              context.platformIcon(material: Icons.camera_alt, cupertino: CupertinoIcons.camera),
             ),
-            _DemoTile(
-              icon: Icon(
-                context.platformIcon(material: Icons.image, cupertino: CupertinoIcons.photo),
-              ),
-              title: 'One-shot',
-              description:
-                  'Recognize a still image from bytes or a file path. No camera, session or '
-                  'permission.',
-              pageBuilder: (_) => const OneShotView(),
+            title: 'Live scanner',
+            description:
+                'Real-time camera OCR with a confidence-coloured overlay, torch, and a '
+                'recognized-text panel.',
+            pageBuilder: (_) => const LiveScannerView(),
+          ),
+          _DemoTile(
+            icon: Icon(
+              context.platformIcon(material: Icons.image, cupertino: CupertinoIcons.photo),
             ),
-            _DemoTile(
-              icon: Icon(
-                context.platformIcon(
-                  material: Icons.tune,
-                  cupertino: CupertinoIcons.slider_horizontal_3,
-                ),
+            title: 'One-shot',
+            description:
+                'Recognize a still image from bytes or a file path. No camera, session or '
+                'permission.',
+            pageBuilder: (_) => const OneShotView(),
+          ),
+          _DemoTile(
+            icon: Icon(
+              context.platformIcon(
+                material: Icons.tune,
+                cupertino: CupertinoIcons.slider_horizontal_3,
               ),
-              title: 'Playground',
-              description:
-                  'Tune RecognitionLevel and the region-of-interest on a still image and compare '
-                  'the output.',
-              pageBuilder: (_) => const PlaygroundView(),
             ),
-            _DemoTile(
-              icon: Icon(
-                context.platformIcon(material: Icons.info_outline, cupertino: CupertinoIcons.info),
-              ),
-              title: 'Under the hood',
-              description:
-                  'How text_sight links zero ML libraries on iOS, and the native engine behind '
-                  'each platform.',
-              pageBuilder: (_) => const AboutView(),
+            title: 'Playground',
+            description:
+                'Tune RecognitionLevel and the region-of-interest on a still image and compare '
+                'the output.',
+            pageBuilder: (_) => const PlaygroundView(),
+          ),
+          _DemoTile(
+            icon: Icon(
+              context.platformIcon(material: Icons.info_outline, cupertino: CupertinoIcons.info),
             ),
-          ],
-        ),
+            title: 'Under the hood',
+            description:
+                'How text_sight links zero ML libraries on iOS, and the native engine behind '
+                'each platform.',
+            pageBuilder: (_) => const AboutView(),
+          ),
+        ],
       ),
     ),
   );

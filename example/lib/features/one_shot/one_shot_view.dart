@@ -16,55 +16,54 @@ class const OneShotView({super.key}) extends StatelessWidget {
     viewModel: OneShotViewModel(),
     viewBuilder: (context, viewModel) => PlatformScaffold(
       appBarData: const PlatformAppBar(title: Text('One-shot')),
-      body: SafeArea(
-        child: ListView(
-          padding: const .all(16),
-          children: [
-            const DemoIntro(
-              title: 'Still-image recognition',
-              description:
-                  'Recognize a bundled sample two ways, from in-memory bytes and from a file '
-                  'path. No camera, session, or permission.',
+      useSafeArea: true,
+      body: ListView(
+        padding: const .all(16),
+        children: [
+          const DemoIntro(
+            title: 'Still-image recognition',
+            description:
+                'Recognize a bundled sample two ways, from in-memory bytes and from a file '
+                'path. No camera, session, or permission.',
+          ),
+          const Gap(16),
+          PlatformCard(
+            child: Padding(
+              padding: const .all(8),
+              child: ConstMedia.sampleText.image(height: 160, fit: .contain),
             ),
-            const Gap(16),
-            PlatformCard(
-              child: Padding(
-                padding: const .all(8),
-                child: ConstMedia.sampleText.image(height: 160, fit: .contain),
-              ),
-            ),
-            const Gap(16),
-            Row(
-              spacing: 12,
-              children: [
-                Expanded(
-                  child: AsyncIconActionButton(
-                    onPressed: viewModel.onRecognizeBytesPressed,
-                    idleIcon: PlatformIcons.photo,
-                    idleLabel: 'From bytes',
-                    busyLabel: 'Reading…',
-                  ),
+          ),
+          const Gap(16),
+          Row(
+            spacing: 12,
+            children: [
+              Expanded(
+                child: AsyncIconActionButton(
+                  onPressed: viewModel.onRecognizeBytesPressed,
+                  idleIcon: PlatformIcons.photo,
+                  idleLabel: 'From bytes',
+                  busyLabel: 'Reading…',
                 ),
-                Expanded(
-                  child: AsyncIconActionButton(
-                    onPressed: viewModel.onRecognizePathPressed,
-                    idleIcon: PlatformIcons.folderOpen,
-                    idleLabel: 'From file',
-                    busyLabel: 'Reading…',
-                  ),
-                ),
-              ],
-            ),
-            const Gap(16),
-            ValueListenableBuilder(
-              valueListenable: viewModel.resultListenable,
-              builder: (context, result, _) => RecognitionResultView(
-                result: result,
-                idleHint: 'Recognize the sample to see the lines it finds.',
               ),
+              Expanded(
+                child: AsyncIconActionButton(
+                  onPressed: viewModel.onRecognizePathPressed,
+                  idleIcon: PlatformIcons.folderOpen,
+                  idleLabel: 'From file',
+                  busyLabel: 'Reading…',
+                ),
+              ),
+            ],
+          ),
+          const Gap(16),
+          ValueListenableBuilder(
+            valueListenable: viewModel.resultListenable,
+            builder: (context, result, _) => RecognitionResultView(
+              result: result,
+              idleHint: 'Recognize the sample to see the lines it finds.',
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     ),
   );
