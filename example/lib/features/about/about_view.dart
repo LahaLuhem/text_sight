@@ -15,84 +15,80 @@ class const AboutView({super.key}) extends StatelessWidget {
     viewModel: AboutViewModel(),
     viewBuilder: (context, _) => PlatformScaffold(
       appBarData: const PlatformAppBar(title: Text('Under the hood')),
-      body: SafeArea(
-        child: ListView(
-          padding: const .all(16),
-          children: [
-            const DemoIntro(
-              title: 'Why text_sight',
-              description:
-                  'A live, cross-platform OCR plugin that links zero third-party ML libraries on '
-                  'iOS. Here is how.',
-            ),
-            const Gap(16),
-            _NuanceCard(
-              icon: Icon(
-                context.platformIcon(
-                  material: Icons.verified_user_outlined,
-                  cupertino: CupertinoIcons.shield,
-                ),
+      useSafeArea: true,
+      body: ListView(
+        padding: const .all(16),
+        children: [
+          const DemoIntro(
+            title: 'Why text_sight',
+            description:
+                'A live, cross-platform OCR plugin that links zero third-party ML libraries on '
+                'iOS. Here is how.',
+          ),
+          const Gap(16),
+          _NuanceCard(
+            icon: Icon(
+              context.platformIcon(
+                material: Icons.verified_user_outlined,
+                cupertino: CupertinoIcons.shield,
               ),
-              title: 'Zero third-party ML on iOS',
-              body:
-                  'iOS uses Apple Vision, a system framework, so the iOS build links no GoogleMLKit, '
-                  'and none of the arm64 / Swift Package Manager warnings that come from running '
-                  'ML Kit on iOS. ML Kit lives only in the Android Gradle build. No recognition '
-                  'library ever enters your Dart dependencies.',
             ),
-            const Gap(12),
-            _NuanceCard(
-              icon: Icon(
-                context.platformIcon(
-                  material: Icons.smartphone,
-                  cupertino: CupertinoIcons.device_phone_portrait,
-                ),
+            title: 'Zero third-party ML on iOS',
+            body:
+                'iOS uses Apple Vision, a system framework, so the iOS build links no GoogleMLKit, '
+                'and none of the arm64 / Swift Package Manager warnings that come from running '
+                'ML Kit on iOS. ML Kit lives only in the Android Gradle build. No recognition '
+                'library ever enters your Dart dependencies.',
+          ),
+          const Gap(12),
+          _NuanceCard(
+            icon: Icon(
+              context.platformIcon(
+                material: Icons.smartphone,
+                cupertino: CupertinoIcons.device_phone_portrait,
               ),
-              title: 'A native engine per platform',
-              body:
-                  'iOS recognizes with Apple Vision (the Swift RecognizeTextRequest, iOS 18+); '
-                  'Android with ML Kit Text Recognition v2 (Latin). One Dart API drives both.',
             ),
-            const Gap(12),
-            _NuanceCard(
-              icon: Icon(
-                context.platformIcon(
-                  material: Icons.crop_free,
-                  cupertino: CupertinoIcons.fullscreen,
-                ),
+            title: 'A native engine per platform',
+            body:
+                'iOS recognizes with Apple Vision (the Swift RecognizeTextRequest, iOS 18+); '
+                'Android with ML Kit Text Recognition v2 (Latin). One Dart API drives both.',
+          ),
+          const Gap(12),
+          _NuanceCard(
+            icon: Icon(
+              context.platformIcon(material: Icons.crop_free, cupertino: CupertinoIcons.fullscreen),
+            ),
+            title: 'One coordinate contract',
+            body:
+                'Bounding boxes are normalized [0,1] with a top-left origin on both platforms, '
+                'converted natively, so an overlay painter never branches on platform.',
+          ),
+          const Gap(12),
+          _NuanceCard(
+            icon: Icon(
+              context.platformIcon(material: Icons.speed, cupertino: CupertinoIcons.speedometer),
+            ),
+            title: 'Confidence, with a caveat',
+            body:
+                'Both engines report a per-line confidence, but the numbers only mean something '
+                'next to others from the same engine. Ask TextSightEngine.confidenceScale what '
+                'you are holding before you rank or threshold.',
+          ),
+          const Gap(12),
+          _NuanceCard(
+            icon: Icon(
+              context.platformIcon(
+                material: Icons.swap_horiz,
+                cupertino: CupertinoIcons.arrow_right_arrow_left,
               ),
-              title: 'One coordinate contract',
-              body:
-                  'Bounding boxes are normalized [0,1] with a top-left origin on both platforms, '
-                  'converted natively, so an overlay painter never branches on platform.',
             ),
-            const Gap(12),
-            _NuanceCard(
-              icon: Icon(
-                context.platformIcon(material: Icons.speed, cupertino: CupertinoIcons.speedometer),
-              ),
-              title: 'Confidence, with a caveat',
-              body:
-                  'Both engines report a per-line confidence, but the numbers only mean something '
-                  'next to others from the same engine. Ask TextSightEngine.confidenceScale what '
-                  'you are holding before you rank or threshold.',
-            ),
-            const Gap(12),
-            _NuanceCard(
-              icon: Icon(
-                context.platformIcon(
-                  material: Icons.swap_horiz,
-                  cupertino: CupertinoIcons.arrow_right_arrow_left,
-                ),
-              ),
-              title: 'Two drivers, one recognizer',
-              body:
-                  'The live camera (TextSightController + TextSightView) and the static one-shot '
-                  '(TextSight.recognizeImage / recognizePath) share the same recognizer and result '
-                  'models. The one-shot needs no camera, session, or permission.',
-            ),
-          ],
-        ),
+            title: 'Two drivers, one recognizer',
+            body:
+                'The live camera (TextSightController + TextSightView) and the static one-shot '
+                '(TextSight.recognizeImage / recognizePath) share the same recognizer and result '
+                'models. The one-shot needs no camera, session, or permission.',
+          ),
+        ],
       ),
     ),
   );

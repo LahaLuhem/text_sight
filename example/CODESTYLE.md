@@ -239,15 +239,15 @@ All spacing values (`Gap`, `spacing:`, `Padding`, `EdgeInsets`, margins) follow 
 
 The example renders through
 [`platform_adaptive_widgets`](https://pub.dev/packages/platform_adaptive_widgets),
-`PlatformScaffold`, `PlatformAppBar`, `PlatformButton`, `PlatformSlider`,
-`PlatformSwitch`, `PlatformSegmentButton`, `PlatformListTile`,
-`PlatformProgressIndicator`, so each screen is Material on Android and Cupertino on
+`PlatformScaffold`, `PlatformAppBar`, `PlatformButton`, `PlatformSwitch`,
+`PlatformSegmentButton`, `PlatformListTile`, `PlatformProgressIndicator`,
+`PlatformProgressBar`, so each screen is Material on Android and Cupertino on
 iOS from a single widget tree. Things the library's surface does NOT enforce, all
 iOS-only (Android's Material `Scaffold` masks them):
 
-- **Wrap every `PlatformScaffold` body in `SafeArea`.** On iOS the scaffold is a
+- **Pass `useSafeArea: true` to every `PlatformScaffold`.** On iOS the scaffold is a
   `CupertinoPageScaffold`, which lets the body sit *behind* the translucent nav bar.
-  Without the wrap, the top of a scrolling body hides under the bar.
+  Without it, the top of a scrolling body hides under the bar.
 - **Plug missing widgets under [`platform/`](lib/features/core/widgets/platform/), one
   per file, built on `PlatformWidget`.** `platform_adaptive_widgets` ships no
   `PlatformCard` / `PlatformChip` (Cupertino has no native equivalent), and a bare
