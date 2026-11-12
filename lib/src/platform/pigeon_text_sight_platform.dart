@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../capture/camera_permission_status.dart';
 import '../capture/capture_resolution.dart';
+import '../capture/preview_geometry.dart';
 import '../capture/text_sight_session_state.dart';
 import '../recognition/confidence_scale.dart';
 import '../recognition/recognition_level.dart';
@@ -15,7 +16,7 @@ import '../recognition/text_sight_readiness_state.dart';
 import 'messages.g.dart';
 import 'text_sight_platform.dart';
 
-/// The default [TextSightPlatform]: Pigeon for control calls and session-state pushes, a plain
+/// The default [TextSightPlatform]: Pigeon for control calls and native's pushes, a plain
 /// `EventChannel` for the per-frame results.
 ///
 /// The one place public types meet their transport twins, decoding self-describing frame maps
@@ -45,8 +46,9 @@ final class PigeonTextSightPlatform() extends TextSightPlatform implements TextS
       .receiveBroadcastStream()
       .map(_decodeReadiness);
 
-  // Never closed: it lives as long as the platform does, like the EventChannel streams above.
+  // Never closed: they live as long as the platform does, like the EventChannel streams above.
   final _sessionStates = StreamController<TextSightSessionState>.broadcast();
+  final _previews = StreamController<PreviewGeometry>.broadcast();
 
   @override
   Future<int> initialize(TextSightOptions options, CaptureResolution resolution) =>
@@ -91,6 +93,16 @@ final class PigeonTextSightPlatform() extends TextSightPlatform implements TextS
 
   @override
   void onSessionStateChanged(SessionStateMessage state) => _sessionStates.add(state._toPublic());
+
+  @override
+  Stream<PreviewGeometry> get previews => _previews.stream;
+
+  @override
+  void onPreviewChanged(PreviewMessage preview) => _previews.add((
+    textureId: preview.textureId,
+    size: Size(preview.width.toDouble(), preview.height.toDouble()),
+    quarterTurns: preview.quarterTurns,
+  ));
 
   @override
   Future<TextSightReadinessState> ensureModelReady() async =>

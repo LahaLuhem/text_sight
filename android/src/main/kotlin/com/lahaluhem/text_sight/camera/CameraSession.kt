@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
+import android.util.Size
 import android.view.Display
 import android.view.Surface
 import androidx.camera.core.Camera
@@ -17,6 +18,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import com.lahaluhem.text_sight.CaptureResolutionMessage
 import com.lahaluhem.text_sight.FlutterError
+import com.lahaluhem.text_sight.PreviewMessage
 import com.lahaluhem.text_sight.SessionFailedMessage
 import com.lahaluhem.text_sight.SessionIdleMessage
 import com.lahaluhem.text_sight.SessionStateMessage
@@ -46,6 +48,7 @@ internal class CameraSession(
     private val mainExecutor: Executor = ContextCompat.getMainExecutor(context),
     private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main,
     private val onSessionState: (SessionStateMessage) -> Unit = {},
+    private val onPreview: (PreviewMessage) -> Unit = {},
 ) {
     // Resumes the provider future on whatever thread CameraX completed it on. mainDispatcher is
     // what puts the LiveData work back on main, so this deliberately does not hop.
@@ -58,6 +61,7 @@ internal class CameraSession(
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageAnalysis: ImageAnalysis? = null
     private var camera: Camera? = null
+    private var previewResolution: Size? = null
     private var isRecognizing = false
 
     // Kept because [bindUseCases] also runs from the surface callback, long after open() returned.
@@ -79,6 +83,7 @@ internal class CameraSession(
         override fun onDisplayChanged(displayId: Int) {
             if (displayId == Display.DEFAULT_DISPLAY) {
                 imageAnalysis?.targetRotation = currentRotation()
+                reportPreview()
             }
         }
     }
@@ -169,6 +174,7 @@ internal class CameraSession(
 
         isRecognizing = false
         camera = null
+        previewResolution = null
         imageAnalysis = null
         cameraProvider = null
         surfaceProducer = null
@@ -191,6 +197,25 @@ internal class CameraSession(
     private fun currentRotation(): Int =
         displayManager.getDisplay(Display.DEFAULT_DISPLAY)?.rotation ?: Surface.ROTATION_0
 
+    /** Tells Dart how to show the preview, once its size, camera and producer are all known. */
+    private fun reportPreview() {
+        val producer = surfaceProducer
+        val resolution = previewResolution
+        val sensorDegrees = camera?.cameraInfo?.sensorRotationDegrees
+        if (producer == null || resolution == null || sensorDegrees == null) return
+
+        onPreview(
+            previewGeometry(
+                textureId = producer.id(),
+                bufferWidth = resolution.width,
+                bufferHeight = resolution.height,
+                sensorDegrees = sensorDegrees,
+                displayRotation = currentRotation(),
+                surfaceRotates = producer.handlesCropAndRotation(),
+            ),
+        )
+    }
+
     private fun bindUseCases() {
         val provider = cameraProvider ?: return
         val producer = surfaceProducer ?: return
@@ -201,6 +226,8 @@ internal class CameraSession(
             .apply {
                 setSurfaceProvider(mainExecutor) { request ->
                     producer.setSize(request.resolution.width, request.resolution.height)
+                    previewResolution = request.resolution
+                    reportPreview()
                     request.provideSurface(producer.surface, mainExecutor) { _ ->
                         // Flutter owns the Surface via the SurfaceProducer, so nothing to release.
                     }

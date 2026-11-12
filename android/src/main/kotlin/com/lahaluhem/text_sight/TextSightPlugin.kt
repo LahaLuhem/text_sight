@@ -33,17 +33,15 @@ class TextSightPlugin :
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         TextSightHostApi.setUp(binding.binaryMessenger, this)
 
-        val stateApi = TextSightFlutterApi(binding.binaryMessenger)
+        val flutterApi = TextSightFlutterApi(binding.binaryMessenger)
         val capturesChannel = EventChannel(binding.binaryMessenger, CAPTURES_CHANNEL_NAME)
-        camera = TextSightCamera(binding.applicationContext, binding.textureRegistry, capturesChannel) { state ->
-            engine.launch {
-                try {
-                    stateApi.onSessionStateChanged(state)
-                } catch (ignored: FlutterError) {
-                    // No Dart handler attached (hot restart in progress, or detached).
-                }
-            }
-        }
+        camera = TextSightCamera(
+            binding.applicationContext,
+            binding.textureRegistry,
+            capturesChannel,
+            onSessionState = { state -> notifyDart { flutterApi.onSessionStateChanged(state) } },
+            onPreview = { preview -> notifyDart { flutterApi.onPreviewChanged(preview) } },
+        )
 
         val readinessChannel = EventChannel(binding.binaryMessenger, READINESS_CHANNEL_NAME)
         modelReadiness = TextSightModelReadiness(binding.applicationContext, readinessChannel)
@@ -149,6 +147,14 @@ class TextSightPlugin :
 
     override fun onDetachedFromActivity() {
         unbindActivity()
+    }
+
+    private fun notifyDart(send: suspend () -> Unit) = engine.launch {
+        try {
+            send()
+        } catch (ignored: FlutterError) {
+            // No Dart handler attached (hot restart in progress, or detached).
+        }
     }
 
     // The runtime permission request needs a foreground Activity and a result listener. Both arrive

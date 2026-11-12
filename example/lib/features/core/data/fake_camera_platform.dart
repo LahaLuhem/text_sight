@@ -7,6 +7,9 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
 // The example doubles as the plugin's own harness, and the federation seam is not on the barrel.
 // ignore: implementation_imports
+import 'package:text_sight/src/capture/preview_geometry.dart';
+// Same reason.
+// ignore: implementation_imports
 import 'package:text_sight/src/platform/text_sight_platform.dart';
 import 'package:text_sight/text_sight.dart';
 
@@ -39,6 +42,7 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
 
   final _captures = StreamController<TextSightCapture>.broadcast();
   final _sessionStates = StreamController<TextSightSessionState>.broadcast();
+  final _previews = StreamController<PreviewGeometry>.broadcast();
   final _frameNotifier = ValueNotifier<SimulatedFrame?>(null);
 
   late final _bridge = _BridgeClient(onFrame: _onBridgeFrame, onLost: _onBridgeLost);
@@ -138,6 +142,9 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
   @override
   Stream<TextSightSessionState> get sessionStates => _sessionStates.stream;
 
+  @override
+  Stream<PreviewGeometry> get previews => _previews.stream;
+
   // Everything below needs no camera, so it goes to the real implementation untouched.
 
   @override
@@ -199,7 +206,10 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
 
     _isRecognizing = true;
     try {
-      _captures.add(await _real.recognizeImage(bytes, _options));
+      final capture = await _real.recognizeImage(bytes, _options);
+      // A one-shot comes back upright, so the frame needs no turn. The controller drops repeats.
+      _previews.add((textureId: _textureId, size: capture.imageSize, quarterTurns: 0));
+      _captures.add(capture);
     } on Object {
       // A frame the recognizer rejects is dropped, exactly as native drops a bad frame.
     } finally {

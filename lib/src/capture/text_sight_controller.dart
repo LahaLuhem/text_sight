@@ -9,6 +9,7 @@ import '../recognition/text_sight_capture.dart';
 import '../recognition/text_sight_options.dart';
 import 'camera_permission_status.dart';
 import 'capture_resolution.dart';
+import 'preview_geometry.dart';
 import 'text_sight_session_state.dart';
 
 /// Configures and drives a live camera recognition session.
@@ -29,6 +30,8 @@ final class TextSightController({
   int? _textureId;
   TextSightSessionState _sessionState = const SessionIdle();
   StreamSubscription<TextSightSessionState>? _stateSubscription;
+  PreviewGeometry? _preview;
+  StreamSubscription<PreviewGeometry>? _previewSubscription;
 
   /// Creates a controller from [options], a [resolution] and an initial torch state. Nothing opens
   /// the camera until [start]. [resolution] cannot change after, it rebuilds the capture graph.
@@ -52,6 +55,12 @@ final class TextSightController({
   /// Read by `TextSightView` to mount the camera preview.
   int? get textureId => _textureId;
 
+  /// How to show the open texture, or `null` until native has said. Only `TextSightView` reads it.
+  @internal
+  PreviewGeometry? get preview =>
+      // Matched on read, since geometry can land before `initialize` hands back the id.
+      _preview?.textureId == _textureId ? _preview : null;
+
   /// The capture session's state as native last reported it: [SessionIdle] until [start] and
   /// again after [dispose]. Listeners are notified on change only.
   TextSightSessionState get sessionState => _sessionState;
@@ -64,8 +73,9 @@ final class TextSightController({
   /// a session acquired once is reused across [pauseRecognition] and [start]. Also the way back
   /// from [SessionFailed].
   Future<void> start() async {
-    // Before initialize, so the first state of this session is never missed.
+    // Before initialize, so nothing native reports for this session is missed.
     _stateSubscription ??= TextSightPlatform.instance.sessionStates.listen(_onSessionState);
+    _previewSubscription ??= TextSightPlatform.instance.previews.listen(_onPreview);
     _textureId ??= await TextSightPlatform.instance.initialize(_options, resolution);
     await TextSightPlatform.instance.start();
     _isRecognizing = true;
@@ -121,6 +131,7 @@ final class TextSightController({
   @override
   void dispose() {
     _stateSubscription?.cancel().ignore();
+    _previewSubscription?.cancel().ignore();
     _sessionState = const SessionIdle();
     // Unconditional: native can be holding a session this controller never learned about, which is
     // what a hot restart leaves behind. Its dispose is idempotent, so an extra call costs nothing.
@@ -133,6 +144,13 @@ final class TextSightController({
   void _onSessionState(TextSightSessionState state) {
     if (state == _sessionState) return;
     _sessionState = state;
+    notifyListeners();
+  }
+
+  void _onPreview(PreviewGeometry preview) {
+    assert(!preview.size.isEmpty, 'Native sends real buffer sizes, so an empty one is its bug.');
+    if (preview == _preview) return;
+    _preview = preview;
     notifyListeners();
   }
 }
