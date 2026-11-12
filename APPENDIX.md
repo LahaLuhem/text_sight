@@ -227,6 +227,8 @@ funnelled through one channel:
 - **Session state → a Pigeon `@FlutterApi`.** Rare, typed, request grain: one method carrying a
   sealed `SessionStateMessage` that mirrors the public type case for case, leaving the frame wire
   untouched. See [#session-state](#session-state).
+- **Preview geometry → the same `@FlutterApi`.** Its size and turns change with the session and
+  the device, not with recognition, so they can't ride the captures.
 
 **Why split at all.** Each transport matches the *shape* of its traffic: typed
 request/response for control, an unbounded push-stream for results, a raw pixel surface for

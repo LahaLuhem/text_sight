@@ -92,6 +92,22 @@ class SessionFailedMessage extends SessionStateMessage {
   String? details;
 }
 
+/// How to show the preview texture: its size once upright, and the clockwise quarter turns that
+/// get it there. No public twin, since only `TextSightView` reads it.
+class PreviewMessage {
+  new({
+    required this.textureId,
+    required this.width,
+    required this.height,
+    required this.quarterTurns,
+  });
+
+  int textureId;
+  int width;
+  int height;
+  int quarterTurns;
+}
+
 /// The typed control channel. Per-frame results stream over a plain
 /// EventChannel and the preview is a texture. Neither rides this API.
 @HostApi()
@@ -162,4 +178,7 @@ abstract class TextSightHostApi {
 abstract class TextSightFlutterApi {
   /// Fired on every actual session transition native makes or observes.
   void onSessionStateChanged(SessionStateMessage state);
+
+  /// Fired when the preview's size or turns change, recognition paused or not.
+  void onPreviewChanged(PreviewMessage preview);
 }

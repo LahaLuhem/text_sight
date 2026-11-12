@@ -485,6 +485,59 @@ struct SessionFailedMessage: SessionStateMessage, Hashable, CustomStringConverti
   }
 }
 
+/// How to show the preview texture: its size once upright, and the clockwise quarter turns that
+/// get it there. No public twin, since only `TextSightView` reads it.
+///
+/// Generated class from Pigeon that represents data sent in messages.
+struct PreviewMessage: Hashable, CustomStringConvertible {
+  var textureId: Int64
+  var width: Int64
+  var height: Int64
+  var quarterTurns: Int64
+
+
+  // swift-format-ignore: AlwaysUseLowerCamelCase
+  static func fromList(_ pigeonVar_list: [Any?]) -> PreviewMessage? {
+    let textureId = pigeonVar_list[0] as! Int64
+    let width = pigeonVar_list[1] as! Int64
+    let height = pigeonVar_list[2] as! Int64
+    let quarterTurns = pigeonVar_list[3] as! Int64
+
+    return PreviewMessage(
+      textureId: textureId,
+      width: width,
+      height: height,
+      quarterTurns: quarterTurns
+    )
+  }
+  func toList() -> [Any?] {
+    return [
+      textureId,
+      width,
+      height,
+      quarterTurns,
+    ]
+  }
+  static func == (lhs: PreviewMessage, rhs: PreviewMessage) -> Bool {
+    if Swift.type(of: lhs) != Swift.type(of: rhs) {
+      return false
+    }
+    return MessagesPigeonInternal.deepEquals(lhs.textureId, rhs.textureId) && MessagesPigeonInternal.deepEquals(lhs.width, rhs.width) && MessagesPigeonInternal.deepEquals(lhs.height, rhs.height) && MessagesPigeonInternal.deepEquals(lhs.quarterTurns, rhs.quarterTurns)
+  }
+
+  func hash(into hasher: inout Hasher) {
+    hasher.combine("PreviewMessage")
+    MessagesPigeonInternal.deepHash(value: textureId, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: width, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: height, hasher: &hasher)
+    MessagesPigeonInternal.deepHash(value: quarterTurns, hasher: &hasher)
+  }
+
+  public var description: String {
+    return "PreviewMessage(textureId: \(String(describing: textureId)), width: \(String(describing: width)), height: \(String(describing: height)), quarterTurns: \(String(describing: quarterTurns)))"
+  }
+}
+
 private class MessagesPigeonCodecReader: FlutterStandardReader {
   override func readValue(ofType type: UInt8) -> Any? {
     switch type {
@@ -530,6 +583,8 @@ private class MessagesPigeonCodecReader: FlutterStandardReader {
       return SessionPausedMessage.fromList(self.readValue() as! [Any?])
     case 139:
       return SessionFailedMessage.fromList(self.readValue() as! [Any?])
+    case 140:
+      return PreviewMessage.fromList(self.readValue() as! [Any?])
     default:
       return super.readValue(ofType: type)
     }
@@ -570,6 +625,9 @@ private class MessagesPigeonCodecWriter: FlutterStandardWriter {
       super.writeValue(value.toList())
     } else if let value = value as? SessionFailedMessage {
       super.writeByte(139)
+      super.writeValue(value.toList())
+    } else if let value = value as? PreviewMessage {
+      super.writeByte(140)
       super.writeValue(value.toList())
     } else {
       super.writeValue(value)
@@ -847,6 +905,8 @@ class TextSightHostApiSetup {
 protocol TextSightFlutterApiProtocol {
   /// Fired on every actual session transition native makes or observes.
   @MainActor func onSessionStateChanged(state stateArg: SessionStateMessage) async throws
+  /// Fired when the preview's size or turns change, recognition paused or not.
+  @MainActor func onPreviewChanged(preview previewArg: PreviewMessage) async throws
 }
 class TextSightFlutterApi: TextSightFlutterApiProtocol {
   private let binaryMessenger: FlutterBinaryMessenger
@@ -864,6 +924,27 @@ class TextSightFlutterApi: TextSightFlutterApiProtocol {
       let channelName: String = "dev.flutter.pigeon.text_sight.TextSightFlutterApi.onSessionStateChanged\(messageChannelSuffix)"
       let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
       channel.sendMessage([stateArg] as [Any?]) { response in
+        guard let listResponse = response as? [Any?] else {
+          continuation.resume(throwing: createConnectionError(withChannelName: channelName))
+          return
+        }
+        if listResponse.count > 1 {
+          let code: String = listResponse[0] as! String
+          let message: String? = nilOrValue(listResponse[1])
+          let details: String? = nilOrValue(listResponse[2])
+          continuation.resume(throwing: PigeonError(code: code, message: message, details: details))
+        } else {
+          continuation.resume()
+        }
+      }
+    }
+  }
+  /// Fired when the preview's size or turns change, recognition paused or not.
+  @MainActor func onPreviewChanged(preview previewArg: PreviewMessage) async throws {
+    return try await withCheckedThrowingContinuation { continuation in
+      let channelName: String = "dev.flutter.pigeon.text_sight.TextSightFlutterApi.onPreviewChanged\(messageChannelSuffix)"
+      let channel = FlutterBasicMessageChannel(name: channelName, binaryMessenger: binaryMessenger, codec: codec)
+      channel.sendMessage([previewArg] as [Any?]) { response in
         guard let listResponse = response as? [Any?] else {
           continuation.resume(throwing: createConnectionError(withChannelName: channelName))
           return

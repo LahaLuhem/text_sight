@@ -24,6 +24,7 @@ void main() {
   final oneShot = BddFeature('TextSight one-shot recognition');
   final readiness = BddFeature('TextSight model readiness');
   final sessionStates = BddFeature('TextSight session states');
+  final previews = BddFeature('TextSight preview geometry');
 
   Bdd(control)
       .scenario('Recognition level is sent as its Pigeon twin')
@@ -674,7 +675,11 @@ void main() {
         final platform = PigeonTextSightPlatform();
         final first = platform.sessionStates.first;
 
-        await _pushState(messenger, ctx.example.val('message') as SessionStateMessage);
+        await _pushToDart(
+          messenger,
+          'onSessionStateChanged',
+          ctx.example.val('message') as SessionStateMessage,
+        );
 
         check(await first).equals(ctx.example.val('state') as TextSightSessionState);
       });
@@ -693,12 +698,13 @@ void main() {
           platform.sessionStates.listen(second.add),
         ];
 
-        await _pushState(messenger, SessionActiveMessage());
-        await _pushState(
+        await _pushToDart(messenger, 'onSessionStateChanged', SessionActiveMessage());
+        await _pushToDart(
           messenger,
+          'onSessionStateChanged',
           SessionPausedMessage(reason: SessionPauseReasonMessage.appBackgrounded),
         );
-        await _pushState(messenger, SessionActiveMessage());
+        await _pushToDart(messenger, 'onSessionStateChanged', SessionActiveMessage());
         await pumpEventQueue();
 
         const expected = <TextSightSessionState>[
@@ -711,6 +717,24 @@ void main() {
         for (final subscription in subscriptions) {
           await subscription.cancel();
         }
+      });
+
+  Bdd(previews)
+      .scenario('A pushed preview message decodes into its geometry')
+      .given('a platform registered as the FlutterApi handler')
+      .when('native pushes a preview for texture 7, 960 by 1280, one quarter turn')
+      .then('previews emits that texture, size and turn')
+      .run((_) async {
+        final platform = PigeonTextSightPlatform();
+        final first = platform.previews.first;
+
+        await _pushToDart(
+          messenger,
+          'onPreviewChanged',
+          PreviewMessage(textureId: 7, width: 960, height: 1280, quarterTurns: 1),
+        );
+
+        check(await first).equals((textureId: 7, size: const Size(960, 1280), quarterTurns: 1));
       });
 }
 
@@ -779,11 +803,15 @@ void _mockReadiness(TestDefaultBinaryMessenger messenger, List<Object?> states) 
 }
 
 /// Pushes one FlutterApi state message into the platform, the way native does.
-Future<void> _pushState(TestDefaultBinaryMessenger messenger, SessionStateMessage message) {
-  const channel = 'dev.flutter.pigeon.text_sight.TextSightFlutterApi.onSessionStateChanged';
+/// Plays native calling [method] on the FlutterApi with [message].
+Future<void> _pushToDart(TestDefaultBinaryMessenger messenger, String method, Object message) {
   final bytes = TextSightFlutterApi.pigeonChannelCodec.encodeMessage(<Object?>[message]);
 
-  return messenger.handlePlatformMessage(channel, bytes, null);
+  return messenger.handlePlatformMessage(
+    'dev.flutter.pigeon.text_sight.TextSightFlutterApi.$method',
+    bytes,
+    null,
+  );
 }
 
 /// Builds one per-frame wire-line map from a `lines` table [row].

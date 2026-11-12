@@ -540,6 +540,60 @@ data class SessionFailedMessage (
     return "SessionFailedMessage(details=$details)"
   }
 }
+
+/**
+ * How to show the preview texture: its size once upright, and the clockwise quarter turns that
+ * get it there. No public twin, since only `TextSightView` reads it.
+ *
+ * Generated class from Pigeon that represents data sent in messages.
+ */
+data class PreviewMessage (
+  val textureId: Long,
+  val width: Long,
+  val height: Long,
+  val quarterTurns: Long
+)
+ {
+  companion object {
+    fun fromList(pigeonVar_list: List<Any?>): PreviewMessage {
+      val textureId = pigeonVar_list[0] as Long
+      val width = pigeonVar_list[1] as Long
+      val height = pigeonVar_list[2] as Long
+      val quarterTurns = pigeonVar_list[3] as Long
+      return PreviewMessage(textureId, width, height, quarterTurns)
+    }
+  }
+  fun toList(): List<Any?> {
+    return listOf(
+      textureId,
+      width,
+      height,
+      quarterTurns,
+    )
+  }
+  override fun equals(other: Any?): Boolean {
+    if (other == null || other.javaClass != javaClass) {
+      return false
+    }
+    if (this === other) {
+      return true
+    }
+    val other = other as PreviewMessage
+    return MessagesPigeonUtils.deepEquals(this.textureId, other.textureId) && MessagesPigeonUtils.deepEquals(this.width, other.width) && MessagesPigeonUtils.deepEquals(this.height, other.height) && MessagesPigeonUtils.deepEquals(this.quarterTurns, other.quarterTurns)
+  }
+
+  override fun hashCode(): Int {
+    var result = javaClass.hashCode()
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.textureId)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.width)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.height)
+    result = 31 * result + MessagesPigeonUtils.deepHash(this.quarterTurns)
+    return result
+  }
+  override fun toString(): String {
+    return "PreviewMessage(textureId=$textureId, width=$width, height=$height, quarterTurns=$quarterTurns)"
+  }
+}
 private open class MessagesPigeonCodec : StandardMessageCodec() {
   override fun readValueOfType(type: Byte, buffer: ByteBuffer): Any? {
     return when (type) {
@@ -598,6 +652,11 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
           SessionFailedMessage.fromList(it)
         }
       }
+      140.toByte() -> {
+        (readValue(buffer) as? List<Any?>)?.let {
+          PreviewMessage.fromList(it)
+        }
+      }
       else -> super.readValueOfType(type, buffer)
     }
   }
@@ -645,6 +704,10 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
       }
       is SessionFailedMessage -> {
         stream.write(139)
+        writeValue(stream, value.toList())
+      }
+      is PreviewMessage -> {
+        stream.write(140)
         writeValue(stream, value.toList())
       }
       else -> super.writeValue(stream, value)
@@ -945,6 +1008,26 @@ class TextSightFlutterApi(private val binaryMessenger: BinaryMessenger, private 
       val channelName = "dev.flutter.pigeon.text_sight.TextSightFlutterApi.onSessionStateChanged$separatedMessageChannelSuffix"
       val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
       channel.send(listOf(stateArg)) {
+        if (it is List<*>) {
+          if (it.size > 1) {
+            continuation.resumeWithException(FlutterError(it[0] as String, it[1] as String, it[2] as String?))
+          } else {
+            continuation.resume(Unit)
+          }
+        } else {
+          continuation.resumeWithException(MessagesPigeonUtils.createConnectionError(channelName))
+        } 
+      }
+    }
+  }
+  /** Fired when the preview's size or turns change, recognition paused or not. */
+  suspend fun onPreviewChanged(previewArg: PreviewMessage)
+{
+    val separatedMessageChannelSuffix = if (messageChannelSuffix.isNotEmpty()) ".$messageChannelSuffix" else ""
+    return suspendCancellableCoroutine { continuation ->
+      val channelName = "dev.flutter.pigeon.text_sight.TextSightFlutterApi.onPreviewChanged$separatedMessageChannelSuffix"
+      val channel = BasicMessageChannel<Any?>(binaryMessenger, channelName, codec)
+      channel.send(listOf(previewArg)) {
         if (it is List<*>) {
           if (it.size > 1) {
             continuation.resumeWithException(FlutterError(it[0] as String, it[1] as String, it[2] as String?))

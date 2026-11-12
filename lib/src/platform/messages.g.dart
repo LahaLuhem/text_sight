@@ -411,6 +411,67 @@ class SessionFailedMessage extends SessionStateMessage {
   }
 }
 
+/// How to show the preview texture: its size once upright, and the clockwise quarter turns that
+/// get it there. No public twin, since only `TextSightView` reads it.
+class PreviewMessage {
+  PreviewMessage({
+    required this.textureId,
+    required this.width,
+    required this.height,
+    required this.quarterTurns,
+  });
+
+  int textureId;
+
+  int width;
+
+  int height;
+
+  int quarterTurns;
+
+  List<Object?> _toList() {
+    return <Object?>[textureId, width, height, quarterTurns];
+  }
+
+  Object encode() {
+    return _toList();
+  }
+
+  static PreviewMessage decode(Object result) {
+    result as List<Object?>;
+    return PreviewMessage(
+      textureId: result[0]! as int,
+      width: result[1]! as int,
+      height: result[2]! as int,
+      quarterTurns: result[3]! as int,
+    );
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  bool operator ==(Object other) {
+    if (other is! PreviewMessage || other.runtimeType != runtimeType) {
+      return false;
+    }
+    if (identical(this, other)) {
+      return true;
+    }
+    return _deepEquals(textureId, other.textureId) &&
+        _deepEquals(width, other.width) &&
+        _deepEquals(height, other.height) &&
+        _deepEquals(quarterTurns, other.quarterTurns);
+  }
+
+  @override
+  // ignore: avoid_equals_and_hash_code_on_mutable_classes
+  int get hashCode => _deepHash(<Object?>[runtimeType, ..._toList()]);
+
+  @override
+  String toString() {
+    return 'PreviewMessage(textureId: $textureId, width: $width, height: $height, quarterTurns: $quarterTurns)';
+  }
+}
+
 class _PigeonCodec extends StandardMessageCodec {
   const _PigeonCodec();
   @override
@@ -451,6 +512,9 @@ class _PigeonCodec extends StandardMessageCodec {
     } else if (value is SessionFailedMessage) {
       buffer.putUint8(139);
       writeValue(buffer, value.encode());
+    } else if (value is PreviewMessage) {
+      buffer.putUint8(140);
+      writeValue(buffer, value.encode());
     } else {
       super.writeValue(buffer, value);
     }
@@ -486,6 +550,8 @@ class _PigeonCodec extends StandardMessageCodec {
         return SessionPausedMessage.decode(readValue(buffer)!);
       case 139:
         return SessionFailedMessage.decode(readValue(buffer)!);
+      case 140:
+        return PreviewMessage.decode(readValue(buffer)!);
       default:
         return super.readValueOfType(type, buffer);
     }
@@ -749,6 +815,9 @@ abstract class TextSightFlutterApi {
   /// Fired on every actual session transition native makes or observes.
   void onSessionStateChanged(SessionStateMessage state);
 
+  /// Fired when the preview's size or turns change, recognition paused or not.
+  void onPreviewChanged(PreviewMessage preview);
+
   static void setUp(
     TextSightFlutterApi? api, {
     BinaryMessenger? binaryMessenger,
@@ -769,6 +838,31 @@ abstract class TextSightFlutterApi {
           final SessionStateMessage arg_state = args[0]! as SessionStateMessage;
           try {
             api.onSessionStateChanged(arg_state);
+            return wrapResponse(empty: true);
+          } on PlatformException catch (e) {
+            return wrapResponse(error: e);
+          } catch (e) {
+            return wrapResponse(
+              error: PlatformException(code: 'error', message: e.toString()),
+            );
+          }
+        });
+      }
+    }
+    {
+      final pigeonVar_channel = BasicMessageChannel<Object?>(
+        'dev.flutter.pigeon.text_sight.TextSightFlutterApi.onPreviewChanged$messageChannelSuffix',
+        pigeonChannelCodec,
+        binaryMessenger: binaryMessenger,
+      );
+      if (api == null) {
+        pigeonVar_channel.setMessageHandler(null);
+      } else {
+        pigeonVar_channel.setMessageHandler((Object? message) async {
+          final List<Object?> args = message! as List<Object?>;
+          final PreviewMessage arg_preview = args[0]! as PreviewMessage;
+          try {
+            api.onPreviewChanged(arg_preview);
             return wrapResponse(empty: true);
           } on PlatformException catch (e) {
             return wrapResponse(error: e);

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:text_sight/src/capture/preview_geometry.dart';
 import 'package:text_sight/src/platform/text_sight_platform.dart';
 import 'package:text_sight/text_sight.dart';
 
@@ -48,4 +49,7 @@ final class _FramePlatform() extends TextSightPlatform {
 
   @override
   Stream<TextSightSessionState> get sessionStates => const Stream.empty();
+
+  @override
+  Stream<PreviewGeometry> get previews => const Stream.empty();
 }
