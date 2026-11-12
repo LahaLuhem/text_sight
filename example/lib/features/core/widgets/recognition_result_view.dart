@@ -29,8 +29,8 @@ class const RecognitionResultView({
   }
 }
 
-/// The recognized lines plus a one-line summary (count, image size, quarter-turns), or [emptyHint]
-/// when recognition succeeded but matched no lines.
+/// The recognized lines plus a one-line summary (count, image size), or [emptyHint] when
+/// recognition succeeded but matched no lines.
 class const _CaptureCard({required final TextSightCapture capture, required final String emptyHint})
     extends StatelessWidget {
   @override
@@ -43,8 +43,7 @@ class const _CaptureCard({required final TextSightCapture capture, required fina
         children: [
           Text(
             '${capture.lines.length} lines · '
-            '${capture.imageSize.width.toInt()}×${capture.imageSize.height.toInt()} px · '
-            'quarterTurns ${capture.quarterTurns}',
+            '${capture.imageSize.width.toInt()}×${capture.imageSize.height.toInt()} px',
             style: Theme.of(context).textTheme.labelMedium,
           ),
           if (capture.lines.isEmpty)

@@ -14,16 +14,13 @@ final class const TextSightCapture({
   /// Pixel size of the analyzed image, in the same orientation as the lines' normalized boxes (post-rotation).
   required final Size imageSize,
 
-  /// Clockwise quarter-turns to rotate the *raw preview texture* so it aligns with the
-  /// display-upright orientation [lines] and [imageSize] are already in. Live preview frames are
-  /// delivered unrotated (cheaper, and avoids leaning on native buffer rotation). `TextSightView`
-  /// applies this turn. `0` for an already-upright source such as the static one-shot.
+  /// Clockwise quarter turns that bring the analyzed frame upright. `0` for a still.
+  @Deprecated('TextSightView turns the preview itself. Removed in the next major.')
   final int quarterTurns = 0,
 }) {
   /// Creates a capture.
   this;
 
   @override
-  String toString() =>
-      'TextSightCapture(lines: $lines, imageSize: $imageSize, quarterTurns: $quarterTurns)';
+  String toString() => 'TextSightCapture(lines: $lines, imageSize: $imageSize)';
 }
