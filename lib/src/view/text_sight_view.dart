@@ -17,8 +17,8 @@ typedef TextSightOverlayBuilder = Widget Function(
 
 /// A live camera preview that recognizes text, driven by a [TextSightController].
 ///
-/// Shows the preview the right way up. Each [TextSightCapture] goes to [onResult] and to
-/// [overlayBuilder] for drawing boxes over the preview.
+/// Shows the preview the right way up, fitted by [fit]. Each [TextSightCapture] goes to [onResult]
+/// and to [overlayBuilder] for drawing boxes over the preview.
 ///
 /// The view never starts or stops the session. The consumer drives the controller, so lifecycle
 /// (including pausing on app background) stays in one place.
@@ -35,6 +35,9 @@ final class const TextSightView({
   /// Builds what shows until the preview is ready (camera opening), including before
   /// [TextSightController.start].
   final WidgetBuilder? placeholderBuilder,
+
+  /// How the preview fills the view, centred. Any space it leaves is transparent.
+  final BoxFit fit = .contain,
   super.key,
 }) extends StatefulWidget {
   /// Creates a view bound to [controller].
@@ -79,24 +82,47 @@ class _TextSightViewState() extends State<TextSightView> {
         return widget.placeholderBuilder?.call(context) ?? const SizedBox.shrink();
       }
 
-      final capture = _capture;
-      final overlayBuilder = widget.overlayBuilder;
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final view = constraints.biggest;
+          final fittedSizes = applyBoxFit(widget.fit, preview.size, view);
+          // `source` is the part of the frame that shows, so the whole frame scales by the same
+          // factor. An empty view has none (zero over zero), so nothing shows.
+          final frame = view.isEmpty
+              ? Rect.zero
+              : Rect.fromCenter(
+                  center: view.center(.zero),
+                  width:
+                      preview.size.width * fittedSizes.destination.width / fittedSizes.source.width,
+                  height:
+                      preview.size.height *
+                      fittedSizes.destination.height /
+                      fittedSizes.source.height,
+                );
+          final capture = _capture;
+          final overlayBuilder = widget.overlayBuilder;
 
-      return Stack(
-        // Non-directional, so the view needs no Directionality.
-        alignment: .topLeft,
-        fit: .expand,
-        children: [
-          RotatedBox(
-            quarterTurns: preview.quarterTurns,
-            child: Texture(textureId: preview.textureId),
-          ),
-          // Unrotated, since the boxes arrive upright.
-          if (overlayBuilder != null && capture != null)
-            LayoutBuilder(
-              builder: (context, constraints) => overlayBuilder(context, capture, constraints),
-            ),
-        ],
+          // Its default clip trims what `fit` spills past the view.
+          return Stack(
+            // Non-directional, so the view needs no Directionality.
+            alignment: .topLeft,
+            children: [
+              Positioned.fromRect(
+                rect: frame,
+                child: RotatedBox(
+                  quarterTurns: preview.quarterTurns,
+                  child: Texture(textureId: preview.textureId),
+                ),
+              ),
+              // Unrotated, since the boxes arrive upright.
+              if (overlayBuilder != null && capture != null)
+                Positioned.fromRect(
+                  rect: frame,
+                  child: overlayBuilder(context, capture, .tight(frame.size)),
+                ),
+            ],
+          );
+        },
       );
     },
   );
