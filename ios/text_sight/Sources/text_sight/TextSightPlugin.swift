@@ -22,9 +22,7 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
     // A failed send means no Dart handler is attached.
     let camera = TextSightCamera(
       textureRegistry: registrar.textures(),
-      onSessionState: { state in
-        Task { try? await flutterApi.onSessionStateChanged(state: state) }
-      },
+      onSessionState: { state in try? await flutterApi.onSessionStateChanged(state: state) },
       onPreview: { preview in try? await flutterApi.onPreviewChanged(preview: preview) }
     )
     let modelReadiness = TextSightModelReadiness()

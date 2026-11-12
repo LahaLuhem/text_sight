@@ -15,13 +15,15 @@ let package = Package(
         .library(name: "text-sight", targets: ["text_sight"])
     ],
     dependencies: [
-        .package(name: "FlutterFramework", path: "../FlutterFramework")
+        .package(name: "FlutterFramework", path: "../FlutterFramework"),
+        .package(url: "https://github.com/dfed/swift-async-queue", from: "1.1.1"),
     ],
     targets: [
         .target(
             name: "text_sight",
             dependencies: [
-                .product(name: "FlutterFramework", package: "FlutterFramework")
+                .product(name: "FlutterFramework", package: "FlutterFramework"),
+                .product(name: "AsyncQueue", package: "swift-async-queue"),
             ],
             resources: [
                 // If your plugin requires a privacy manifest, for example if it uses any required

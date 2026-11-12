@@ -1,10 +1,11 @@
+import AsyncQueue
 import AVFoundation
 import Testing
 
 @testable import text_sight
 
-/// What each capture-session notification turns into, and the emit path's silence when there is
-/// nothing to report.
+/// What each capture-session notification turns into, and how states reach Dart: in order, and
+/// never after detach.
 @Suite("Session state mapping")
 struct SessionStateMappingTests {
   @Test("Losing the camera to the background is the plugin's own pause")
@@ -46,29 +47,65 @@ struct SessionStateMappingTests {
     #expect(TextSightCamera.state(forRuntimeError: nil).details == nil)
   }
 
-  @Test("Nothing is reported for a session that never opened, on release or detach")
-  func silentWithoutASession() async throws {
-    let recorder = StateRecorder()
+  @Test("States reach Dart in the order the camera emits them")
+  func emitOrder() async {
+    let recorder = await StateRecorder()
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(),
+                                 onSessionState: recorder.record)
+    let emitted = (0..<200).map(String.init)
+
+    for details in emitted { camera.emitState(paused(details)) }
+    await drainPushes()
+
+    #expect(await recorder.details == emitted)
+  }
+
+  @Test("Releasing a session that never opened reports nothing")
+  func silentRelease() async throws {
+    let recorder = await StateRecorder()
     let camera = TextSightCamera(textureRegistry: StubTextureRegistry(),
                                  onSessionState: recorder.record)
 
     try await camera.dispose()
-    camera.detach()
-    // `dispose` rides the same queue, so awaiting it drains the detach's release too.
-    try await camera.dispose()
+    camera.emitState(paused("fence"))
+    await drainPushes()
 
-    #expect(recorder.states.isEmpty)
+    #expect(await recorder.details == ["fence"])
+  }
+
+  @Test("Nothing reaches Dart after detach")
+  func silentAfterDetach() async {
+    let recorder = await StateRecorder()
+    let camera = TextSightCamera(textureRegistry: StubTextureRegistry(),
+                                 onSessionState: recorder.record)
+
+    camera.emitState(paused("before"))
+    await drainPushes()
+    camera.detach()
+    camera.emitState(paused("after"))
+    await drainPushes()
+
+    #expect(await recorder.details == ["before"])
   }
 }
 
-/// Collects reported states. Called on the camera's session queue, read after it drained.
-private final class StateRecorder: @unchecked Sendable {
-  private let lock = NSLock()
-  private var recorded: [SessionStateMessage] = []
+private func paused(_ details: String) -> SessionPausedMessage {
+  SessionPausedMessage(reason: .interrupted, details: details)
+}
 
-  var states: [SessionStateMessage] { lock.withLock { recorded } }
+/// Waits until every push queued so far has started, which is when it reaches the recorder.
+private func drainPushes() async {
+  await Task(on: MainActor.queue) {}.value
+}
 
-  func record(_ state: SessionStateMessage) {
-    lock.withLock { recorded.append(state) }
+/// Collects reported states, on main as the camera delivers them.
+@MainActor
+private final class StateRecorder {
+  private var states: [SessionStateMessage] = []
+
+  var details: [String?] { states.map { ($0 as? SessionPausedMessage)?.details } }
+
+  func record(_ state: SessionStateMessage) async {
+    states.append(state)
   }
 }
