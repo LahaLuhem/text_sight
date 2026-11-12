@@ -122,7 +122,7 @@ suppressions pointless, analyze will say so.
 >
 > Will document: why the recognition engines are declared **only** in platform build
 > files (ML Kit + CameraX in `android/build.gradle.kts`, and nothing but system frameworks,
-> `Vision`, `AVFoundation`, on the Apple side via the podspec / `Package.swift`), so the
+> `Vision`, `AVFoundation`, on the Apple side via `Package.swift`), so the
 > Dart `pubspec.yaml` declares **no** recognition library. The payoff: iOS links
 > **zero** third-party ML libraries, so the GoogleMLKit arm64 / Swift-Package-Manager
 > warnings that motivated this package cannot arise. Includes the rejected path
@@ -421,9 +421,9 @@ model and the `Rect` ROI).
 **Decision.** The iOS live path is roll-your-own `AVCaptureSession` + Vision → `FlutterTexture`,
 mirroring the Android `TextSightCamera`. The primary recognizer is Vision's
 **Swift `RecognizeTextRequest`** (the WWDC 2024 API) with a legacy `VNRecognizeTextRequest` fallback
-for iOS 15-17 (the hybrid, below). The **deployment floor is 15.0** (`text_sight.podspec` +
-`Package.swift`). iOS 18+ runs the modern path, and a future macOS target would floor at 15.0 for it
-(the same API's macOS availability).
+for iOS 15-17 (the hybrid, below). The **deployment floor is 15.0** (`Package.swift`). iOS 18+
+runs the modern path, and a future macOS target would floor at 15.0 for it (the same API's macOS
+availability).
 
 **Why roll-your-own, not `DataScannerViewController`.** VisionKit's `DataScannerViewController`
 (iOS 16+, A12+) is turnkey, but it is a UIKit view controller that **owns its own camera preview
