@@ -103,105 +103,114 @@ class const LiveScannerView({super.key}) extends StatelessWidget {
 /// The ready state: preview + overlay + torch + recognized-text panel.
 class const _ScannerView({required final LiveScannerViewModel viewModel}) extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Stack(
-    fit: .expand,
-    children: [
-      // The Simulator registers no preview texture, so paint the frame the boxes were found in.
-      // `.fill` on purpose: the overlay's boxes are normalized to the whole preview area.
-      if (viewModel.simulatedFrames case final frames?)
-        ValueListenableBuilder(
-          valueListenable: frames,
-          builder: (context, frame, _) => frame == null
-              ? const SizedBox.shrink()
-              : Image.memory(frame.bytes, fit: .fill, gaplessPlayback: true),
-        ),
-      TextSightView(
-        controller: viewModel.controller,
-        overlayBuilder: (context, capture, constraints) => ValueListenableBuilder(
-          valueListenable: EngineConfidence.scaleListenable,
-          builder: (context, scale, _) {
-            // One stroke colour for every box unless the engine's numbers can actually be ranked.
-            final isTiered = scale?.isRankable ?? false;
+  Widget build(BuildContext context) {
+    final simulatedFrames = viewModel.simulatedFrames;
 
-            return CustomPaint(
-              size: constraints.biggest,
-              painter: _ConfidenceBoxPainter(
-                capture.lines,
-                isTiered: isTiered,
-                colorFor: isTiered
-                    ? (confidence) => ConstTheme.confidence(context, confidence)
-                    : (_) => ConstTheme.neutral(context),
+    return Stack(
+      fit: .expand,
+      children: [
+        TextSightView(
+          controller: viewModel.controller,
+          overlayBuilder: (context, capture, constraints) => Stack(
+            fit: .expand,
+            children: [
+              // The Simulator registers no preview texture, so paint the frame the boxes were found in.
+              // The overlay has the frame's shape, so `.fill` doesn't stretch it.
+              if (simulatedFrames != null)
+                ValueListenableBuilder(
+                  valueListenable: simulatedFrames,
+                  // A capture only follows a published frame, so there is one.
+                  builder: (context, frame, _) =>
+                      Image.memory(frame!.bytes, fit: .fill, gaplessPlayback: true),
+                ),
+              ValueListenableBuilder(
+                valueListenable: EngineConfidence.scaleListenable,
+                builder: (context, scale, _) {
+                  // One stroke colour for every box unless the engine's numbers can be ranked.
+                  final isTiered = scale?.isRankable ?? false;
+
+                  return CustomPaint(
+                    size: constraints.biggest,
+                    painter: _ConfidenceBoxPainter(
+                      capture.lines,
+                      isTiered: isTiered,
+                      colorFor: isTiered
+                          ? (confidence) => ConstTheme.confidence(context, confidence)
+                          : (_) => ConstTheme.neutral(context),
+                    ),
+                  );
+                },
               ),
-            );
-          },
+            ],
+          ),
+          placeholderBuilder: (_) => const Center(child: PlatformProgressIndicator()),
         ),
-        placeholderBuilder: (_) => const Center(child: PlatformProgressIndicator()),
-      ),
-      Positioned(
-        top: 16,
-        right: 16,
-        child: Row(
-          spacing: 8,
-          children: [
-            ListenableBuilder(
-              listenable: viewModel.controller,
-              builder: (context, _) {
-                final isRecognizing = viewModel.controller.isRecognizing;
+        Positioned(
+          top: 16,
+          right: 16,
+          child: Row(
+            spacing: 8,
+            children: [
+              ListenableBuilder(
+                listenable: viewModel.controller,
+                builder: (context, _) {
+                  final isRecognizing = viewModel.controller.isRecognizing;
 
-                return PlatformButton.icon(
-                  onPressed: viewModel.onRecognitionToggled,
+                  return PlatformButton.icon(
+                    onPressed: viewModel.onRecognitionToggled,
+                    emphasis: .medium,
+                    icon: Icon(
+                      context.platformIcon(
+                        material: isRecognizing ? Icons.pause : Icons.play_arrow,
+                        cupertino: isRecognizing
+                            ? CupertinoIcons.pause_fill
+                            : CupertinoIcons.play_fill,
+                      ),
+                    ),
+                    label: Text(isRecognizing ? 'Pause' : 'Resume'),
+                  );
+                },
+              ),
+              ValueListenableBuilder(
+                valueListenable: viewModel.shouldEnableTorchListenable,
+                builder: (context, isTorchOn, _) => PlatformButton.icon(
+                  onPressed: viewModel.onTorchToggled,
                   emphasis: .medium,
                   icon: Icon(
                     context.platformIcon(
-                      material: isRecognizing ? Icons.pause : Icons.play_arrow,
-                      cupertino: isRecognizing
-                          ? CupertinoIcons.pause_fill
-                          : CupertinoIcons.play_fill,
+                      material: isTorchOn ? Icons.flash_on : Icons.flash_off,
+                      cupertino: isTorchOn
+                          ? CupertinoIcons.bolt_fill
+                          : CupertinoIcons.bolt_slash_fill,
                     ),
                   ),
-                  label: Text(isRecognizing ? 'Pause' : 'Resume'),
-                );
-              },
-            ),
-            ValueListenableBuilder(
-              valueListenable: viewModel.shouldEnableTorchListenable,
-              builder: (context, isTorchOn, _) => PlatformButton.icon(
-                onPressed: viewModel.onTorchToggled,
-                emphasis: .medium,
-                icon: Icon(
-                  context.platformIcon(
-                    material: isTorchOn ? Icons.flash_on : Icons.flash_off,
-                    cupertino: isTorchOn
-                        ? CupertinoIcons.bolt_fill
-                        : CupertinoIcons.bolt_slash_fill,
-                  ),
+                  label: Text(isTorchOn ? 'On' : 'Off'),
                 ),
-                label: Text(isTorchOn ? 'On' : 'Off'),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-      Positioned(
-        left: 8,
-        right: 8,
-        bottom: 8,
-        child: Column(
-          mainAxisSize: .min,
-          crossAxisAlignment: .start,
-          spacing: 8,
-          children: [
-            if (viewModel.simulatedFrames case final frames?)
-              _SimulatedCameraControls(viewModel: viewModel, frames: frames),
-            StreamBuilder(
-              stream: viewModel.controller.captures,
-              builder: (context, snapshot) => _RecognizedTextPanel(capture: snapshot.data),
-            ),
-          ],
+        Positioned(
+          left: 8,
+          right: 8,
+          bottom: 8,
+          child: Column(
+            mainAxisSize: .min,
+            crossAxisAlignment: .start,
+            spacing: 8,
+            children: [
+              if (simulatedFrames != null)
+                _SimulatedCameraControls(viewModel: viewModel, frames: simulatedFrames),
+              StreamBuilder(
+                stream: viewModel.controller.captures,
+                builder: (context, snapshot) => _RecognizedTextPanel(capture: snapshot.data),
+              ),
+            ],
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 /// Names where the frames come from, and fires the two session events that need real hardware.
@@ -304,20 +313,24 @@ class _ConfidenceBoxPainter(
 class const _PreparingModel({required final String message, final double? progress})
     extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const .all(24),
-    child: Column(
-      mainAxisSize: .min,
-      spacing: 16,
-      children: [
-        if (progress case final progress?)
-          PlatformProgressBar(value: progress)
-        else
-          const PlatformProgressIndicator(),
-        Text(message, textAlign: .center),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final progress = this.progress;
+
+    return Padding(
+      padding: const .all(24),
+      child: Column(
+        mainAxisSize: .min,
+        spacing: 16,
+        children: [
+          if (progress == null)
+            const PlatformProgressIndicator()
+          else
+            PlatformProgressBar(value: progress),
+          Text(message, textAlign: .center),
+        ],
+      ),
+    );
+  }
 }
 
 /// A centered icon + message, with an action button for the states the user can do something about.

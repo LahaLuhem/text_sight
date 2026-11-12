@@ -338,7 +338,8 @@ final class _RecordingPlatform({
     log.add('initialize');
     if (failsToInitialize) throw StateError('no camera here');
     lastResolution = resolution;
-    if (previewOnOpen case final preview?) previewPushes.add(preview);
+    final preview = previewOnOpen;
+    if (preview != null) previewPushes.add(preview);
 
     return 7;
   }
