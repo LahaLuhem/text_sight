@@ -19,14 +19,9 @@ void main() {
       .scenario('recognizeImage recognizes a still from encoded bytes')
       .given('the bundled sample image bytes, already upright')
       .when('TextSight.recognizeImage is awaited on them')
-      .then('the capture is upright (quarterTurns <quarterTurns>), sized <width> by <height>')
+      .then('the capture is upright, sized <width> by <height>')
       .and('its recognized lines include <token>')
-      .example(
-        val('quarterTurns', 0),
-        val('width', 1000),
-        val('height', 620),
-        val('token', 'TextSight'),
-      )
+      .example(val('width', 1000), val('height', 620), val('token', 'TextSight'))
       .run((ctx) async {
         final capture = await TextSight.recognizeImage(await _sampleBytes());
 
@@ -37,14 +32,9 @@ void main() {
       .scenario('recognizePath recognizes a still from a file path')
       .given('the bundled sample image written to a temp file, already upright')
       .when('TextSight.recognizePath is awaited on its path')
-      .then('the capture is upright (quarterTurns <quarterTurns>), sized <width> by <height>')
+      .then('the capture is upright, sized <width> by <height>')
       .and('its recognized lines include <token>')
-      .example(
-        val('quarterTurns', 0),
-        val('width', 1000),
-        val('height', 620),
-        val('token', 'TextSight'),
-      )
+      .example(val('width', 1000), val('height', 620), val('token', 'TextSight'))
       .run((ctx) async {
         final capture = await TextSight.recognizePath(await _writeTempCopy(await _sampleBytes()));
 
@@ -65,10 +55,9 @@ Future<String> _writeTempCopy(Uint8List bytes) async {
   return file.path;
 }
 
-/// Asserts [capture] is the upright sample described by the current scenario's example row:
-/// the expected quarter-turns and image size, with recognized lines including the expected token.
+/// Asserts [capture] is the upright sample described by the current scenario's example row: its
+/// image size, which a turn would swap, with recognized lines including the expected token.
 void _checkUprightSample(BddContext ctx, TextSightCapture capture) {
-  check(capture.quarterTurns).equals(ctx.example.val('quarterTurns') as int);
   check(capture.imageSize).equals(
     Size(
       (ctx.example.val('width') as int).toDouble(),

@@ -15,8 +15,7 @@ import 'text_sight_session_state.dart';
 /// Configures and drives a live camera recognition session.
 ///
 /// A [ChangeNotifier] exposing configuration and session state through individual getters that a
-/// `TextSightView` (or any listener) rebuilds from. Per-frame results arrive on [captures], and
-/// the preview renders [textureId].
+/// `TextSightView` (or any listener) rebuilds from. Per-frame results arrive on [captures].
 final class TextSightController({
   TextSightOptions options = const TextSightOptions(),
 
@@ -52,7 +51,7 @@ final class TextSightController({
   bool get isRecognizing => _isRecognizing;
 
   /// The preview texture id, or `null` before [start] has acquired one.
-  /// Read by `TextSightView` to mount the camera preview.
+  @Deprecated('Use TextSightView, which shows the texture the right way up.')
   int? get textureId => _textureId;
 
   /// How to show the open texture, or `null` until native has said. Only `TextSightView` reads it.

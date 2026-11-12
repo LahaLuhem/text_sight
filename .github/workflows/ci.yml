@@ -27,4 +27,5 @@ jobs:
       min-coverage: 61
       coverage-excludes: ""
       python-min-coverage: 0
-      ignored-lints: ""
+      ignored-lints: >-
+        deprecated_member_use_from_same_package remove_deprecations_in_breaking_versions
