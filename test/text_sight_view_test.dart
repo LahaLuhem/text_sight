@@ -114,8 +114,8 @@ const _portrait = (textureId: 7, size: Size(960, 1280), quarterTurns: 1);
 
 const _overlay = ValueKey('overlay');
 
-/// Mounts [view] (a plain view by default) at the screen's top left, on a started controller that
-/// native hasn't pushed to yet.
+/// Mounts [view] (a plain one by default) top left, on a started controller native hasn't pushed
+/// to yet.
 Future<_PreviewPlatform> _pumpView(
   WidgetTester tester, {
   Size size = const Size(300, 600),

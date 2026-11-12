@@ -55,8 +55,8 @@ Future<String> _writeTempCopy(Uint8List bytes) async {
   return file.path;
 }
 
-/// Asserts [capture] is the upright sample described by the current scenario's example row: its
-/// image size, which a turn would swap, with recognized lines including the expected token.
+/// Checks [capture] is the row's sample: its size, which a turn would swap, and a line with the
+/// token.
 void _checkUprightSample(BddContext ctx, TextSightCapture capture) {
   check(capture.imageSize).equals(
     Size(

@@ -256,9 +256,8 @@ cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
 
 **The per-frame wire format is a hand-written, self-describing map.** Each event on the captures
 `EventChannel` (`com.lahaluhem.text_sight/captures`) is a `Map`: top-level `imageWidth` /
-`imageHeight` (doubles, pixels post-rotation), `quarterTurns` (int, clockwise quarter-turns to
-rotate the raw preview texture to display-upright, per
-[#coordinate-normalization](#coordinate-normalization)), plus `lines`, a `List` of per-line maps:
+`imageHeight` (doubles, pixels post-rotation), `quarterTurns` (int, the analyzed frame's turns to
+upright, deprecated in Dart), plus `lines`, a `List` of per-line maps:
 `text` (String), `confidence` (double), `left` / `top` / `width` / `height` (the box, normalized
 `[0,1]` top-left per [#coordinate-normalization](#coordinate-normalization)), and `elements` (null
 in v1, reserved). `elements` rides the wire as a reserved slot so populating it later is additive.
@@ -360,34 +359,36 @@ The three coordinate systems that meet here disagree:
   (`top = 1 - (origin.y + height)`) before sending.
 - **ML Kit** returns pixel rects in the *rotated* image space. The Kotlin side divides by
   the rotated image width/height to normalize.
-- **Flutter** wants top-left normalized, so the painter maps a box onto the preview with one
-  `BoxFit`-style transform.
+- **Flutter** wants top-left normalized, so the painter only scales a box by the overlay's size.
 
 Doing the conversion natively, where each side owns a small named helper (see
 [`CODESTYLE.md#swift-ios`](./CODESTYLE.md#swift-ios) and
 [`CODESTYLE.md#kotlin-android`](./CODESTYLE.md#kotlin-android)), establishes the unified
 contract *before* the channel, so the Dart layer carries no platform conditionals.
 
-**`TextSightCapture.imageSize`** is the pixel size of the analyzed frame/image **in the same
-orientation as the normalized boxes** (post-rotation). A consumer maps a normalized box into
-widget space with `imageSize` plus the fit used to display the preview, and it never needs the raw
-sensor orientation.
+**`TextSightCapture.imageSize`** is the analyzed image's pixel size, **in the boxes' orientation**.
+Only a consumer drawing over its own image needs it, with its own fit. `TextSightView`'s overlay is
+already the shown frame.
 
-**The preview texture is the one thing not pre-rotated.** Boxes and `imageSize` are reported in
-display orientation, but the live preview is handed to the texture in the camera's *raw* (sensor)
-orientation, since rotating frames natively is either costly or unreliable across the two capture
-stacks (CameraX `Preview` → `SurfaceProducer` doesn't transform a raw surface, and an
-`AVCaptureVideoDataOutput` connection rotation is fiddly). Each frame therefore carries
-`quarterTurns`: the clockwise quarter-turns `TextSightView` applies via a `RotatedBox` to bring the
-texture into the same display orientation the boxes already use, so the overlay aligns
-**without a per-platform branch in Dart**. On Android `quarterTurns` is the `ImageProxy` rotation ÷
-90, kept live by mirroring the display rotation into `ImageAnalysis.targetRotation` (a headless
-plugin session gets no automatic orientation updates, so a `DisplayManager.DisplayListener` drives
-it, and without it only portrait is right). On iOS it comes from
-`AVCaptureDevice.RotationCoordinator`, which also selects the `CGImagePropertyOrientation` handed to
-Vision so recognition stays upright. A still image is read in its EXIF orientation natively (iOS via
-`CGImageSource`, Android decodes the bitmap and reads `ExifInterface`, passing the rotation to
-`InputImage`), so it is already upright and the static one-shot reports `0`.
+**The preview texture is the one thing not pre-rotated.** Turning it natively costs a pass per
+frame. In Flutter a turn and a fit are a matrix and a rectangle on a draw the engine makes anyway.
+So native reports only what it alone knows, the upright size and the quarter turns, through
+`onPreviewChanged` ([#channel-topology](#channel-topology)). Captures don't carry them, so the
+preview is right before the first one and while recognition is paused.
+
+| Surface | Turns |
+|---|---|
+| iOS, Android's ImageReader `SurfaceProducer` (API 29+) | `sensor - display`. iOS reads it off `AVCaptureDevice.RotationCoordinator` |
+| Android's SurfaceTexture one (below API 29, Huawei at 29) | `0 - display`. It applies the sensor's turn itself (`handlesCropAndRotation()`) |
+
+`TextSightView` turns the texture, fits it (`contain` by default, centred), and gives the overlay
+the same rectangle, so boxes align **without a per-platform branch in Dart**.
+
+Recognition turns separately. Android keeps `ImageAnalysis.targetRotation` on the display with a
+`DisplayManager.DisplayListener`, since a headless session gets no orientation updates. iOS hands
+Vision the `RotationCoordinator`'s orientation. Captures still report that turn as the deprecated
+`quarterTurns`. Stills are read in their EXIF orientation (`CGImageSource`, `ExifInterface`), so the
+one-shot reports `0`.
 
 **Region-of-interest uses the same contract.** The ROI is a `Rect` in the same normalized `[0,1]`
 top-left space as the output boxes (not pixels), with a debug `assert` at the consuming controller

@@ -32,8 +32,7 @@ final class const TextSightView({
   /// Builds an overlay stacked over the preview from the latest capture.
   final TextSightOverlayBuilder? overlayBuilder,
 
-  /// Builds what shows until the preview is ready (camera opening), including before
-  /// [TextSightController.start].
+  /// Builds what shows until the camera opens, before [TextSightController.start] too.
   final WidgetBuilder? placeholderBuilder,
 
   /// How the preview fills the view, centred. Any space it leaves is transparent.
@@ -86,8 +85,8 @@ class _TextSightViewState() extends State<TextSightView> {
         builder: (context, constraints) {
           final view = constraints.biggest;
           final fittedSizes = applyBoxFit(widget.fit, preview.size, view);
-          // `source` is the part of the frame that shows, so the whole frame scales by the same
-          // factor. An empty view has none (zero over zero), so nothing shows.
+          // `source` is the part that shows, so the whole frame scales by the same factor. An
+          // empty view would make that 0 / 0.
           final frame = view.isEmpty
               ? Rect.zero
               : Rect.fromCenter(

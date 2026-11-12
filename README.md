@@ -80,6 +80,10 @@ await controller.requestCameraPermission(); // prompts via the OS
 await controller.start();
 ```
 
+The preview keeps its shape, centred and letterboxed. `fit: BoxFit.cover` fills and crops instead.
+Either way the overlay's `constraints` are the shown frame, so a `boundingBox` scaled by them sits
+on its text. `placeholderBuilder` shows until the camera opens.
+
 ### A single image
 
 No camera, no permission, works on a simulator:
