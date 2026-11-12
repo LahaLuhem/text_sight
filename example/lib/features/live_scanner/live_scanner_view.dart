@@ -114,8 +114,8 @@ class const _ScannerView({required final LiveScannerViewModel viewModel}) extend
           overlayBuilder: (context, capture, constraints) => Stack(
             fit: .expand,
             children: [
-              // The Simulator registers no preview texture, so paint the frame the boxes were found in.
-              // The overlay has the frame's shape, so `.fill` doesn't stretch it.
+              // No preview texture on the Simulator, so paint the frame the boxes came from. The
+              // overlay has its shape, so `.fill` doesn't stretch it.
               if (simulatedFrames != null)
                 ValueListenableBuilder(
                   valueListenable: simulatedFrames,

@@ -2,16 +2,16 @@ import 'dart:ui' show Size;
 
 import 'recognized_line.dart';
 
-/// The result of one recognition pass: every [RecognizedLine] found plus the size of the image they were located in.
+/// One recognition pass: every [RecognizedLine] found, plus the size of the image they came from.
 ///
-/// The same type comes from the live stream and the one-shot, with no hint of where the pixels
-/// came from. Map a normalized [RecognizedLine.boundingBox] into widget space with [imageSize] and
-/// whatever fit shows the preview.
+/// Live and one-shot results look the same. In `TextSightView`'s overlay, scale a
+/// [RecognizedLine.boundingBox] by the overlay's constraints. Over your own image, use [imageSize]
+/// and your fit.
 final class const TextSightCapture({
-  /// The recognized lines, in the recognizer's emission order.
+  /// The recognized lines, in the recognizer's order.
   required final List<RecognizedLine> lines,
 
-  /// Pixel size of the analyzed image, in the same orientation as the lines' normalized boxes (post-rotation).
+  /// The analyzed image's pixel size, in the boxes' orientation.
   required final Size imageSize,
 
   /// Clockwise quarter turns that bring the analyzed frame upright. `0` for a still.

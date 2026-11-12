@@ -197,7 +197,7 @@ internal class CameraSession(
     private fun currentRotation(): Int =
         displayManager.getDisplay(Display.DEFAULT_DISPLAY)?.rotation ?: Surface.ROTATION_0
 
-    /** Tells Dart how to show the preview, once its size, camera and producer are all known. */
+    /** Tells Dart how to show the preview, once its size, camera and producer are known. */
     private fun reportPreview() {
         val producer = surfaceProducer
         val resolution = previewResolution
