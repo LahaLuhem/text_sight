@@ -1,7 +1,7 @@
 // Tests
 // ignore_for_file: prefer-match-file-name
 
-import 'dart:async' show unawaited;
+import 'dart:async' show Completer, unawaited;
 import 'dart:ui' show Locale, Rect, Size;
 
 import 'package:bdd_framework/bdd_framework.dart';
@@ -311,7 +311,7 @@ void main() {
 
         final status = await platform.requestCameraPermission();
 
-        check(call.invoked).isTrue();
+        check(call.received.isCompleted).isTrue();
         check(status).equals(ctx.example.val('status') as CameraPermissionStatus);
       });
 
@@ -637,9 +637,8 @@ void main() {
         // Model a consumer that kicks off the fetch without awaiting it (watching the stream
         // instead, or just letting it run). The native prepare must still fire.
         unawaited(TextSightModel.ensureReady());
-        await pumpEventQueue();
 
-        check(call.invoked).isTrue();
+        await call.received.future;
       });
 
   Bdd(sessionStates)
@@ -691,12 +690,8 @@ void main() {
       .then('both listeners see the three states in that order')
       .run((_) async {
         final platform = PigeonTextSightPlatform();
-        final first = <TextSightSessionState>[];
-        final second = <TextSightSessionState>[];
-        final subscriptions = [
-          platform.sessionStates.listen(first.add),
-          platform.sessionStates.listen(second.add),
-        ];
+        final first = platform.sessionStates.take(3).toList();
+        final second = platform.sessionStates.take(3).toList();
 
         await _pushToDart(messenger, 'onSessionStateChanged', SessionActiveMessage());
         await _pushToDart(
@@ -705,18 +700,14 @@ void main() {
           SessionPausedMessage(reason: SessionPauseReasonMessage.appBackgrounded),
         );
         await _pushToDart(messenger, 'onSessionStateChanged', SessionActiveMessage());
-        await pumpEventQueue();
 
         const expected = <TextSightSessionState>[
           SessionActive(),
           SessionPaused(reason: SessionPauseReason.appBackgrounded),
           SessionActive(),
         ];
-        check(first).deepEquals(expected);
-        check(second).deepEquals(expected);
-        for (final subscription in subscriptions) {
-          await subscription.cancel();
-        }
+        check(await first).deepEquals(expected);
+        check(await second).deepEquals(expected);
       });
 
   Bdd(previews)
@@ -746,7 +737,7 @@ TextSightOptionsMessage _sentOptions(_HostCall call) =>
 
 final class _HostCall() {
   Object? payload;
-  var invoked = false;
+  final received = Completer<void>();
   var invocations = 0;
 }
 
@@ -761,9 +752,9 @@ _HostCall _mockHostMethod(TestDefaultBinaryMessenger messenger, String method, {
   );
   messenger.setMockDecodedMessageHandler<Object?>(channel, (message) {
     call
-      ..invoked = true
       ..invocations += 1
       ..payload = message;
+    if (!call.received.isCompleted) call.received.complete();
 
     return Future<Object?>.syncValue(<Object?>[reply]);
   });

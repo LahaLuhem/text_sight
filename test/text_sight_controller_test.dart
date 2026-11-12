@@ -191,7 +191,7 @@ void main() {
         controller.addListener(() => notifications++);
         final state = ctx.example.val('state') as TextSightSessionState;
 
-        await platform.report(state);
+        platform.states.add(state);
 
         check(controller.sessionState).equals(state);
         check(notifications).equals(1);
@@ -207,14 +207,14 @@ void main() {
         TextSightPlatform.instance = platform;
         final controller = TextSightController();
         await controller.start();
-        await platform.report(const SessionActive());
+        platform.states.add(const SessionActive());
         var notifications = 0;
         controller.addListener(() => notifications++);
 
-        await platform.report(const SessionActive());
+        platform.states.add(const SessionActive());
         check(notifications).equals(0);
 
-        await platform.report(const SessionPaused(reason: SessionPauseReason.appBackgrounded));
+        platform.states.add(const SessionPaused(reason: SessionPauseReason.appBackgrounded));
         check(notifications).equals(1);
         check(controller.sessionState)
             .equals(const SessionPaused(reason: SessionPauseReason.appBackgrounded));
@@ -230,13 +230,13 @@ void main() {
         TextSightPlatform.instance = platform;
         final controller = TextSightController();
         await controller.start();
-        await platform.report(const SessionActive());
+        platform.states.add(const SessionActive());
         var notifications = 0;
         controller
           ..addListener(() => notifications++)
           ..dispose();
 
-        await platform.report(const SessionFailed());
+        platform.states.add(const SessionFailed());
 
         check(controller.sessionState).equals(const SessionIdle());
         check(notifications).equals(0);
@@ -316,21 +316,21 @@ final class _RecordingPlatform({
   final PreviewGeometry? previewOnOpen,
 }) extends TextSightPlatform {
   final log = <String>[];
-  late final states = StreamController<TextSightSessionState>.broadcast(
-    onListen: () => log.add('listen'),
-  );
 
   // Sync, so a report has reached the controller by the time `add` returns.
+  late final states = StreamController<TextSightSessionState>.broadcast(
+    onListen: () => log.add('listen'),
+    sync: true,
+  );
   final previewPushes = StreamController<PreviewGeometry>.broadcast(sync: true);
   var disposeCalls = 0;
   CaptureResolution? lastResolution;
   TextSightOptions? lastOptions;
 
-  /// Reports [state] the way native would, and lets it reach the controller.
-  Future<void> report(TextSightSessionState state) {
-    states.add(state);
-
-    return pumpEventQueue();
+  // At the test's end, not on dispose: a scenario reports after the controller has disposed.
+  this {
+    addTearDown(() => states.close());
+    addTearDown(previewPushes.close);
   }
 
   @override
