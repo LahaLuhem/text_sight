@@ -86,6 +86,8 @@ class _TextSightViewState() extends State<TextSightView> {
       final overlayBuilder = widget.overlayBuilder;
 
       return Stack(
+        // Non-directional, so the view needs no Directionality.
+        alignment: .topLeft,
         fit: .expand,
         children: [
           // The preview texture is delivered in the camera's raw orientation, so rotate it to
