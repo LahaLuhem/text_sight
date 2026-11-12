@@ -68,8 +68,8 @@ publish).
   that duplicates a system framework) on the Apple side, or a non-gradle path to ML Kit, breaks
   the package's reason to exist. See
   [hard rules 1-3 in AGENTS.md](./AGENTS.md#hard-rules). The contract is *prefer-native*, not
-  *zero-dependency*: a genuinely useful Apple-side lib with no native equivalent is allowed (prefer
-  SPM-clean), so flag-and-ask rather than assume any new SPM dep is forbidden. The
+  *zero-dependency*: a small SPM lib that leaves less code here is allowed even where a native
+  route exists, so flag-and-ask rather than assume any new SPM dep is forbidden. The
   frame-backpressure and off-main-thread invariants (hard rule 5) are the most common source of
   plugin bugs.
 - **`pigeons/text_sight.dart` edits** change the typed control-channel surface, so regenerate

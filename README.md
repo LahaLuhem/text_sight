@@ -51,7 +51,7 @@ Most cross-platform OCR plugins run Google ML Kit on *both* platforms, which qui
 
 |                                         |                                                                                                                                                                                    |
 |-----------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **No ML framework in your iOS app**     | iOS recognition is Apple Vision, which is already part of the OS. No GoogleMLKit, nothing third-party to ship, so your iOS build stays smaller. CI fails the moment one sneaks in. |
+| **No ML framework in your iOS app**     | iOS recognition is Apple Vision, which is already part of the OS. No GoogleMLKit or other ML library to ship, so your iOS build stays smaller. CI fails the moment one sneaks in. |
 | **Android fetches its model on demand** | The ML Kit model stays unbundled by default, so your APK carries a ~260 KB stub instead of the whole thing. Want it baked in? One line of Gradle.                                  |
 | **`fast` or `accurate`, per call**      | Switch mid-session. On one live page `accurate` read 15 lines where `fast` got 9, for roughly 4x the time. iOS only, since ML Kit's Latin recognizer has no such knob.             |
 | **No permission package**               | `requestCameraPermission()` goes straight to AVFoundation and the Android permission flow. Already using `permission_handler`? That still works.                                   |

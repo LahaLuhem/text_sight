@@ -1,3 +1,4 @@
+import AsyncQueue
 import AVFoundation
 import CoreGraphics
 import CoreMedia
@@ -53,8 +54,8 @@ final class TextSightCamera: NSObject {
   private var isForeground = true
   private var hasFailed = false
 
-  /// Where session transitions go: production forwards to the FlutterApi, tests record.
-  private let onSessionState: (SessionStateMessage) -> Void
+  /// Where session transitions go, on main: production forwards to the FlutterApi, tests record.
+  private let onSessionState: @MainActor (SessionStateMessage) async -> Void
 
   /// Where preview geometry goes, on main. Production forwards to the FlutterApi.
   private let onPreview: @MainActor (PreviewMessage) async -> Void
@@ -75,7 +76,7 @@ final class TextSightCamera: NSObject {
   /// The last frame's buffer size, so a frame only rebuilds the preview geometry when it changes.
   private var previewBufferSize: CGSize?
 
-  /// The newest preview geometry, read by `sendPreview`.
+  /// The last geometry pushed, so an unchanged one isn't pushed again.
   private var preview: PreviewMessage?
 
   // Recognizer config, stored as the Pigeon transport types and snapshotted into a
@@ -91,8 +92,8 @@ final class TextSightCamera: NSObject {
   /// Written at initialize, read on the session queue when the graph builds, so it takes the lock.
   private var captureResolution: CaptureResolutionMessage = .medium
 
-  /// Set when the engine detaches, so a control call that was already in flight cannot rebuild the
-  /// session behind teardown's back.
+  /// Set when the engine detaches, so neither a control call already in flight nor a queued push
+  /// outlives teardown.
   private var isDetached = false
 
   /// `recognizer` defaults to the OS-picked backend (modern on iOS 18+, legacy on 15-17),
@@ -101,7 +102,7 @@ final class TextSightCamera: NSObject {
   init(textureRegistry: FlutterTextureRegistry,
        recognizer: any TextRecognizer = TextRecognizerFactory.make(),
        makeSession: @escaping () -> AVCaptureSession = { AVCaptureSession() },
-       onSessionState: @escaping (SessionStateMessage) -> Void = { _ in },
+       onSessionState: @escaping @MainActor (SessionStateMessage) async -> Void = { _ in },
        onPreview: @escaping @MainActor (PreviewMessage) async -> Void = { _ in }) {
     self.textureRegistry = textureRegistry
     self.recognizer = recognizer
@@ -316,18 +317,15 @@ final class TextSightCamera: NSObject {
   }
 
   private func updateRotationAngle(_ angle: CGFloat) {
-    let previewChanged = stateLock.withLock {
+    stateLock.withLock {
       currentRotationAngle = angle
-
-      return refreshPreviewLocked()
+      refreshPreviewLocked()
     }
-    if previewChanged { sendPreview() }
   }
 
-  /// Caller holds `stateLock`. Rebuilds the preview geometry and reports whether it changed.
-  private func refreshPreviewLocked() -> Bool {
-    guard let textureId = activeSession?.textureId, let size = previewBufferSize
-    else { return false }
+  /// Caller holds `stateLock`, so geometry is pushed in the order it changes.
+  private func refreshPreviewLocked() {
+    guard let textureId = activeSession?.textureId, let size = previewBufferSize else { return }
 
     // The texture is the raw buffer, so it takes the same turns Vision's orientation does.
     let rotation = Self.displayRotation(forCaptureAngle: currentRotationAngle)
@@ -335,23 +333,10 @@ final class TextSightCamera: NSObject {
                               width: Int64(rotation.isQuarterTurned ? size.height : size.width),
                               height: Int64(rotation.isQuarterTurned ? size.width : size.height),
                               quarterTurns: Int64(rotation.quarterTurns))
-    guard next != preview else { return false }
+    guard next != preview else { return }
 
     preview = next
-
-    return true
-  }
-
-  /// Reads the newest geometry on main right before sending, so a task that runs late can't
-  /// deliver a stale one.
-  private func sendPreview() {
-    Task { @MainActor [weak self] in
-      guard let self,
-            let preview = self.stateLock.withLock({ self.isDetached ? nil : self.preview })
-      else { return }
-
-      await self.onPreview(preview)
-    }
+    push { [onPreview] in await onPreview(next) }
   }
 
   /// App lifecycle feeds the foreground flag (stopping explicitly on background hands the camera
@@ -458,11 +443,19 @@ final class TextSightCamera: NSObject {
     SessionFailedMessage(details: error?.localizedDescription)
   }
 
-  /// Runs on `sessionQueue`. Reports a transition unless the engine is gone.
-  private func emitState(_ state: SessionStateMessage) {
-    guard !stateLock.withLock({ isDetached }) else { return }
+  /// Runs on `sessionQueue`. Internal for `RunnerTests`.
+  func emitState(_ state: SessionStateMessage) {
+    push { [onSessionState] in await onSessionState(state) }
+  }
 
-    onSessionState(state)
+  /// Pushes start on main in the order they're made. One that would start after detach is dropped,
+  /// since the messenger is gone.
+  private func push(_ send: @escaping @MainActor () async -> Void) {
+    Task(on: MainActor.queue) { [weak self] in
+      guard let self, !self.stateLock.withLock({ self.isDetached }) else { return }
+
+      await send()
+    }
   }
 
   /// Whether the session should be running: wanted, app in the foreground, and not parked by a
@@ -539,21 +532,22 @@ final class TextSightCamera: NSObject {
   func handle(_ pixelBuffer: CVPixelBuffer) {
     let bufferSize = CGSize(width: CVPixelBufferGetWidth(pixelBuffer),
                             height: CVPixelBufferGetHeight(pixelBuffer))
-    let (activeTextureId, previewChanged) = stateLock.withLock {
+    let activeTextureId = stateLock.withLock {
       latestPixelBuffer = pixelBuffer
       // Offer under the same lock hold that reads the flag. Teardown clears the flag before it
       // stops the gate, so a frame racing dispose cannot restart the consumer behind it.
       if isRecognizing, eventSink != nil { gate.offer(pixelBuffer) }
 
-      let sizeChanged = bufferSize != previewBufferSize
-      previewBufferSize = bufferSize
+      if bufferSize != previewBufferSize {
+        previewBufferSize = bufferSize
+        refreshPreviewLocked()
+      }
 
-      return (activeSession?.textureId, sizeChanged && refreshPreviewLocked())
+      return activeSession?.textureId
     }
 
     // Keep the preview live every frame. Recognition is paced by the gate.
     activeTextureId.map { textureRegistry.textureFrameAvailable($0) }
-    if previewChanged { sendPreview() }
   }
 
   /// Recognizes one frame and emits it. Runs on the gate's consumer, so never concurrently with

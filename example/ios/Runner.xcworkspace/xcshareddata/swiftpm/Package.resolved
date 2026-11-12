@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "swift-async-queue",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/dfed/swift-async-queue",
+      "state" : {
+        "revision" : "0f1ec3f0cebb0e5819a6fcd304884c837bdacb0d",
+        "version" : "1.1.1"
+      }
+    }
+  ],
+  "version" : 2
+}

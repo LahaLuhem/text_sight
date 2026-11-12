@@ -121,8 +121,8 @@ suppressions pointless, analyze will say so.
 > principle and the reason it exists._
 >
 > Will document: why the recognition engines are declared **only** in platform build
-> files (ML Kit + CameraX in `android/build.gradle.kts`, and nothing but system frameworks,
-> `Vision`, `AVFoundation`, on the Apple side via `Package.swift`), so the
+> files (ML Kit + CameraX in `android/build.gradle.kts`, and only system frameworks for
+> recognition and capture, `Vision` and `AVFoundation`, on the Apple side), so the
 > Dart `pubspec.yaml` declares **no** recognition library. The payoff: iOS links
 > **zero** third-party ML libraries, so the GoogleMLKit arm64 / Swift-Package-Manager
 > warnings that motivated this package cannot arise. Includes the rejected path
@@ -315,9 +315,10 @@ leaves the frame wire byte-identical and types the state by codegen. The message
 flat: about 100 more generated lines per end on Pigeon 28, nothing hand-written, and invalid
 combinations become unrepresentable.
 
-**Ordering.** Frames and states both hop to main before emission, so the engine delivers them in
-emission order. Engine behaviour, not a contract. Capture-causal order is not promised: an
-in-flight recognition may land after a pause.
+**Ordering.** Frames and states both reach main in emission order, and the engine keeps that order
+on the way to Dart (engine behaviour, not a contract). Android emits on main. iOS starts each push
+on swift-async-queue's `MainActor.queue`, which keeps the order without waiting for Dart's reply.
+Capture-causal order is not promised: an in-flight recognition may land after a pause.
 
 | State                     | iOS                                                 | Android                                                                                                 |
 |---------------------------|-----------------------------------------------------|---------------------------------------------------------------------------------------------------------|
