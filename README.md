@@ -238,6 +238,9 @@ flutter pub add text_sight
 
 ### iOS
 
+The plugin ships through Swift Package Manager only, which Flutter turns on by default. An app that
+switched it off needs it back on.
+
 Add a camera-usage string to `ios/Runner/Info.plist`. This is **required**, because iOS kills the
 app the moment the camera is requested without it.
 

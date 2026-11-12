@@ -722,10 +722,10 @@ like the DCM rules above.
 - **System frameworks only:** `import Vision`, `import AVFoundation`, `import CoreMedia`,
   `import CoreVideo`, `import Flutter`.** Never add a third-party dependency on this side.
   This is the load-bearing rule of the whole package (no GoogleMLKit on Apple platforms)
-  and it's enforced structurally by the podspec / `Package.swift` carrying no
-  dependencies. See [*Hard rules*](./.ai/AGENTS.md#hard-rules) and
+  and it's enforced structurally by `Package.swift` carrying no dependencies. See
+  [*Hard rules*](./.ai/AGENTS.md#hard-rules) and
   [`APPENDIX.md#no-bundling`](./APPENDIX.md#no-bundling). If you find yourself wanting a
-  pod, stop and reconsider.
+  dependency, stop and reconsider.
 - **`guard … else { return }` for early exits, and never force-unwrap (`!`).** Optionals
   from the capture pipeline (`CMSampleBufferGetImageBuffer`, `topCandidates(1).first`)
   are unwrapped with `guard let`. The per-frame backpressure check is the canonical

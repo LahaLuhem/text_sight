@@ -45,7 +45,7 @@ publish).
 
 - **Read / Edit / Grep / Glob** over `cat` / `sed` / `grep` / `find`. Always.
 - **Bash** only for things without a dedicated tool: `flutter`, `dart`, `git`, and the
-  native toolchains when needed (`pod`, `xcodebuild`, `gradlew`). The user's shell aliases
+  native toolchains when needed (`xcodebuild`, `gradlew`). The user's shell aliases
   `flutter` / `dart` to whatever toolchain manager serves the `.fvmrc`-pinned channel,
   invoke plain `flutter` / `dart`, not the manager directly.
 - **Lint with `dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it: the shared lints
@@ -65,8 +65,8 @@ publish).
   stable. `lib/src/platform/messages.g.dart` is **generated**, so change
   `pigeons/text_sight.dart` and regenerate, never hand-edit the output.
 - **Native edits (`ios/`, `android/`)** carry the no-bundling contract. Bundling ML Kit (or any lib
-  that duplicates a system framework) on the Apple side, dragging in a CocoaPods graph, or a
-  non-gradle path to ML Kit, breaks the package's reason to exist. See
+  that duplicates a system framework) on the Apple side, or a non-gradle path to ML Kit, breaks
+  the package's reason to exist. See
   [hard rules 1-3 in AGENTS.md](./AGENTS.md#hard-rules). The contract is *prefer-native*, not
   *zero-dependency*: a genuinely useful Apple-side lib with no native equivalent is allowed (prefer
   SPM-clean), so flag-and-ask rather than assume any new SPM dep is forbidden. The
