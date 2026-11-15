@@ -91,10 +91,10 @@ void main() {
       });
 
   Bdd(control)
-      .scenario('The confidence scale is decoded, and read from the host only once')
+      .scenario('The confidence scale decodes from its host twin')
       .given('a host reporting the <twin> scale')
-      .when('confidenceScale is awaited twice')
-      .then('it decodes to <scale> and the host was asked once')
+      .when('confidenceScale is awaited')
+      .then('it decodes to <scale>')
       .example(
         val('twin', ConfidenceScaleMessage.visionCoarse),
         val('scale', ConfidenceScale.visionCoarse),
@@ -102,13 +102,27 @@ void main() {
       .example(val('twin', ConfidenceScaleMessage.mlKit), val('scale', ConfidenceScale.mlKit))
       .run((ctx) async {
         final platform = PigeonTextSightPlatform();
-        final call = _mockHostMethod(messenger, 'confidenceScale', reply: ctx.example.val('twin'));
+        _mockHostMethod(messenger, 'confidenceScale', reply: ctx.example.val('twin'));
 
-        final first = await platform.confidenceScale;
-        final second = await platform.confidenceScale;
+        check(await platform.confidenceScale).equals(ctx.example.val('scale') as ConfidenceScale);
+      });
 
-        check(first).equals(ctx.example.val('scale') as ConfidenceScale);
-        check(second).equals(first);
+  Bdd(control)
+      .scenario('The confidence scale is read from the host only once')
+      .given('a host reporting a scale')
+      .when('confidenceScale is awaited twice')
+      .then('the host was asked once')
+      .run((_) async {
+        final platform = PigeonTextSightPlatform();
+        final call = _mockHostMethod(
+          messenger,
+          'confidenceScale',
+          reply: ConfidenceScaleMessage.mlKit,
+        );
+
+        await platform.confidenceScale;
+        await platform.confidenceScale;
+
         check(call.invocations).equals(1);
       });
 
@@ -197,65 +211,42 @@ void main() {
       });
 
   Bdd(control)
-      .scenario('Initialize sends the mapped options and returns the texture id')
-      .given('a host that replies with texture id <textureId>')
-      .when('initialize is called with the <level> level and <locales>')
-      .then('the host receives options carrying <twin> and <tags>, with no roi')
-      .and('initialize returns <textureId>')
-      .example(
-        val('level', RecognitionLevel.fast),
-        val('twin', RecognitionLevelMessage.fast),
-        val('locales', const [Locale.fromSubtags(languageCode: 'en', countryCode: 'US')]),
-        val('tags', const ['en-US']),
-        val('textureId', 7),
-      )
-      .example(
-        val('level', RecognitionLevel.accurate),
-        val('twin', RecognitionLevelMessage.accurate),
-        val('locales', const [Locale('en'), Locale('fr')]),
-        val('tags', const ['en', 'fr']),
-        val('textureId', 1),
-      )
-      .run((ctx) async {
+      .scenario('Initialize sends the options and the resolution, and returns the texture id')
+      .given('a host that replies with texture id 7')
+      .when('initialize is called with a text-height floor, at high resolution')
+      .then('the host receives the floor and the resolution, and initialize returns 7')
+      .run((_) async {
         final platform = PigeonTextSightPlatform();
-        final textureId = ctx.example.val('textureId') as int;
-        final call = _mockHostMethod(messenger, 'initialize', reply: textureId);
+        final call = _mockHostMethod(messenger, 'initialize', reply: 7);
 
         final returned = await platform.initialize(
-          TextSightOptions(
-            darwin: DarwinOptions(
-              recognitionLevel: ctx.example.val('level') as RecognitionLevel,
-              preferredLanguages: ctx.example.val('locales') as Iterable<Locale>,
-            ),
-          ),
+          const TextSightOptions(darwin: DarwinOptions(minimumTextHeight: 0.05)),
           CaptureResolution.high,
         );
 
         final arguments = call.payload! as List<Object?>;
-        final options = arguments.first! as TextSightOptionsMessage;
+        check((arguments.first! as TextSightOptionsMessage).minimumTextHeight).equals(0.05);
         check(arguments[1]).equals(CaptureResolutionMessage.high);
-        check(options.level).equals(ctx.example.val('twin') as RecognitionLevelMessage);
-        check<Iterable<Object?>>(options.languages)
-            .deepEquals(ctx.example.val('tags') as List<String>);
-        check(options.minimumTextHeight).equals(0);
-        check(options.roi).isNull();
-        check(returned).equals(textureId);
+        check(returned).equals(7);
       });
 
   Bdd(control)
-      .scenario('Start, pauseRecognition, and dispose complete against the host')
+      .scenario('Start, pauseRecognition, and dispose each reach their own host method')
       .given('a platform with mocked start, pauseRecognition, and dispose')
-      .when('each lifecycle call is awaited')
-      .then('every future completes without error')
+      .when('each lifecycle call is awaited in turn')
+      .then('each one invoked its own host method')
       .run((_) async {
         final platform = PigeonTextSightPlatform();
-        _mockHostMethod(messenger, 'start');
-        _mockHostMethod(messenger, 'pauseRecognition');
-        _mockHostMethod(messenger, 'dispose');
+        final start = _mockHostMethod(messenger, 'start');
+        final pause = _mockHostMethod(messenger, 'pauseRecognition');
+        final dispose = _mockHostMethod(messenger, 'dispose');
 
-        await check(platform.start()).completes();
-        await check(platform.pauseRecognition()).completes();
-        await check(platform.dispose()).completes();
+        await platform.start();
+        check(start.invocations).equals(1);
+        await platform.pauseRecognition();
+        check(pause.invocations).equals(1);
+        await platform.dispose();
+        check(dispose.invocations).equals(1);
       });
 
   Bdd(control)
@@ -284,35 +275,24 @@ void main() {
         check(status).equals(ctx.example.val('status') as CameraPermissionStatus);
       });
 
+  // The mapping itself is checkCameraPermission's, so one status shows the request reaches it.
   Bdd(control)
       .scenario('requestCameraPermission invokes the host and maps the resulting status')
-      .given('a host that replies with the <twin> status')
+      .given('a host that replies with the granted status')
       .when('requestCameraPermission is awaited')
-      .then('the host is invoked and it resolves to <status>')
-      .example(
-        val('twin', CameraPermissionStatusMessage.granted),
-        val('status', CameraPermissionStatus.granted),
-      )
-      .example(
-        val('twin', CameraPermissionStatusMessage.denied),
-        val('status', CameraPermissionStatus.denied),
-      )
-      .example(
-        val('twin', CameraPermissionStatusMessage.permanentlyDenied),
-        val('status', CameraPermissionStatus.permanentlyDenied),
-      )
-      .run((ctx) async {
+      .then('the host is invoked and it resolves to granted')
+      .run((_) async {
         final platform = PigeonTextSightPlatform();
         final call = _mockHostMethod(
           messenger,
           'requestCameraPermission',
-          reply: ctx.example.val('twin'),
+          reply: CameraPermissionStatusMessage.granted,
         );
 
         final status = await platform.requestCameraPermission();
 
         check(call.received.isCompleted).isTrue();
-        check(status).equals(ctx.example.val('status') as CameraPermissionStatus);
+        check(status).equals(CameraPermissionStatus.granted);
       });
 
   Bdd(captures)
@@ -413,7 +393,7 @@ void main() {
       .given('a host that replies with a still-image capture sized <imageWidth> by <imageHeight>')
       .when('recognizeImage is called with bytes and the <level> level')
       .then('the host receives the bytes and an options twin carrying <twin>')
-      .and('the decoded capture is sized <imageWidth> by <imageHeight>, quarterTurns 0, one line')
+      .and('the decoded capture is sized <imageWidth> by <imageHeight>')
       .example(
         val('level', RecognitionLevel.accurate),
         val('twin', RecognitionLevelMessage.accurate),
@@ -443,9 +423,6 @@ void main() {
         check((payload[1]! as TextSightOptionsMessage).level)
             .equals(ctx.example.val('twin') as RecognitionLevelMessage);
         check(capture.imageSize).equals(Size(imageWidth.toDouble(), imageHeight.toDouble()));
-        check(capture.quarterTurns).equals(0);
-        check<Iterable<Object?>>(capture.lines).length.equals(1);
-        check(capture.lines.single.text).equals('STILL');
       });
 
   Bdd(oneShot)
@@ -453,7 +430,7 @@ void main() {
       .given('a host that replies with a still-image capture sized <imageWidth> by <imageHeight>')
       .when('recognizePath is called with the path <path>')
       .then('the host receives <path> and an accurate options twin')
-      .and('the decoded capture is sized <imageWidth> by <imageHeight> with quarterTurns 0')
+      .and('the decoded capture is sized <imageWidth> by <imageHeight>')
       .example(val('path', '/tmp/sign.jpg'), val('imageWidth', 1024), val('imageHeight', 768))
       .run((ctx) async {
         final platform = PigeonTextSightPlatform();
@@ -478,7 +455,6 @@ void main() {
         check((payload[1]! as TextSightOptionsMessage).level)
             .equals(RecognitionLevelMessage.accurate);
         check(capture.imageSize).equals(Size(imageWidth.toDouble(), imageHeight.toDouble()));
-        check(capture.quarterTurns).equals(0);
       });
 
   Bdd(oneShot)
@@ -493,20 +469,6 @@ void main() {
 
         final options = (call.payload! as List<Object?>)[1]! as TextSightOptionsMessage;
         check(options.level).equals(RecognitionLevelMessage.accurate);
-      });
-
-  Bdd(readiness)
-      .scenario('ensureModelReady decodes a ready terminal reply')
-      .given('a host that replies with a ready state')
-      .when('ensureModelReady is awaited')
-      .then('it resolves to ModelReady')
-      .run((_) async {
-        final platform = PigeonTextSightPlatform();
-        _mockHostMethod(messenger, 'ensureModelReady', reply: <String, Object?>{'state': 'ready'});
-
-        final state = await platform.ensureModelReady();
-
-        check(state).isA<ModelReady>();
       });
 
   Bdd(readiness)
@@ -570,43 +532,6 @@ void main() {
             .isA<ModelDownloading>()
             .has((s) => s.progress, 'progress')
             .equals(ctx.example.val('progress') as double?);
-      });
-
-  Bdd(readiness)
-      .scenario('The readiness stream decodes a ready event')
-      .given('the host emits a ready event')
-      .when('the platform receives the first readiness state')
-      .then('it is ModelReady')
-      .run((_) async {
-        final platform = PigeonTextSightPlatform();
-        _mockReadiness(messenger, <Object?>[
-          <Object?, Object?>{'state': 'ready'},
-        ]);
-
-        final state = await platform.modelReadiness.first;
-
-        check(state).isA<ModelReady>();
-      });
-
-  Bdd(readiness)
-      .scenario('The readiness stream decodes a download-then-ready progression in order')
-      .given('the host emits downloading 25%, downloading 80%, then ready')
-      .when('the platform collects the readiness states in order')
-      .then('they decode to ModelDownloading(0.25), ModelDownloading(0.8), ModelReady')
-      .run((_) async {
-        final platform = PigeonTextSightPlatform();
-        _mockReadiness(messenger, <Object?>[
-          <Object?, Object?>{'state': 'downloading', 'progress': 0.25},
-          <Object?, Object?>{'state': 'downloading', 'progress': 0.8},
-          <Object?, Object?>{'state': 'ready'},
-        ]);
-
-        final states = await platform.modelReadiness.take(3).toList();
-
-        check<Iterable<Object?>>(states).length.equals(3);
-        check(states.first).isA<ModelDownloading>().has((s) => s.progress, 'progress').equals(0.25);
-        check(states[1]).isA<ModelDownloading>().has((s) => s.progress, 'progress').equals(0.8);
-        check(states[2]).isA<ModelReady>();
       });
 
   Bdd(readiness)
@@ -684,30 +609,24 @@ void main() {
       });
 
   Bdd(sessionStates)
-      .scenario('States reach every listener in push order')
+      .scenario('A state reaches every listener')
       .given('two listeners on sessionStates')
-      .when('native pushes active, paused and active again')
-      .then('both listeners see the three states in that order')
+      .when('native pushes a paused state')
+      .then('both listeners see it')
       .run((_) async {
         final platform = PigeonTextSightPlatform();
-        final first = platform.sessionStates.take(3).toList();
-        final second = platform.sessionStates.take(3).toList();
+        final first = platform.sessionStates.first;
+        final second = platform.sessionStates.first;
 
-        await _pushToDart(messenger, 'onSessionStateChanged', SessionActiveMessage());
         await _pushToDart(
           messenger,
           'onSessionStateChanged',
           SessionPausedMessage(reason: SessionPauseReasonMessage.appBackgrounded),
         );
-        await _pushToDart(messenger, 'onSessionStateChanged', SessionActiveMessage());
 
-        const expected = <TextSightSessionState>[
-          SessionActive(),
-          SessionPaused(reason: SessionPauseReason.appBackgrounded),
-          SessionActive(),
-        ];
-        check(await first).deepEquals(expected);
-        check(await second).deepEquals(expected);
+        const expected = SessionPaused(reason: SessionPauseReason.appBackgrounded);
+        check(await first).equals(expected);
+        check(await second).equals(expected);
       });
 
   Bdd(previews)

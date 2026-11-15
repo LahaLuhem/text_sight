@@ -399,11 +399,11 @@ controller and the one-shot per call, and `null` means the whole frame.
 Every path reads only the box. One `FrameRegion` per platform decides what the engine reads and
 moves every box it reports back onto the frame, so the two can't drift apart:
 
-| Path | What limits the read | Why boxes need moving back |
-|---|---|---|
+| Path                   | What limits the read                                                    | Why boxes need moving back                        |
+|------------------------|-------------------------------------------------------------------------|---------------------------------------------------|
 | iOS, live and one-shot | The request's `regionOfInterest`, flipped to Vision's bottom-left space | Vision measures each box from the region's corner |
-| Android one-shot | A crop of the bitmap as stored, with its EXIF turn handed to ML Kit | ML Kit measures from the crop's corner |
-| Android live | libyuv cuts the box out of the YUV planes into an NV21 buffer | Same |
+| Android one-shot       | A crop of the bitmap as stored, with its EXIF turn handed to ML Kit     | ML Kit measures from the crop's corner            |
+| Android live           | libyuv cuts the box out of the YUV planes into an NV21 buffer           | Same                                              |
 
 A line the box's edge crosses comes back cut on every path. Both engines drop a line the edge slices
 deep and return fragments for a shallow slice, and no rule on box position tells those fragments
@@ -615,9 +615,9 @@ the platform thread. Attractive for `recognizeImage`, the one control method car
 payload. It was measured on both platforms and **not kept**: it helps Android, clearly hurts iOS,
 and the annotation is per-method with no per-platform form.
 
-Measured by `example/integration_test/platform_thread_bench_test.dart`, which pings the synchronous
-`checkCameraPermission` while 40 undecodable 8 MiB payloads cross the channel, so the number is the
-channel hop and not inference. Read `p50` only, since `max` swings 2.4x run to run.
+Measured by `benchmark/app/integration_test/platform_thread_bench_test.dart`, which pings the
+synchronous `checkCameraPermission` while 40 undecodable 8 MiB payloads cross the channel, so the
+number is the channel hop and not inference. Read `p50` only, since `max` swings 2.4x run to run.
 
 Criterion, fixed before the after-run: loaded `p50` at or under 300 us in two of three runs.
 

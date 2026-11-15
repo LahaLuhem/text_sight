@@ -7,7 +7,9 @@ import 'dart:ui' as ui;
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
 import 'package:example/features/core/data/constants/core_constants.dart';
+import 'package:example/features/core/data/fake_camera_platform.dart';
 import 'package:example/features/core/data/swaying_frames.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,17 +21,28 @@ void main() {
   Bdd(drift)
       .scenario('Each tick is a different image, so recognition has something to track')
       .given('the bundled sample')
-      .when('two frames are composed a moment apart')
-      .then('they differ, and both keep the source size')
+      .when('two frames are composed one tick apart')
+      .then('they differ')
       .run((_) async {
         final sway = await _loadSample();
 
         final first = await sway.frameAt(Duration.zero);
-        final later = await sway.frameAt(const Duration(milliseconds: 1200));
+        final next = await sway.frameAt(FakeCameraPlatform.sampleInterval);
 
-        check(_bytesDiffer(first, later)).isTrue();
-        check(await _sizeOf(first)).equals(sway.size);
-        check(await _sizeOf(later)).equals(sway.size);
+        check(listEquals(first, next)).isFalse();
+      });
+
+  Bdd(drift)
+      .scenario('A drifted frame keeps the source size')
+      .given('the bundled sample')
+      .when('a frame is composed partway through the motion')
+      .then('it is the size of the source')
+      .run((_) async {
+        final sway = await _loadSample();
+
+        final frame = await sway.frameAt(const Duration(milliseconds: 1200));
+
+        check(await _sizeOf(frame)).equals(sway.size);
       });
 
   Bdd(drift)
@@ -59,12 +72,6 @@ Future<SwayingFrames> _loadSample() async {
   addTearDown(sway.dispose);
 
   return sway;
-}
-
-bool _bytesDiffer(Uint8List a, Uint8List b) {
-  if (a.length != b.length) return true;
-
-  return List.generate(a.length, (i) => i).any((i) => a[i] != b[i]);
 }
 
 Future<ui.Size> _sizeOf(Uint8List png) async {

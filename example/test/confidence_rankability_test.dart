@@ -13,32 +13,37 @@ import 'package:text_sight/text_sight.dart';
 // Plain `testWidgets` rather than bdd_framework: its scenarios run on `test()`, which hands out no
 // `WidgetTester`. The scale is driven by swapping the platform, so nothing needs a test backdoor.
 void main() {
-  const cases = [
-    (ConfidenceScale.visionCoarse, false),
-    (ConfidenceScale.visionGraded, true),
-    (ConfidenceScale.mlKit, true),
-  ];
+  // Both widgets only read `isRankable`, so one scale of each kind covers them.
+  for (final isRankable in [true, false]) {
+    // Picked by `isRankable`, not looked up by name, which is the case the rule is for.
+    // ignore: prefer-enums-by-name
+    final scale = ConfidenceScale.values.firstWhere((scale) => scale.isRankable == isRankable);
 
-  for (final (scale, isTiered) in cases) {
-    testWidgets('${scale.name} ${isTiered ? "tints" : "leaves plain"} the chip', (tester) async {
+    testWidgets('${scale.name} ${isRankable ? "tints" : "leaves plain"} the chip', (tester) async {
       await _install(scale);
 
       await tester.pumpWidget(const _Host(child: ConfidenceChip(confidence: 1)));
 
       final chip = tester.widget<PlatformChip>(find.byType(PlatformChip));
-      check(chip.side == null, because: 'the border tracks the tier').equals(!isTiered);
-      check(chip.backgroundColor == null, because: 'the fill tracks the tier').equals(!isTiered);
+      check(chip.side == null, because: 'the border tracks the tier').equals(!isRankable);
+      check(chip.backgroundColor == null, because: 'the fill tracks the tier').equals(!isRankable);
     });
 
-    testWidgets('${scale.name} ${isTiered ? "hides" : "shows"} the note', (tester) async {
+    testWidgets('${scale.name} ${isRankable ? "hides" : "shows"} the note', (tester) async {
       await _install(scale);
 
       await tester.pumpWidget(const _Host(child: ConfidenceScaleNote()));
 
-      expect(find.textContaining('Coarse confidence'), isTiered ? findsNothing : findsOneWidget);
+      expect(_noteText, isRankable ? findsNothing : findsOneWidget);
     });
   }
 }
+
+/// The note's text, found by where it sits rather than what it says.
+final _noteText = find.descendant(
+  of: find.byType(ConfidenceScaleNote),
+  matching: find.byType(Text),
+);
 
 Future<void> _install(ConfidenceScale scale) {
   TextSightPlatform.instance = _ScalePlatform(scale);

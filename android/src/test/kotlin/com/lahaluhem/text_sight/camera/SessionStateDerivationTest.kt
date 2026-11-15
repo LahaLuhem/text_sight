@@ -25,7 +25,8 @@ internal class SessionStateDerivationTest(
 ) {
     @Test
     fun `derives the state to report`() {
-        assertEquals(expected, deriveSessionState(status, camera))
+        // The details are only log text, so the type and the reason are what gets compared.
+        assertEquals(expected, deriveSessionState(status, camera)?.withoutDetails())
     }
 
     companion object {
@@ -46,24 +47,24 @@ internal class SessionStateDerivationTest(
             arrayOf("closed without an error is transient", Status.ACTIVE, state(CameraState.Type.CLOSED), null),
             arrayOf(
                 "pending open without an error is an interruption", Status.ACTIVE,
-                state(CameraState.Type.PENDING_OPEN),
-                SessionPausedMessage(reason = interrupted, details = "pendingOpen"),
+                state(CameraState.Type.PENDING_OPEN), SessionPausedMessage(reason = interrupted),
             ),
+            // Opening, where CameraX reports this error, would otherwise be transient.
             arrayOf(
-                "a recoverable error is an interruption, named", Status.ACTIVE,
+                "a recoverable error is an interruption", Status.ACTIVE,
                 CameraState.create(
-                    CameraState.Type.PENDING_OPEN,
-                    CameraState.StateError.create(CameraState.ERROR_CAMERA_IN_USE),
+                    CameraState.Type.OPENING,
+                    CameraState.StateError.create(CameraState.ERROR_OTHER_RECOVERABLE_ERROR),
                 ),
-                SessionPausedMessage(reason = interrupted, details = "ERROR_CAMERA_IN_USE"),
+                SessionPausedMessage(reason = interrupted),
             ),
             arrayOf(
-                "a critical error is a failure, named", Status.ACTIVE,
+                "a critical error is a failure", Status.ACTIVE,
                 CameraState.create(
                     CameraState.Type.CLOSED,
                     CameraState.StateError.create(CameraState.ERROR_CAMERA_FATAL_ERROR),
                 ),
-                SessionFailedMessage(details = "ERROR_CAMERA_FATAL_ERROR"),
+                SessionFailedMessage(),
             ),
         )
 
@@ -71,4 +72,10 @@ internal class SessionStateDerivationTest(
 
         private fun state(type: CameraState.Type): CameraState = CameraState.create(type)
     }
+}
+
+private fun SessionStateMessage.withoutDetails(): SessionStateMessage = when (this) {
+    is SessionPausedMessage -> SessionPausedMessage(reason = reason)
+    is SessionFailedMessage -> SessionFailedMessage()
+    else -> this
 }

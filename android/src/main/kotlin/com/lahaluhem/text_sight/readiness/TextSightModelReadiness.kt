@@ -159,18 +159,9 @@ internal class TextSightModelReadiness(
     }
 }
 
-// The readiness wire-map builders are file-level `internal`, like the captures' `encodeFrame`, so
-// the host-side unit tests can assert the shapes the Dart side decodes without a Google Play
-// Services round-trip. (The module installation can't be triggered on an emulator.)
+private fun readyState(): Map<String, Any?> = mapOf("state" to "ready")
 
-/** The "ready" readiness wire map. */
-internal fun readyState(): Map<String, Any?> = mapOf("state" to "ready")
-
-/**
- * The "downloading" readiness wire map from a Play Services [ModuleInstallStatusUpdate]: `progress`
- * is `bytesDownloaded / totalBytesToDownload` in `[0, 1]`, or `null` when no byte counts are reported
- * yet, or when the total is zero (never divide by it).
- */
+// Internal so the fraction tests without a Play Services round-trip, which an emulator can't trigger.
 internal fun downloadingState(update: ModuleInstallStatusUpdate): Map<String, Any?> {
     val progress = update.progressInfo?.let { info ->
         val total = info.totalBytesToDownload
@@ -180,6 +171,5 @@ internal fun downloadingState(update: ModuleInstallStatusUpdate): Map<String, An
     return mapOf("state" to "downloading", "progress" to progress)
 }
 
-/** The terminal "unavailable" wire map, carrying the [reason] tag and optional [details]. */
-internal fun unavailableState(reason: String, details: String?): Map<String, Any?> =
+private fun unavailableState(reason: String, details: String?): Map<String, Any?> =
     mapOf("state" to "unavailable", "reason" to reason, "details" to details)

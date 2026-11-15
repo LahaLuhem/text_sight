@@ -35,8 +35,9 @@ final class TextSightCamera: NSObject {
   /// the recognizer config. The gate does its own locking.
   private let stateLock = NSLock()
 
-  /// Paces recognition: newest frame only, one at a time, next one starts on completion.
-  private let gate = FrameGate()
+  /// Paces recognition: newest frame only, one at a time, next one starts on completion. Internal
+  /// so `RunnerTests` can see whether a frame got through.
+  let gate = FrameGate()
 
   private var eventSink: FlutterEventSink?
   private var latestPixelBuffer: CVPixelBuffer?

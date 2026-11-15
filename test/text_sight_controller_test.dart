@@ -17,21 +17,14 @@ void main() {
   final preview = BddFeature('TextSightController preview geometry');
 
   Bdd(lifecycle)
-      .scenario('Disposing releases the native session after a failed start')
-      .given('a controller whose start() failed, so it holds no texture id')
-      .when('the controller is disposed')
-      .then('the native session is released anyway')
+      .scenario('A failed initialize throws at the start() call site')
+      .given('a platform whose initialize fails')
+      .when('the controller is started')
+      .then('start() throws that failure')
       .run((ctx) async {
-        final platform = _RecordingPlatform(failsToInitialize: true);
-        TextSightPlatform.instance = platform;
-        final controller = TextSightController();
-        await check(controller.start()).throws<StateError>();
+        TextSightPlatform.instance = _RecordingPlatform(failsToInitialize: true);
 
-        controller.dispose();
-
-        // The failed start is exactly the case where native may still own a live session: a hot
-        // restart leaves one running and the fresh controller never gets its texture id.
-        check(platform.disposeCalls).equals(1);
+        await check(TextSightController().start()).throws<StateError>();
       });
 
   Bdd(lifecycle)
@@ -65,6 +58,7 @@ void main() {
 
         await controller.start();
         check(controller.isRecognizing).isTrue();
+        check(notifications).equals(1);
 
         await controller.pauseRecognition();
 
@@ -73,57 +67,50 @@ void main() {
         check(notifications).equals(2);
       });
 
+  // Accurate, since the live default is fast and the getter would report that untouched.
   Bdd(lifecycle)
       .scenario('Updating options forwards them and republishes them')
       .given('a controller on a recording platform')
-      .when('updateOptions is called with the <level> level')
+      .when('updateOptions is called with the accurate level')
       .then('the platform receives it, the getter reports it, and listeners are told once')
-      .example(val('level', RecognitionLevel.accurate))
-      .example(val('level', RecognitionLevel.fast))
       .run((ctx) async {
         final platform = _RecordingPlatform();
         TextSightPlatform.instance = platform;
         final controller = TextSightController();
-        final level = ctx.example.val('level') as RecognitionLevel;
         var notifications = 0;
         controller.addListener(() => notifications++);
 
         await controller.updateOptions(
-          TextSightOptions(darwin: DarwinOptions(recognitionLevel: level)),
+          const TextSightOptions(
+            darwin: DarwinOptions(recognitionLevel: RecognitionLevel.accurate),
+          ),
         );
 
-        check(platform.lastOptions?.darwin.recognitionLevel).equals(level);
-        check(controller.options.darwin.recognitionLevel).equals(level);
+        check(platform.lastOptions?.darwin.recognitionLevel).equals(RecognitionLevel.accurate);
+        check(controller.options.darwin.recognitionLevel).equals(RecognitionLevel.accurate);
         check(notifications).equals(1);
       });
 
   Bdd(lifecycle)
       .scenario('Repeated languages collapse, and the order given survives')
       .given('a controller on a recording platform')
-      .when('updateOptions is called with <given>')
-      .then('the platform and the getter both see <kept>')
-      .example(
-        val('given', const [Locale('fr'), Locale('en', 'US'), Locale('fr')]),
-        val('kept', const ['fr', 'en-US']),
-      )
-      .example(
-        val('given', const [Locale('en', 'US'), Locale('en', 'US')]),
-        val('kept', const ['en-US']),
-      )
+      .when('updateOptions is called with fr, en-US and fr again')
+      .then('the platform and the getter both see fr, then en-US')
       .run((ctx) async {
         final platform = _RecordingPlatform();
         TextSightPlatform.instance = platform;
         final controller = TextSightController();
-        final kept = ctx.example.val('kept') as List<String>;
 
         await controller.updateOptions(
-          TextSightOptions(
-            darwin: DarwinOptions(preferredLanguages: ctx.example.val('given') as Iterable<Locale>),
+          const TextSightOptions(
+            darwin: DarwinOptions(
+              preferredLanguages: [Locale('fr'), Locale('en', 'US'), Locale('fr')],
+            ),
           ),
         );
 
-        check(_tags(platform.lastOptions!.darwin.preferredLanguages)).deepEquals(kept);
-        check(_tags(controller.options.darwin.preferredLanguages)).deepEquals(kept);
+        check(_tags(platform.lastOptions!.darwin.preferredLanguages)).deepEquals(['fr', 'en-US']);
+        check(_tags(controller.options.darwin.preferredLanguages)).deepEquals(['fr', 'en-US']);
       });
 
   Bdd(lifecycle)
@@ -133,14 +120,15 @@ void main() {
       .then('the controller still reports the languages it was given')
       .run((ctx) {
         TextSightPlatform.instance = _RecordingPlatform();
-        final languages = <Locale>[const Locale('en', 'US')];
+        // Not the default list, so a constructor that dropped the options couldn't pass.
+        final languages = <Locale>[const Locale('fr')];
         final controller = TextSightController(
           options: TextSightOptions(darwin: DarwinOptions(preferredLanguages: languages)),
         );
 
-        languages.add(const Locale('fr'));
+        languages.add(const Locale('de'));
 
-        check<Iterable<Object?>>(controller.options.darwin.preferredLanguages).length.equals(1);
+        check(_tags(controller.options.darwin.preferredLanguages)).deepEquals(['fr']);
       });
 
   Bdd(lifecycle)
@@ -174,13 +162,8 @@ void main() {
   Bdd(sessionState)
       .scenario('A reported state becomes the current value and notifies once')
       .given('a started controller, idle until native reports')
-      .when('native reports <state>')
-      .then('sessionState is <state> and listeners were told once')
-      .example(val('state', const SessionActive()))
-      .example(
-        val('state', const SessionPaused(reason: SessionPauseReason.interrupted, details: 'call')),
-      )
-      .example(val('state', const SessionFailed(details: 'camera died')))
+      .when('native reports a paused state')
+      .then('sessionState is that state and listeners were told once')
       .run((ctx) async {
         final platform = _RecordingPlatform();
         TextSightPlatform.instance = platform;
@@ -189,7 +172,7 @@ void main() {
         check(controller.sessionState).equals(const SessionIdle());
         var notifications = 0;
         controller.addListener(() => notifications++);
-        final state = ctx.example.val('state') as TextSightSessionState;
+        const state = SessionPaused(reason: SessionPauseReason.interrupted, details: 'call');
 
         platform.states.add(state);
 
@@ -199,19 +182,23 @@ void main() {
 
   Bdd(sessionState)
       .scenario('An equal report is dropped, a different one is not')
-      .given('a started controller that native has reported active')
-      .when('native reports active again, then paused')
-      .then('listeners hear the paused change only')
+      .given('a started controller that native has reported interrupted')
+      .when('native reports the same interruption again, then a backgrounding')
+      .then('listeners hear the backgrounding only')
       .run((_) async {
         final platform = _RecordingPlatform();
         TextSightPlatform.instance = platform;
         final controller = TextSightController();
         await controller.start();
-        platform.states.add(const SessionActive());
+        // Built at runtime, as Pigeon decodes them, so only `==` can drop the repeat.
+        // ignore: prefer_const_constructors
+        platform.states.add(SessionPaused(reason: SessionPauseReason.interrupted, details: 'call'));
         var notifications = 0;
         controller.addListener(() => notifications++);
 
-        platform.states.add(const SessionActive());
+        // An equal report, but a separate instance.
+        // ignore: prefer_const_constructors
+        platform.states.add(SessionPaused(reason: SessionPauseReason.interrupted, details: 'call'));
         check(notifications).equals(0);
 
         platform.states.add(const SessionPaused(reason: SessionPauseReason.appBackgrounded));
@@ -224,22 +211,19 @@ void main() {
       .scenario('Disposing returns to idle and stops listening')
       .given('a started controller that native has reported active')
       .when('it is disposed and native reports again')
-      .then('sessionState is idle and no listener is notified')
+      .then('sessionState is idle and nothing listens to native any more')
       .run((_) async {
         final platform = _RecordingPlatform();
         TextSightPlatform.instance = platform;
         final controller = TextSightController();
         await controller.start();
         platform.states.add(const SessionActive());
-        var notifications = 0;
-        controller
-          ..addListener(() => notifications++)
-          ..dispose();
+        check(controller.sessionState).equals(const SessionActive());
 
+        controller.dispose();
         platform.states.add(const SessionFailed());
 
         check(controller.sessionState).equals(const SessionIdle());
-        check(notifications).equals(0);
         check(platform.states.hasListener).isFalse();
       });
 

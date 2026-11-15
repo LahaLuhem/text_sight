@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io' show Directory, InternetAddress, Platform, Socket;
 import 'dart:typed_data' show ByteData, Uint8List;
 
-import 'package:flutter/foundation.dart' show ValueListenable;
+import 'package:flutter/foundation.dart' show ValueListenable, visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
 // The example doubles as the plugin's own harness, and the federation seam is not on the barrel.
@@ -31,9 +31,10 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
   /// one does. Long enough to read the paused screen, short enough that nothing feels stuck.
   static const _interruptionHold = Duration(seconds: 6);
 
-  /// Paces the drifting fallback. Bridged frames arrive at the webcam's own rate instead. Composing
-  /// and encoding one frame measures about 8 ms, so the recognizer is what sets the real ceiling.
-  static const _sampleInterval = Duration(milliseconds: 150);
+  /// Paces the drifting fallback. Bridged frames arrive at the webcam's own rate instead. Composing a
+  /// frame takes a fraction of this, so the recognizer is what sets the real ceiling.
+  @visibleForTesting
+  static const sampleInterval = Duration(milliseconds: 150);
 
   /// Nothing registers a texture here, so any id will do. `TextSightView` only needs a non-null one.
   static const _textureId = 0;
@@ -220,7 +221,7 @@ final class FakeCameraPlatform(final TextSightPlatform _real) extends TextSightP
   void _startSampleReplay() {
     if (!_isStreaming || _isBridged) return;
 
-    _sampleTimer ??= Timer.periodic(_sampleInterval, (_) => unawaited(_driftSample()));
+    _sampleTimer ??= Timer.periodic(sampleInterval, (_) => unawaited(_driftSample()));
   }
 
   void _stopSampleReplay() {

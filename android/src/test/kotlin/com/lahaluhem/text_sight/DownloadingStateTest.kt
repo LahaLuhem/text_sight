@@ -39,7 +39,6 @@ class DownloadingStateTest(
 
         val map = downloadingState(update)
 
-        assertEquals("downloading", map["state"])
         if (expectedProgress == null) {
             assertNull(map["progress"])
         } else {

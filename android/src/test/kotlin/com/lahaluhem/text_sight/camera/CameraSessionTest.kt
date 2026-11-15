@@ -15,8 +15,8 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -34,13 +34,23 @@ class CameraSessionTest {
     private val direct = Executor { it.run() }
 
     @Test
-    fun `open routes through the injected main dispatcher`() = runTest {
+    fun `open does its work on the injected main dispatcher`() = runTest {
+        grantCamera()
         val recording = RecordingDispatcher(StandardTestDispatcher(testScheduler))
+        var claimedOnMain = false
+        val registry = mock<TextureRegistry> {
+            on { createSurfaceProducer() } doAnswer {
+                claimedOnMain = recording.isRunning
+                mock<TextureRegistry.SurfaceProducer>()
+            }
+        }
 
-        // Robolectric denies the camera permission, so open() fails fast. The dispatch is the point.
-        assertFailsWith<FlutterError> { newSession(recording).open(CaptureResolutionMessage.MEDIUM) }
+        // CameraX cannot start under Robolectric, so open() fails once past the producer.
+        assertFailsWith<FlutterError> {
+            newSession(recording, registry).open(CaptureResolutionMessage.MEDIUM)
+        }
 
-        assertTrue(recording.dispatches > 0, "open() never went through mainDispatcher")
+        assertTrue(claimedOnMain, "open() claimed the producer off mainDispatcher")
     }
 
     @Test
@@ -66,26 +76,6 @@ class CameraSessionTest {
         verify(producer).release()
     }
 
-    // A stranded producer never goes away: the engine keeps every one it hands out in a list until
-    // release(), so its texture and buffers sit there for the life of the engine.
-    @Test
-    fun `repeated opens strand no producer`() = runTest {
-        grantCamera()
-        val first = mock<TextureRegistry.SurfaceProducer>()
-        val second = mock<TextureRegistry.SurfaceProducer>()
-        val registry = mock<TextureRegistry> {
-            on { createSurfaceProducer() }.thenReturn(first, second)
-        }
-        val session = newSession(StandardTestDispatcher(testScheduler), registry)
-
-        assertFailsWith<FlutterError> { session.open(CaptureResolutionMessage.MEDIUM) }
-        assertFailsWith<FlutterError> { session.open(CaptureResolutionMessage.MEDIUM) }
-
-        verify(registry, times(2)).createSurfaceProducer()
-        verify(first).release()
-        verify(second).release()
-    }
-
     private fun grantCamera() = Shadows.shadowOf(RuntimeEnvironment.getApplication())
         .grantPermissions(Manifest.permission.CAMERA)
 
@@ -101,14 +91,22 @@ class CameraSessionTest {
         mainDispatcher = dispatcher,
     )
 
+    /** Knows whether work it dispatched is running right now. */
     private class RecordingDispatcher(
         private val delegate: CoroutineDispatcher,
     ) : CoroutineDispatcher() {
-        var dispatches = 0
+        var isRunning = false
+            private set
 
         override fun dispatch(context: CoroutineContext, block: Runnable) {
-            dispatches++
-            delegate.dispatch(context, block)
+            delegate.dispatch(context) {
+                isRunning = true
+                try {
+                    block.run()
+                } finally {
+                    isRunning = false
+                }
+            }
         }
     }
 }

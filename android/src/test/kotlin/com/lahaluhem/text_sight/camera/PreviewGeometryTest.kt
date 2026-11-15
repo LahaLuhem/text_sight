@@ -7,7 +7,7 @@ import org.junit.Test
 
 class PreviewGeometryTest {
     @Test
-    fun `the preview comes out upright on both producers at every display rotation`() {
+    fun `the preview comes out upright on both producers at display rotations 0, 90 and 270`() {
         // A back sensor at 90 delivering 1280x960, every row checked upright on an emulator.
         val cases = listOf(
             Triple(Surface.ROTATION_0, false, PreviewMessage(7, 960, 1280, 1)),

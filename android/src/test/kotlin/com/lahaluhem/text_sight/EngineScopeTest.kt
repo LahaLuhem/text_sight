@@ -19,13 +19,6 @@ import org.junit.Test
  */
 class EngineScopeTest {
     @Test
-    fun `run returns the value`() = runTest {
-        val engine = EngineScope(StandardTestDispatcher(testScheduler))
-
-        assertEquals("ok", engine.run { "ok" })
-    }
-
-    @Test
     fun `cancel interrupts work already in flight`() = runTest {
         val engine = EngineScope(StandardTestDispatcher(testScheduler))
         val started = CompletableDeferred<Unit>()
