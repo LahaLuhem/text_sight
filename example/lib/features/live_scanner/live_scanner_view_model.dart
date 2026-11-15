@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart' show BoxFit;
 import 'package:pmvvm/pmvvm.dart';
 import 'package:text_sight/text_sight.dart';
 
@@ -15,6 +16,7 @@ final class LiveScannerViewModel() extends ViewModel {
 
   final _sessionStatusNotifier = ValueNotifier(SessionStatus.preparingModel);
   final _shouldEnableTorchNotifier = ValueNotifier(false);
+  final _boxFitNotifier = ValueNotifier(BoxFit.contain);
   String? _failure;
   SessionPauseReason? _pauseReason;
 
@@ -31,6 +33,8 @@ final class LiveScannerViewModel() extends ViewModel {
   ValueListenable<SessionStatus> get sessionStatusListenable => _sessionStatusNotifier;
 
   ValueListenable<bool> get shouldEnableTorchListenable => _shouldEnableTorchNotifier;
+
+  ValueListenable<BoxFit> get boxFitListenable => _boxFitNotifier;
 
   /// The stand-in camera's current frame, `null` when a real camera is driving the session.
   ValueListenable<SimulatedFrame?>? get simulatedFrames => _fakeCamera?.frameListenable;
@@ -50,6 +54,10 @@ final class LiveScannerViewModel() extends ViewModel {
   void onInterruptPressed() => _fakeCamera?.simulateInterruption();
 
   void onFailPressed() => _fakeCamera?.simulateFailure();
+
+  // Not a field setter
+  //ignore: use_setters_to_change_properties
+  void onBoxFitSelected(BoxFit boxFit) => _boxFitNotifier.value = boxFit;
 
   Future<void> onTorchToggled() async {
     final next = !_shouldEnableTorchNotifier.value;
@@ -122,6 +130,7 @@ final class LiveScannerViewModel() extends ViewModel {
     _controller.removeListener(_onSessionStateChanged);
     _sessionStatusNotifier.dispose();
     _shouldEnableTorchNotifier.dispose();
+    _boxFitNotifier.dispose();
     _controller.dispose();
 
     super.dispose();
