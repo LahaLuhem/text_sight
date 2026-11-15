@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Icons;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+import 'package:platform_icons/platform_icons.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 import 'package:text_sight/text_sight.dart';
 
@@ -12,8 +13,7 @@ import '/features/core/data/fake_camera_platform.dart';
 import '/features/core/widgets/core_widgets.dart';
 import 'live_scanner_view_model.dart';
 
-/// Live camera OCR: the preview with a confidence-coloured box overlay, a torch
-/// toggle, and a scrolling recognized-text panel.
+/// Live camera OCR: the preview with a confidence-coloured box overlay and the recognized text.
 class const LiveScannerView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -84,13 +84,7 @@ class const LiveScannerView({super.key}) extends StatelessWidget {
           ),
           // Swapping the scanner out also drops the stale overlay the view would keep painting.
           .paused => _MessageView(
-            icon: Icon(
-              context.platformIcon(
-                material: Icons.pause_circle_outline,
-                cupertino: CupertinoIcons.pause_circle,
-              ),
-              size: 48,
-            ),
+            icon: const PlatformIcon(PlatformIcons.pauseCircle, size: 48),
             message: viewModel.pauseMessage,
           ),
           .ready => _ScannerView(viewModel: viewModel),
@@ -100,7 +94,7 @@ class const LiveScannerView({super.key}) extends StatelessWidget {
   );
 }
 
-/// The ready state: preview + overlay + torch + recognized-text panel.
+/// The ready state: the preview, its controls and the recognized text.
 class const _ScannerView({required final LiveScannerViewModel viewModel}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -109,41 +103,45 @@ class const _ScannerView({required final LiveScannerViewModel viewModel}) extend
     return Stack(
       fit: .expand,
       children: [
-        TextSightView(
-          controller: viewModel.controller,
-          overlayBuilder: (context, capture, constraints) => Stack(
-            fit: .expand,
-            children: [
-              // No preview texture on the Simulator, so paint the frame the boxes came from. The
-              // overlay has its shape, so `.fill` doesn't stretch it.
-              if (simulatedFrames != null)
+        ValueListenableBuilder(
+          valueListenable: viewModel.boxFitListenable,
+          builder: (context, boxFit, _) => TextSightView(
+            controller: viewModel.controller,
+            fit: boxFit,
+            overlayBuilder: (context, capture, constraints) => Stack(
+              fit: .expand,
+              children: [
+                // No preview texture on the Simulator, so paint the frame the boxes came from. The
+                // overlay has its shape, so `.fill` doesn't stretch it.
+                if (simulatedFrames != null)
+                  ValueListenableBuilder(
+                    valueListenable: simulatedFrames,
+                    // A capture only follows a published frame, so there is one.
+                    builder: (context, frame, _) =>
+                        Image.memory(frame!.bytes, fit: .fill, gaplessPlayback: true),
+                  ),
                 ValueListenableBuilder(
-                  valueListenable: simulatedFrames,
-                  // A capture only follows a published frame, so there is one.
-                  builder: (context, frame, _) =>
-                      Image.memory(frame!.bytes, fit: .fill, gaplessPlayback: true),
-                ),
-              ValueListenableBuilder(
-                valueListenable: EngineConfidence.scaleListenable,
-                builder: (context, scale, _) {
-                  // One stroke colour for every box unless the engine's numbers can be ranked.
-                  final isTiered = scale?.isRankable ?? false;
+                  valueListenable: EngineConfidence.scaleListenable,
+                  builder: (context, scale, _) {
+                    // One stroke colour for every box unless the engine's numbers can be ranked.
+                    final isTiered = scale?.isRankable ?? false;
 
-                  return CustomPaint(
-                    size: constraints.biggest,
-                    painter: _ConfidenceBoxPainter(
-                      capture.lines,
-                      isTiered: isTiered,
-                      colorFor: isTiered
-                          ? (confidence) => ConstTheme.confidence(context, confidence)
-                          : (_) => ConstTheme.neutral(context),
-                    ),
-                  );
-                },
-              ),
-            ],
+                    return CustomPaint(
+                      size: constraints.biggest,
+                      painter: _ConfidenceBoxPainter(
+                        capture.lines,
+                        isTiered: isTiered,
+                        colorFor: isTiered
+                            ? (confidence) => ConstTheme.confidence(context, confidence)
+                            : (_) => ConstTheme.neutral(context),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            placeholderBuilder: (_) => const Center(child: PlatformProgressIndicator()),
           ),
-          placeholderBuilder: (_) => const Center(child: PlatformProgressIndicator()),
         ),
         Positioned(
           top: 16,
@@ -159,13 +157,8 @@ class const _ScannerView({required final LiveScannerViewModel viewModel}) extend
                   return PlatformButton.icon(
                     onPressed: viewModel.onRecognitionToggled,
                     emphasis: .medium,
-                    icon: Icon(
-                      context.platformIcon(
-                        material: isRecognizing ? Icons.pause : Icons.play_arrow,
-                        cupertino: isRecognizing
-                            ? CupertinoIcons.pause_fill
-                            : CupertinoIcons.play_fill,
-                      ),
+                    icon: PlatformIcon(
+                      isRecognizing ? PlatformIcons.pauseFilled : PlatformIcons.playFilled,
                     ),
                     label: Text(isRecognizing ? 'Pause' : 'Resume'),
                   );
@@ -185,6 +178,23 @@ class const _ScannerView({required final LiveScannerViewModel viewModel}) extend
                     ),
                   ),
                   label: Text(isTorchOn ? 'On' : 'Off'),
+                ),
+              ),
+              ValueListenableBuilder(
+                valueListenable: viewModel.boxFitListenable,
+                child: const PlatformIcon(PlatformIcons.fullScreen),
+                builder: (context, boxFit, fullScreenIconWidget) => PlatformActionsMenu(
+                  actions: {
+                    for (final fit in BoxFit.values)
+                      .normal(label: fit.name, onPressed: () => viewModel.onBoxFitSelected(fit)),
+                  },
+                  // Menu items can't show a tick, so the button names the current fit.
+                  builder: (context, onPressed) => PlatformButton.icon(
+                    onPressed: onPressed,
+                    emphasis: .medium,
+                    icon: fullScreenIconWidget!,
+                    label: Text(boxFit.name),
+                  ),
                 ),
               ),
             ],

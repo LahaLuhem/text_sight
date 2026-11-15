@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:gap/gap.dart';
 import 'package:material_ui/material_ui.dart' show Icons, Theme;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+import 'package:platform_icons/platform_icons.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/core/widgets/core_widgets.dart';
@@ -26,13 +27,8 @@ class const AboutView({super.key}) extends StatelessWidget {
                 'iOS. Here is how.',
           ),
           const Gap(16),
-          _NuanceCard(
-            icon: Icon(
-              context.platformIcon(
-                material: Icons.verified_user_outlined,
-                cupertino: CupertinoIcons.shield,
-              ),
-            ),
+          const _NuanceCard(
+            icon: PlatformIcon(PlatformIcons.checkMarkShield),
             title: 'Zero third-party ML on iOS',
             body:
                 'iOS uses Apple Vision, a system framework, so the iOS build links no GoogleMLKit, '
@@ -41,33 +37,24 @@ class const AboutView({super.key}) extends StatelessWidget {
                 'library ever enters your Dart dependencies.',
           ),
           const Gap(12),
-          _NuanceCard(
-            icon: Icon(
-              context.platformIcon(
-                material: Icons.smartphone,
-                cupertino: CupertinoIcons.device_phone_portrait,
-              ),
-            ),
+          const _NuanceCard(
+            icon: PlatformIcon(PlatformIcons.deviceMobile),
             title: 'A native engine per platform',
             body:
                 'iOS recognizes with Apple Vision (the Swift RecognizeTextRequest, iOS 18+); '
                 'Android with ML Kit Text Recognition v2 (Latin). One Dart API drives both.',
           ),
           const Gap(12),
-          _NuanceCard(
-            icon: Icon(
-              context.platformIcon(material: Icons.crop_free, cupertino: CupertinoIcons.fullscreen),
-            ),
+          const _NuanceCard(
+            icon: PlatformIcon(PlatformIcons.fullScreen),
             title: 'One coordinate contract',
             body:
                 'Bounding boxes are normalized [0,1] with a top-left origin on both platforms, '
                 'converted natively, so an overlay painter never branches on platform.',
           ),
           const Gap(12),
-          _NuanceCard(
-            icon: Icon(
-              context.platformIcon(material: Icons.speed, cupertino: CupertinoIcons.speedometer),
-            ),
+          const _NuanceCard(
+            icon: PlatformIcon(PlatformIcons.gaugeFilled),
             title: 'Confidence, with a caveat',
             body:
                 'Both engines report a per-line confidence, but the numbers only mean something '

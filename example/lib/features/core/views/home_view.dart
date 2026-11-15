@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/widgets.dart';
 import 'package:material_ui/material_ui.dart' show Icons, MaterialPageRoute, Navigator;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
+import 'package:platform_icons/platform_icons.dart';
 import 'package:pmvvm/mvvm_builder.widget.dart';
 
 import '/features/about/about_view.dart';
@@ -23,9 +24,7 @@ class const HomeView({super.key}) extends StatelessWidget {
         padding: const .symmetric(vertical: 8),
         children: [
           _DemoTile(
-            icon: Icon(
-              context.platformIcon(material: Icons.camera_alt, cupertino: CupertinoIcons.camera),
-            ),
+            icon: const PlatformIcon(PlatformIcons.camera),
             title: 'Live scanner',
             description:
                 'Real-time camera OCR with a confidence-coloured overlay, torch, and a '
@@ -33,9 +32,7 @@ class const HomeView({super.key}) extends StatelessWidget {
             pageBuilder: (_) => const LiveScannerView(),
           ),
           _DemoTile(
-            icon: Icon(
-              context.platformIcon(material: Icons.image, cupertino: CupertinoIcons.photo),
-            ),
+            icon: const PlatformIcon(PlatformIcons.photo),
             title: 'One-shot',
             description:
                 'Recognize a still image from bytes or a file path. No camera, session or '
@@ -43,12 +40,7 @@ class const HomeView({super.key}) extends StatelessWidget {
             pageBuilder: (_) => const OneShotView(),
           ),
           _DemoTile(
-            icon: Icon(
-              context.platformIcon(
-                material: Icons.tune,
-                cupertino: CupertinoIcons.slider_horizontal_3,
-              ),
-            ),
+            icon: const PlatformIcon(PlatformIcons.slider),
             title: 'Playground',
             description:
                 'Tune RecognitionLevel and the region-of-interest on a still image and compare '
@@ -56,9 +48,7 @@ class const HomeView({super.key}) extends StatelessWidget {
             pageBuilder: (_) => const PlaygroundView(),
           ),
           _DemoTile(
-            icon: Icon(
-              context.platformIcon(material: Icons.info_outline, cupertino: CupertinoIcons.info),
-            ),
+            icon: const PlatformIcon(PlatformIcons.info),
             title: 'Under the hood',
             description:
                 'How text_sight links zero ML libraries on iOS, and the native engine behind '
