@@ -21,9 +21,8 @@ import com.lahaluhem.text_sight.RegionOfInterestMessage
 import com.lahaluhem.text_sight.SessionStateMessage
 import com.lahaluhem.text_sight.TextSightOptionsMessage
 import com.lahaluhem.text_sight.await
+import com.lahaluhem.text_sight.recognition.FrameRegion
 import com.lahaluhem.text_sight.recognition.encodeFrame
-import com.lahaluhem.text_sight.recognition.toPixelRect
-import com.lahaluhem.text_sight.recognition.uprightBy
 import io.flutter.plugin.common.EventChannel
 import io.flutter.view.TextureRegistry
 import java.io.ByteArrayInputStream
@@ -131,47 +130,27 @@ internal class TextSightCamera(
     }
 
     /**
-     * Recognizes [bitmap] with a transient pass over the shared recognizer, turned upright by
-     * [rotationDegrees] (its EXIF orientation) first. Emits the same per-frame map the live path
-     * does, with quarterTurns 0 since a still is already upright.
+     * Recognizes [bitmap] with a transient pass over the shared recognizer, which turns it upright
+     * by [rotationDegrees] (its EXIF orientation). Emits the same per-frame map the live path does,
+     * with quarterTurns 0 since the boxes come back upright.
      */
     private suspend fun recognizeStill(
         bitmap: Bitmap,
         rotationDegrees: Int,
         roi: RegionOfInterestMessage?,
     ): Map<String, Any?> {
-        val isQuarterTurned = rotationDegrees == 90 || rotationDegrees == 270
-        val imageWidth = if (isQuarterTurned) bitmap.height else bitmap.width
-        val imageHeight = if (isQuarterTurned) bitmap.width else bitmap.height
-
-        // With an ROI, crop the upright bitmap so ML Kit reads only that region, isolating
-        // partial-line text like iOS Vision does. Too expensive to do per frame on the live path.
-        // The crop's origin offsets the recognized boxes back into full-image coordinates.
-        val crop = roi?.toPixelRect(imageWidth, imageHeight)
-        val input = if (crop == null) {
-            InputImage.fromBitmap(bitmap, rotationDegrees)
-        } else {
-            val upright = bitmap.uprightBy(rotationDegrees)
-            InputImage.fromBitmap(
-                Bitmap.createBitmap(upright, crop.left, crop.top, crop.width(), crop.height()),
-                0,
-            )
-        }
+        val region = FrameRegion(bitmap.width, bitmap.height, rotationDegrees, roi)
+        val pixels = region.crop?.let { crop ->
+            Bitmap.createBitmap(bitmap, crop.left, crop.top, crop.width(), crop.height())
+        } ?: bitmap
 
         val visionText = try {
-            recognizer.process(input).await(analysisExecutor)
+            recognizer.process(InputImage.fromBitmap(pixels, rotationDegrees)).await(analysisExecutor)
         } catch (error: Exception) {
             throw decodeFailed(error.message ?: "Recognition failed.")
         }
 
-        return encodeFrame(
-            visionText,
-            imageWidth,
-            imageHeight,
-            0,
-            offsetX = crop?.left ?: 0,
-            offsetY = crop?.top ?: 0,
-        )
+        return encodeFrame(visionText, region, quarterTurns = 0)
     }
 
     private fun decodeFailed(message: String): FlutterError = FlutterError("decode-failed", message)
@@ -192,14 +171,11 @@ internal class TextSightCamera(
         }
 
         val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-        val isQuarterTurned = rotationDegrees == 90 || rotationDegrees == 270
-        val imageWidth = if (isQuarterTurned) mediaImage.height else mediaImage.width
-        val imageHeight = if (isQuarterTurned) mediaImage.width else mediaImage.height
+        val region = FrameRegion(mediaImage.width, mediaImage.height, rotationDegrees)
 
         recognizer.process(InputImage.fromMediaImage(mediaImage, rotationDegrees))
             .addOnSuccessListener(analysisExecutor) { visionText ->
-                val frame =
-                    encodeFrame(visionText, imageWidth, imageHeight, rotationDegrees / 90, regionOfInterest)
+                val frame = encodeFrame(visionText, region, rotationDegrees / 90, regionOfInterest)
                 mainHandler.post { eventSink?.success(frame) }
             }
             .closeWhenSettled(imageProxy)

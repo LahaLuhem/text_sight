@@ -159,9 +159,9 @@ internal class TextSightModelReadiness(
     }
 }
 
-// The readiness wire-map builders are file-level `internal`, like the captures `encodeFrame` /
-// `encodeLine`, so the host-side unit tests can assert the shapes the Dart side decodes without a
-// Google Play Services round-trip. (The module installation can't be triggered on an emulator.)
+// The readiness wire-map builders are file-level `internal`, like the captures' `encodeFrame`, so
+// the host-side unit tests can assert the shapes the Dart side decodes without a Google Play
+// Services round-trip. (The module installation can't be triggered on an emulator.)
 
 /** The "ready" readiness wire map. */
 internal fun readyState(): Map<String, Any?> = mapOf("state" to "ready")
