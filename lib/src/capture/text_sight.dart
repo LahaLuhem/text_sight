@@ -11,8 +11,6 @@ import '../recognition/text_sight_options.dart';
 ///
 /// Same recognizer and result models as the live driver, but no camera, session, texture, or
 /// permission. Defaults to [RecognitionLevel.accurate], having no per-frame budget to protect.
-// Nothing to construct here, so a primary constructor would only add a public member.
-// ignore: use_primary_constructors
 abstract final class TextSight {
   /// Recognizes text in the encoded image [bytes] (PNG, JPEG, …) at [options].
   ///
