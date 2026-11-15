@@ -4,15 +4,13 @@ import android.graphics.Rect
 import com.lahaluhem.text_sight.recognition.FrameRegion
 import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/**
- * Frames come stored turned, and ML Kit turns what it reads upright. Whichever way a frame is
- * stored, the crop has to be the box, and what ML Kit reports has to land back where it is.
- */
+/** Frames come stored turned, and ML Kit turns what it reads upright. */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
 class FrameRegionTurnsTest(private val rotationDegrees: Int) {
@@ -48,6 +46,23 @@ class FrameRegionTurnsTest(private val rotationDegrees: Int) {
             .turned(rotationDegrees, crop.width(), crop.height())
 
         assertEquals(text.turned(rotationDegrees, storedWidth, storedHeight), region.toFrame(reported))
+    }
+
+    @Test
+    fun `the crop starts and ends on even pixels and still covers the box`() {
+        // Edges that land on odd pixels, in both upright sizes.
+        val oddRoi = RegionOfInterestMessage(left = 0.1025, top = 0.21, width = 0.5, height = 0.3)
+        val oddRegion = FrameRegion(storedWidth, storedHeight, rotationDegrees, oddRoi)
+        val oddCrop = checkNotNull(oddRegion.crop)
+        val box = Rect(
+            (oddRoi.left * oddRegion.uprightWidth).roundToInt(),
+            (oddRoi.top * oddRegion.uprightHeight).roundToInt(),
+            ((oddRoi.left + oddRoi.width) * oddRegion.uprightWidth).roundToInt(),
+            ((oddRoi.top + oddRoi.height) * oddRegion.uprightHeight).roundToInt(),
+        )
+
+        assertTrue("$oddCrop", listOf(oddCrop.left, oddCrop.top, oddCrop.right, oddCrop.bottom).all { it % 2 == 0 })
+        assertTrue(oddCrop.turned(rotationDegrees, storedWidth, storedHeight).contains(box))
     }
 
     companion object {

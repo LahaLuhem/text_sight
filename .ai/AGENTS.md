@@ -208,20 +208,16 @@ up. [dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing) ha
 
 ## Testing
 
-Three test layers, three runners. Each covers only the **pure, platform-independent logic**,
-the device-bound capture/recognition pipeline (CameraX + ML Kit, AVCaptureSession + Vision) is
-not unit-tested.
+Three test layers, three runners. Each covers only logic that runs off the device. The capture
+and recognition pipeline itself (CameraX + ML Kit, AVCaptureSession + Vision) isn't unit-tested.
 
 - **Dart** (`test/`): `flutter test`. Pigeon control-channel, captures-stream and session-state
   decode against a mocked host.
 - **Android native** (`android/src/test/`): `flutter build apk --config-only` in `example/`,
   then `./gradlew :text_sight:testDebugUnitTest` in `example/android/`, as CI does. Robolectric
-  supplies a real `android.graphics.Rect` so the box-geometry helpers test in place (no arithmetic
-  extraction), ML Kit's `Text` graph is Mockito-mocked. Robolectric runs under its JUnit 4
-  runner, executed on the JUnit Platform via `junit-vintage-engine`. Mockito's inline mock-maker
-  loads as a `-javaagent` (JDK 21+ forbids self-attach). See `testOptions` in `build.gradle.kts`.
-  Covers `FrameRegion`, `centerWithin`, and the per-frame wire-map encoder (`encodeFrame`, kept as
-  a file-level `internal` function for this).
+  gives real Android types like `Rect`, and Mockito stands in for ML Kit's `Text` and the camera's
+  image planes. Covers `FrameRegion`, where the crop starts in each plane, and `encodeFrame` (a
+  file-level `internal` function so tests can reach it). libyuv's copy itself needs a device.
 - **iOS native** (`example/ios/RunnerTests/`): `xcodebuild test -workspace
   example/ios/Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,…'
   -only-testing:RunnerTests`. Runs on a **simulator, not the host**, and tests helpers in place via

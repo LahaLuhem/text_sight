@@ -11,10 +11,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/**
- * The frame release must not wait on the main looper: CameraX withholds the next frame until the
- * close lands. Parking the looper is what makes a main-thread hop show up as a failure.
- */
+/** Parking the main looper makes a hop onto main show up as a close that never lands. */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
 class BackpressureTest {
@@ -37,5 +34,15 @@ class BackpressureTest {
             .closeWhenSettled(imageProxy)
 
         verify(imageProxy).close()
+    }
+
+    @Test
+    fun `a part copied out of the frame is freed with it`() {
+        val cutOut = mock<AutoCloseable>()
+        shadowOf(Looper.getMainLooper()).pause()
+
+        Tasks.forResult(Unit).closeWhenSettled(mock<ImageProxy>(), cutOut)
+
+        verify(cutOut).close()
     }
 }
