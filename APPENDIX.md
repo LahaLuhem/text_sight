@@ -392,18 +392,35 @@ Vision the `RotationCoordinator`'s orientation. Captures still report that turn 
 one-shot reports `0`.
 
 **Region-of-interest uses the same contract.** The ROI is a `Rect` in the same normalized `[0,1]`
-top-left space as the output boxes (not pixels), with a debug `assert` at the consuming controller
-enforces the range, since the `const` `TextSightOptions` can't validate in its own constructor.
-Because ROI is part of the source-agnostic recognizer config it applies uniformly: the live driver
-sets it via the controller, and the static driver takes it as an optional parameter (full-frame when
-omitted). On Apple the value goes to `VNImageRequestHandler.regionOfInterest` after the same Y-flip
-(Vision's ROI is also bottom-left). **One Apple wrinkle:** Vision measures its text-height floor
-against the ROI rather than the frame, so a narrower box picks up smaller text than the whole frame
-does. Harmless while that floor stays 0, and it has to be divided out the day it isn't. On Android
-the static one-shot **crops** the upright bitmap to the ROI, so ML Kit reads only that region, a
-true crop (like iOS) that also isolates partial-line text. The **live** stream still runs full-frame
-and drops lines whose box center falls outside the ROI (cropping every frame would cost too much). A
-true YUV pre-crop there is a future optimization.
+top-left space as the output boxes (not pixels). The `const` `TextSightOptions` can't check its own
+range, so a debug `assert` at the controller does. Both drivers take it, the live one through the
+controller and the one-shot per call, and `null` means the whole frame.
+
+Every path reads only the box. One `FrameRegion` per platform decides what the engine reads and
+moves every box it reports back onto the frame, so the two can't drift apart:
+
+| Path | What limits the read | Why boxes need moving back |
+|---|---|---|
+| iOS, live and one-shot | The request's `regionOfInterest`, flipped to Vision's bottom-left space | Vision measures each box from the region's corner |
+| Android one-shot | A crop of the bitmap as stored, with its EXIF turn handed to ML Kit | ML Kit measures from the crop's corner |
+| Android live | libyuv cuts the box out of the YUV planes into an NV21 buffer | Same |
+
+A line the box's edge crosses comes back cut on every path. Both engines drop a line the edge slices
+deep and return fragments for a shallow slice, and no rule on box position tells those fragments
+from good lines ([#3](https://github.com/LahaLuhem/text_sight/issues/3)). Vision measures its
+text-height floor against the region too, so the floor is divided by the box's height on the way in
+([#public-api-via-single-export-file](#public-api-via-single-export-file)).
+
+**Why the Android live crop goes through libyuv.** ML Kit takes no region and ignores
+`Image.cropRect`, so a smaller buffer is the only way to read less. libyuv-android copies the box out
+of planar, NV21 and NV12 memory with no loops of ours, faster than a hand-written copy, for a native
+library in every install. [#3](https://github.com/LahaLuhem/text_sight/issues/3) has the sizes and
+timings.
+
+**Keep the crop in libyuv-android's native `Nv21Buffer`.** ML Kit's NV21 `fromByteBuffer` reads a
+buffer's backing array from index 0 and ignores `arrayOffset()`. On Android,
+`ByteBuffer.allocateDirect` is array-backed with a non-zero offset, so swapping it in makes ML Kit
+read a shifted image and quietly return fewer lines.
 
 **Orientation is an input, not an afterthought.** Recognition silently degrades if it is
 wrong: the Apple side must pass the correct `CGImagePropertyOrientation`, the Android side the
@@ -457,10 +474,8 @@ original 13.0 once Flutter 3.47 made 15 its own minimum, leaving 13 and 14 unrea
 the Swift `RecognizeTextRequest`) and `LegacyTextRecognizer` (`VNRecognizeTextRequest`, iOS 15-17,
 *not* deprecated), and `TextRecognizerFactory.make()` is the **single** `#available(iOS 18, *)`
 site, resolved once at `TextSightCamera` init (kept out of the ~30 fps path). Both backends emit the
-identical neutral `RecognizedLineData`, so the captures-`EventChannel` map and the Y-flip stay
-shared Only request construction and observation-mapping differ (the modern path uses
-`NormalizedRect.toImageCoordinates(_:origin:.upperLeft)`. The legacy path flips lower-left→top-left
-as `1 - maxY`, [#coordinate-normalization](#coordinate-normalization)).
+identical neutral `RecognizedLineData` and move every box through the one `FrameRegion`
+([#coordinate-normalization](#coordinate-normalization)), so only request construction differs.
 **iOS 18+ devices pay nothing:** they take the same `RecognizeTextRequest` path as before,
 `#available` is one cached OS-version compare (not a per-frame tax), and the legacy code never runs
 there. The legacy `perform` is *synchronous*, so it runs on a dedicated serial queue bridged to
