@@ -16,7 +16,7 @@ struct LegacyTextRecognizer: TextRecognizer {
       try VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: orientation, options: [:])
         .perform([request])
 
-      return Self.lines(from: request)
+      return Self.lines(from: request, in: config.region)
     }
   }
 
@@ -27,7 +27,7 @@ struct LegacyTextRecognizer: TextRecognizer {
       try VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
         .perform([request])
 
-      return Self.lines(from: request)
+      return Self.lines(from: request, in: config.region)
     }
   }
 
@@ -40,16 +40,11 @@ struct LegacyTextRecognizer: TextRecognizer {
     // Empty means no preference, so it goes through rather than being guarded away.
     request.recognitionLanguages = config.languages
     request.minimumTextHeight = config.visionTextHeightFraction
-    // Vision's region is lower-left, so flip the top-left rect.
-    request.regionOfInterest = config.roi.map {
-      CGRect(x: $0.left, y: 1 - ($0.top + $0.height), width: $0.width, height: $0.height)
-    } ?? CGRect(x: 0, y: 0, width: 1, height: 1)
+    request.regionOfInterest = config.region.visionRect
 
     return request
   }
 
-  /// Runs the blocking `work` on the recognition queue, bridged to `async`. Keeps the synchronous
-  /// Vision perform off the cooperative pool.
   private func runOffCooperativePool(
     _ work: @escaping () throws -> [RecognizedLineData]
   ) async throws -> [RecognizedLineData] {
@@ -58,19 +53,15 @@ struct LegacyTextRecognizer: TextRecognizer {
     }
   }
 
-  /// Maps each observation's top candidate to a neutral line, flipping Vision's lower-left
-  /// normalized box to the top-left-normalized one the wire contract expects.
-  private static func lines(from request: VNRecognizeTextRequest) -> [RecognizedLineData] {
+  /// Maps each observation's top candidate to a neutral line, its box moved onto the frame.
+  private static func lines(from request: VNRecognizeTextRequest,
+                            in region: FrameRegion) -> [RecognizedLineData] {
     (request.results ?? []).compactMap { observation -> RecognizedLineData? in
       guard let candidate = observation.topCandidates(1).first else { return nil }
 
-      // Lower-left -> top-left: the box's top edge (maxY in lower-left) becomes 1 - maxY.
-      let bounds = observation.boundingBox
-      let box = CGRect(x: bounds.minX, y: 1 - bounds.maxY,
-                       width: bounds.width, height: bounds.height)
-
       return RecognizedLineData(text: candidate.string,
-                                confidence: Double(candidate.confidence), box: box)
+                                confidence: Double(candidate.confidence),
+                                box: region.toFrame(observation.boundingBox))
     }
   }
 }

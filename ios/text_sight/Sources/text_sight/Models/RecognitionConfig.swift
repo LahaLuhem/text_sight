@@ -1,5 +1,4 @@
-/// One snapshot of the recognizer settings, free of the Pigeon types so it can ride the
-/// recognition `Task` as a single value.
+/// One snapshot of the recognizer settings, so they ride the recognition `Task` as a single value.
 struct RecognitionConfig {
   let level: RecognitionLevelMessage
 
@@ -11,6 +10,8 @@ struct RecognitionConfig {
   /// keeps every pixel.
   let minimumTextHeight: Float
   let roi: RegionOfInterestMessage?
+
+  var region: FrameRegion { FrameRegion(roi) }
 
   /// The same floor in the units Vision wants, which are a fraction of the scan box rather than the
   /// frame. Without this a narrower box would quietly start reading smaller text.
