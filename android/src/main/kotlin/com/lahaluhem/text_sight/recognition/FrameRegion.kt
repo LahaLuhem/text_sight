@@ -24,7 +24,7 @@ internal class FrameRegion(
     /** What to cut out of the frame as it's stored, or null to read all of it. */
     val crop: Rect? = box?.turnedBack()
 
-    /** [reported], measured from the corner of what ML Kit read, moved onto the whole frame. */
+    /** A box ML Kit measured from the crop's corner, moved onto the whole frame. */
     fun toFrame(reported: Rect): Rect = Rect(reported).apply { offset(box?.left ?: 0, box?.top ?: 0) }
 
     // Inside the frame and never empty, since ML Kit throws on an empty image.
@@ -34,11 +34,16 @@ internal class FrameRegion(
         val right = ((roi.left + roi.width) * uprightWidth).roundToInt().coerceIn(left + 1, uprightWidth)
         val bottom = ((roi.top + roi.height) * uprightHeight).roundToInt().coerceIn(top + 1, uprightHeight)
 
-        return Rect(left, top, right, bottom)
+        // Out to even pixels, since camera frames keep one colour sample per 2x2 block.
+        return Rect(
+            left / 2 * 2,
+            top / 2 * 2,
+            ((right + 1) / 2 * 2).coerceAtMost(uprightWidth),
+            ((bottom + 1) / 2 * 2).coerceAtMost(uprightHeight),
+        )
     }
 
-    // ML Kit gets the rotation too and turns the crop upright itself, so the crop is the box turned
-    // back the other way.
+    // ML Kit turns the crop upright itself, so cut the box turned back the other way.
     private fun Rect.turnedBack(): Rect = when (rotationDegrees) {
         90 -> Rect(top, uprightWidth - right, bottom, uprightWidth - left)
         180 -> Rect(uprightWidth - right, uprightHeight - bottom, uprightWidth - left, uprightHeight - top)

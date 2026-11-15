@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show Rect;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show BoxFit;
@@ -14,6 +15,9 @@ final class LiveScannerViewModel() extends ViewModel {
 
   final _controller = TextSightController();
 
+  // The README's strip.
+  static const _scanBox = Rect.fromLTWH(0.1, 0.4, 0.8, 0.2);
+
   final _sessionStatusNotifier = ValueNotifier(SessionStatus.preparingModel);
   final _shouldEnableTorchNotifier = ValueNotifier(false);
   final _boxFitNotifier = ValueNotifier(BoxFit.contain);
@@ -26,8 +30,6 @@ final class LiveScannerViewModel() extends ViewModel {
     unawaited(_start());
   }
 
-  /// The session controller, bound to the view's `TextSightView`, and the source of its
-  /// `captures` stream.
   TextSightController get controller => _controller;
 
   ValueListenable<SessionStatus> get sessionStatusListenable => _sessionStatusNotifier;
@@ -64,6 +66,14 @@ final class LiveScannerViewModel() extends ViewModel {
     await _controller.updateTorchEnabled(enabled: next);
     _shouldEnableTorchNotifier.value = next;
   }
+
+  /// Reads only the scan box, or the whole frame again.
+  Future<void> onScanBoxPressed() => _controller.updateOptions(
+    TextSightOptions(
+      roi: _controller.options.roi == null ? _scanBox : null,
+      darwin: _controller.options.darwin,
+    ),
+  );
 
   /// Keeps the camera up but stops the recognizer, the thing to do when nobody reads the results.
   Future<void> onRecognitionToggled() =>

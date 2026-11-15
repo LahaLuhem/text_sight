@@ -22,6 +22,7 @@ import com.lahaluhem.text_sight.SessionStateMessage
 import com.lahaluhem.text_sight.TextSightOptionsMessage
 import com.lahaluhem.text_sight.await
 import com.lahaluhem.text_sight.recognition.FrameRegion
+import com.lahaluhem.text_sight.recognition.cropToNv21
 import com.lahaluhem.text_sight.recognition.encodeFrame
 import io.flutter.plugin.common.EventChannel
 import io.flutter.view.TextureRegistry
@@ -31,14 +32,7 @@ import java.util.concurrent.Executors
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 
-/**
- * Recognition for one live session: the ML Kit recognizer, the per-frame encode, and the one-shot
- * still path. The CameraX side is [CameraSession].
- *
- * Recognition runs off the platform main thread on [analysisExecutor], and results marshal back to
- * main before reaching the [EventChannel] sink. Closing each [ImageProxy] releases backpressure
- * and the stream stalls without it, so it goes through [closeWhenSettled] and stays off main.
- */
+/** ML Kit recognition for live frames and one-shot stills. The camera itself is [CameraSession]. */
 internal class TextSightCamera(
     context: Context,
     textureRegistry: TextureRegistry,
@@ -61,6 +55,9 @@ internal class TextSightCamera(
     )
 
     private var eventSink: EventChannel.EventSink? = null
+
+    // Set on main, read on the analysis thread once per frame.
+    @Volatile
     private var regionOfInterest: RegionOfInterestMessage? = null
 
     init {
@@ -91,15 +88,13 @@ internal class TextSightCamera(
     suspend fun disposeSession() = session.release()
 
     fun setOptions(options: TextSightOptionsMessage) {
-        // Level, language correction, languages and the text-height floor have no ML Kit Latin
-        // equivalent, so the region-of-interest is the only one that lands anywhere.
+        // ML Kit's Latin recognizer has no level, language or text-height settings, so only the box applies.
         regionOfInterest = options.roi
     }
 
     fun setTorchEnabled(enabled: Boolean) = session.setTorchEnabled(enabled)
 
-    // Static one-shot recognition: no camera session, texture, or permission. Decode and
-    // recognition both run on the analysis dispatcher.
+    // One-shot stills: no camera session, texture or permission.
 
     suspend fun recognizeImage(
         bytes: ByteArray,
@@ -129,11 +124,6 @@ internal class TextSightCamera(
         recognizeStill(bitmap, rotation, options.roi)
     }
 
-    /**
-     * Recognizes [bitmap] with a transient pass over the shared recognizer, which turns it upright
-     * by [rotationDegrees] (its EXIF orientation). Emits the same per-frame map the live path does,
-     * with quarterTurns 0 since the boxes come back upright.
-     */
     private suspend fun recognizeStill(
         bitmap: Bitmap,
         rotationDegrees: Int,
@@ -150,12 +140,13 @@ internal class TextSightCamera(
             throw decodeFailed(error.message ?: "Recognition failed.")
         }
 
+        // ML Kit turned the still upright by its EXIF turn, so the boxes come back upright too.
         return encodeFrame(visionText, region, quarterTurns = 0)
     }
 
     private fun decodeFailed(message: String): FlutterError = FlutterError("decode-failed", message)
 
-    /** Releases every per-engine resource. Called when the plugin detaches from the engine. */
+    /** Called when the plugin detaches from the engine. */
     fun dispose() {
         session.dispose()
         recognizer.close()
@@ -171,13 +162,26 @@ internal class TextSightCamera(
         }
 
         val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-        val region = FrameRegion(mediaImage.width, mediaImage.height, rotationDegrees)
+        val region = FrameRegion(mediaImage.width, mediaImage.height, rotationDegrees, regionOfInterest)
+        // ML Kit reads no region of its own, so a box means handing it a smaller image.
+        val cutOut = region.crop?.let(mediaImage::cropToNv21)
+        val input = if (cutOut == null) {
+            InputImage.fromMediaImage(mediaImage, rotationDegrees)
+        } else {
+            InputImage.fromByteBuffer(
+                cutOut.asBuffer(),
+                cutOut.width,
+                cutOut.height,
+                rotationDegrees,
+                InputImage.IMAGE_FORMAT_NV21,
+            )
+        }
 
-        recognizer.process(InputImage.fromMediaImage(mediaImage, rotationDegrees))
+        recognizer.process(input)
             .addOnSuccessListener(analysisExecutor) { visionText ->
-                val frame = encodeFrame(visionText, region, rotationDegrees / 90, regionOfInterest)
+                val frame = encodeFrame(visionText, region, rotationDegrees / 90)
                 mainHandler.post { eventSink?.success(frame) }
             }
-            .closeWhenSettled(imageProxy)
+            .closeWhenSettled(imageProxy, cutOut)
     }
 }

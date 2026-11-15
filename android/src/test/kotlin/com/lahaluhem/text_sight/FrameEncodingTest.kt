@@ -13,12 +13,7 @@ import org.mockito.kotlin.whenever
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/**
- * `encodeFrame`: recognized text onto the per-frame wire map, which has to come out byte-identical
- * to the one iOS emits. ML Kit's [Text] graph is mocked, since its value types expose no public
- * constructors. The box geometry lives in [FrameRegionTest], [FrameRegionTurnsTest] and
- * [CenterWithinTest].
- */
+/** The wire map has to match iOS's. [Text] is mocked, since ML Kit gives it no public constructors. */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
 class FrameEncodingTest {
@@ -60,17 +55,6 @@ class FrameEncodingTest {
         assertEquals(0.1, line["top"] as Double, 1e-9)
     }
 
-    @Test
-    fun `drops lines whose centre falls outside the roi`() {
-        // The first line's centre (0.05, 0.25) is outside, the second's (0.85, 0.25) inside.
-        val text = textOf(line("OUT", Rect(0, 0, 20, 50)), line("IN", Rect(150, 0, 190, 50)))
-        val roi = RegionOfInterestMessage(left = 0.5, top = 0.0, width = 0.5, height = 1.0)
-
-        val frame = encodeFrame(text, FrameRegion(200, 100, 0), quarterTurns = 0, roi = roi)
-
-        assertEquals(listOf("IN"), frame.lines().map { it["text"] })
-    }
-
     @Suppress("UNCHECKED_CAST")
     private fun Map<String, Any?>.lines() = this["lines"] as List<Map<String, Any?>>
 
@@ -83,7 +67,6 @@ class FrameEncodingTest {
         return line
     }
 
-    /** A mocked [Text] of one block holding [lines]. */
     private fun textOf(vararg lines: Text.Line): Text {
         val block = mock<Text.TextBlock>()
         whenever(block.lines).thenReturn(lines.toList())

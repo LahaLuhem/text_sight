@@ -3,12 +3,8 @@ import 'package:flutter/widgets.dart' show BuildContext, Color;
 import 'package:material_ui/material_ui.dart' show Colors;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
 
-/// Confidence-tier palette for the demo, resolved per platform.
-///
-/// Each colour returns the Material hue on Android and the matching `CupertinoColors.system*` on
-/// iOS via [platformValue], then runs through [CupertinoDynamicColor.resolve] so iOS follows
-/// light/dark. Tiers: [green] high, [orange] medium, [red] low, and [neutral] where the engine's
-/// scale cannot be ranked at all.
+/// The demo's colours: the Material hue on Android, and on iOS the matching system colour, which
+/// follows light and dark.
 abstract final class ConstTheme() {
   /// Alpha for a confidence-tinted chip fill.
   static const confidenceFillAlpha = 0.15;
@@ -26,10 +22,13 @@ abstract final class ConstTheme() {
     _ => red(context),
   };
 
-  /// A box whose confidence cannot be ranked, so no tier applies. Deliberately none of the three
-  /// tier hues, so an unranked overlay is not mistaken for a graded one.
+  /// A box whose confidence can't be ranked. None of the tier hues, so it doesn't read as graded.
   static Color neutral(BuildContext context) =>
       _resolve(context, material: Colors.blue, cupertino: CupertinoColors.systemBlue);
+
+  /// The live scanner's scan box. None of the line-box hues, so a line cut at its edge still shows.
+  static Color scanBox(BuildContext context) =>
+      _resolve(context, material: Colors.purple, cupertino: CupertinoColors.systemPurple);
 
   /// High confidence: [Colors.green] / [CupertinoColors.systemGreen].
   static Color green(BuildContext context) =>

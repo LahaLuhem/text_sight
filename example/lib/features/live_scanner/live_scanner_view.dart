@@ -24,9 +24,8 @@ class const LiveScannerView({super.key}) extends StatelessWidget {
       body: ValueListenableBuilder(
         valueListenable: viewModel.sessionStatusListenable,
         builder: (context, status, _) => switch (status) {
-          // Readiness arrives as a sealed TextSightReadinessState, so switch over it. The download
-          // path is the interesting one (Android, unbundled model). ensureReady() in the view
-          // model drives the actual gate and flips to .ready / .failed once it resolves.
+          // Only shows progress, since ensureReady() in the view model is the gate. A download only
+          // happens on Android with the unbundled model.
           .preparingModel => Center(
             child: StreamBuilder(
               stream: TextSightModel.readiness,
@@ -108,46 +107,75 @@ class const _ScannerView({required final LiveScannerViewModel viewModel}) extend
           builder: (context, boxFit, _) => TextSightView(
             controller: viewModel.controller,
             fit: boxFit,
-            overlayBuilder: (context, capture, constraints) => Stack(
-              fit: .expand,
-              children: [
-                // No preview texture on the Simulator, so paint the frame the boxes came from. The
-                // overlay has its shape, so `.fill` doesn't stretch it.
-                if (simulatedFrames != null)
-                  ValueListenableBuilder(
-                    valueListenable: simulatedFrames,
-                    // A capture only follows a published frame, so there is one.
-                    builder: (context, frame, _) =>
-                        Image.memory(frame!.bytes, fit: .fill, gaplessPlayback: true),
-                  ),
-                ValueListenableBuilder(
-                  valueListenable: EngineConfidence.scaleListenable,
-                  builder: (context, scale, _) {
-                    // One stroke colour for every box unless the engine's numbers can be ranked.
-                    final isTiered = scale?.isRankable ?? false;
+            // Also rebuilt on the controller, so a toggled scan box shows even with recognition paused.
+            overlayBuilder: (context, capture, constraints) => ListenableBuilder(
+              listenable: viewModel.controller,
+              builder: (context, _) {
+                final scanBox = viewModel.controller.options.roi;
+                final size = constraints.biggest;
 
-                    return CustomPaint(
-                      size: constraints.biggest,
-                      painter: _ConfidenceBoxPainter(
-                        capture.lines,
-                        isTiered: isTiered,
-                        colorFor: isTiered
-                            ? (confidence) => ConstTheme.confidence(context, confidence)
-                            : (_) => ConstTheme.neutral(context),
+                return Stack(
+                  fit: .expand,
+                  children: [
+                    // No preview texture on the Simulator, so paint the frame the boxes came from.
+                    // The overlay has its shape, so `.fill` doesn't stretch it.
+                    if (simulatedFrames != null)
+                      ValueListenableBuilder(
+                        valueListenable: simulatedFrames,
+                        // A capture only follows a published frame, so there is one.
+                        builder: (context, frame, _) => Image.memory(
+                          frame!.bytes,
+                          fit: .fill,
+                          gaplessPlayback: true,
+                          // Stands in for the preview texture, which screen readers skip too.
+                          excludeFromSemantics: true,
+                        ),
                       ),
-                    );
-                  },
-                ),
-              ],
+                    if (scanBox != null)
+                      Positioned(
+                        left: scanBox.left * size.width,
+                        top: scanBox.top * size.height,
+                        width: scanBox.width * size.width,
+                        height: scanBox.height * size.height,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: .all(color: ConstTheme.scanBox(context), width: 3),
+                          ),
+                        ),
+                      ),
+                    ValueListenableBuilder(
+                      valueListenable: EngineConfidence.scaleListenable,
+                      builder: (context, scale, _) {
+                        // One stroke colour for every box unless the engine's numbers can be ranked.
+                        final isTiered = scale?.isRankable ?? false;
+
+                        return CustomPaint(
+                          size: size,
+                          painter: _ConfidenceBoxPainter(
+                            capture.lines,
+                            isTiered: isTiered,
+                            colorFor: isTiered
+                                ? (confidence) => ConstTheme.confidence(context, confidence)
+                                : (_) => ConstTheme.neutral(context),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                );
+              },
             ),
             placeholderBuilder: (_) => const Center(child: PlatformProgressIndicator()),
           ),
         ),
         Positioned(
           top: 16,
+          left: 16,
           right: 16,
-          child: Row(
+          child: Wrap(
+            alignment: .end,
             spacing: 8,
+            runSpacing: 8,
             children: [
               ListenableBuilder(
                 listenable: viewModel.controller,
@@ -195,6 +223,16 @@ class const _ScannerView({required final LiveScannerViewModel viewModel}) extend
                     icon: fullScreenIconWidget!,
                     label: Text(boxFit.name),
                   ),
+                ),
+              ),
+              // No visible label, since the outline shows whether it's on.
+              ListenableBuilder(
+                listenable: viewModel.controller,
+                builder: (context, _) => PlatformButton.iconOnly(
+                  onPressed: viewModel.onScanBoxPressed,
+                  emphasis: .medium,
+                  icon: const PlatformIcon(PlatformIcons.crop),
+                  label: viewModel.controller.options.roi == null ? 'Scan box off' : 'Scan box on',
                 ),
               ),
             ],
@@ -317,9 +355,7 @@ class _ConfidenceBoxPainter(
       oldDelegate.lines != lines || oldDelegate.isTiered != isTiered;
 }
 
-/// The model-preparation view: a progress indicator over a short message. A bar while a download
-/// reports [progress], a spinner otherwise (indeterminate, or on iOS where there is nothing to
-/// download).
+/// A bar while a download reports [progress], otherwise a spinner.
 class const _PreparingModel({required final String message, final double? progress})
     extends StatelessWidget {
   @override

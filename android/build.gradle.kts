@@ -26,9 +26,8 @@ val useBundled =
 android {
     namespace = "com.lahaluhem.text_sight"
 
-    // Latest STABLE API level, matching flutter.compileSdkVersion. NOT a preview level: AGP bakes
-    // this into the AAR as minCompileSdk, so a higher value forces every consumer onto that SDK
-    // platform and breaks stock-Flutter ones (see APPENDIX).
+    // Latest stable, matching flutter.compileSdkVersion. AGP bakes it into the AAR as every
+    // consumer's minCompileSdk, so a preview level breaks stock Flutter apps (see APPENDIX).
     compileSdk = 36
 
     compileOptions {
@@ -36,7 +35,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    // Library BuildConfig is off by default in AGP 9, enabled here for the USE_BUNDLED field below.
+    // Off by default in AGP 9, and USE_BUNDLED below needs it.
     buildFeatures {
         buildConfig = true
     }
@@ -44,13 +43,11 @@ android {
     defaultConfig {
         minSdk = 24
 
-        // Bundled into the AAR and merged into every consuming app's R8 config. Keeps ML
-        // Kit's reflectively-resolved classes from being renamed in release builds.
-        // without it the recognizer can't initialize and the plugin fails to attach.
+        // Merged into every app's R8 config, so release builds keep the ML Kit classes it looks up
+        // by name. Without them the plugin fails to attach.
         consumerProguardFiles("consumer-rules.pro")
 
-        // Surfaces `useBundled` to Kotlin: the readiness path short-circuits to "ready" (no Play
-        // Services round-trip) when the model is statically linked into the APK.
+        // Lets readiness answer "ready" straight away when the model ships inside the APK.
         buildConfigField("boolean", "USE_BUNDLED", useBundled.toString())
     }
 
@@ -60,9 +57,8 @@ android {
             all { testTask ->
                 testTask.useJUnitPlatform()
 
-                // Mockito's inline mock-maker loads as a Java agent (self-attach is deprecated on
-                // JDK 21+). Point -javaagent at the mockito-core jar already on the resolved test
-                // classpath, so doFirst defers the lookup to execution time, when it's resolvable.
+                // Mockito loads as a Java agent, since JDK 21+ deprecates self-attach. In doFirst,
+                // because the test classpath only resolves when the task runs.
                 testTask.doFirst {
                     val agentJar = testTask.classpath.first { jar -> jar.name.startsWith("mockito-core-") }
                     testTask.jvmArgs("-javaagent:${agentJar.absolutePath}")
@@ -86,56 +82,49 @@ kotlin {
 }
 
 dependencies {
-    // Recognition + camera live ONLY here, never in the Dart pubspec (no-bundling). ML Kit text
-    // recognition is bundled or unbundled per `useBundled`: identical Kotlin API, only the artifact
-    // and model delivery differ.
+    // Recognition and camera libs live only here, never in the Dart pubspec (no-bundling). Both ML
+    // Kit artifacts share one Kotlin API.
     if (useBundled) {
-        // Bundled: model statically linked into the APK, so instant + offline, ~4 MB/script/arch.
         implementation("com.google.mlkit:text-recognition:16.0.1")
     } else {
-        // Unbundled (default): model fetched via Google Play Services, ~260 KB/script/arch.
         implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.2")
     }
-    // ModuleInstallClient, the app-controlled fetch + download progress behind
-    // TextSightModel.ensureReady(). The readiness code references it regardless of `useBundled`
-    // (the bundled path just never calls it), so keep it on the classpath. ML Kit pulls it anyway.
+    // ModuleInstallClient, behind TextSightModel.ensureReady(). Readiness code names it even when
+    // bundled, so it stays on the classpath.
     implementation("com.google.android.gms:play-services-base:18.11.1")
 
     implementation("androidx.camera:camera-core:1.6.1")
     implementation("androidx.camera:camera-camera2:1.6.1")
     implementation("androidx.camera:camera-lifecycle:1.6.1")
 
-    // Reads still-image EXIF orientation for the one-shot recognizer. Android-only utility (not a
-    // recognition lib), already transitive via CameraX, but declared directly since it's used directly.
+    // Cuts the box out of camera frames for ML Kit, which has no region setting.
+    implementation("io.github.crow-misia.libyuv:libyuv-android:0.44.0")
+
+    // EXIF orientation for one-shot stills. Comes with CameraX, declared since we use it.
     implementation("androidx.exifinterface:exifinterface:1.4.2")
 
-    // App foreground/background signal for the headless session owner. Atomic group: lifts every
-    // androidx.lifecycle artifact consumers resolve to the same version.
+    // Foreground/background signal for the session owner. An atomic group, so it lifts every
+    // androidx.lifecycle artifact a consumer resolves to this version.
     implementation("androidx.lifecycle:lifecycle-process:2.11.0")
 
-    // Suspend bridges over CameraX's ListenableFuture and ML Kit's Task (Await.kt). Transitive via
-    // CameraX already, declared because it's used directly. Lifts consumers from 1.9.0.
+    // Await.kt's suspend bridges. Comes with CameraX, declared since we use it.
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test")
-    // runTest and the cancellation assertions for Await.kt.
+    // runTest and the cancellation checks for Await.kt.
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    // ResolvableFuture, a settable ListenableFuture for the Await.kt tests. No POM impact.
+    // ResolvableFuture, a ListenableFuture the Await.kt tests can settle by hand.
     testImplementation("androidx.concurrent:concurrent-futures:1.1.0")
-    // mockito-core also carries the inline mock-maker agent that testOptions points -javaagent at.
+    // Also the jar testOptions loads as the Java agent.
     testImplementation("org.mockito:mockito-core:5.24.0")
-    // Real android.graphics.Rect (and friends) on the JVM, so the box-geometry helpers test
-    // in place without extracting the arithmetic off Android types.
+    // Real android.graphics types on the JVM, so the geometry tests use them as they are.
     testImplementation("org.robolectric:robolectric:4.18")
-    // mockito-kotlin's whenever/mock DSL over the already-present mockito-core, for stubbing the
-    // ML Kit Text/Text.Line value graph that the frame encoder reads.
+    // Kotlin-friendly mock/whenever, for ML Kit's Text graph and the camera's image planes.
     testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
-    // Robolectric runs under its JUnit 4 runner, and the vintage engine executes those tests on the
-    // JUnit Platform configured above (useJUnitPlatform).
+    // Robolectric's runner is JUnit 4, and the vintage engine runs it on the JUnit Platform.
     testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:6.1.3")
-    // JUnit Platform launcher, required on the test runtime classpath for useJUnitPlatform().
-    // The legacy AGP DSL / kotlin-android setup provided it implicitly. AGP 9's new DSL does not.
+    // useJUnitPlatform() needs the launcher, which AGP 9's DSL no longer brings along.
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
 }
 
