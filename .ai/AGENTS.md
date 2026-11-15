@@ -219,9 +219,9 @@ not unit-tested.
   supplies a real `android.graphics.Rect` so the box-geometry helpers test in place (no arithmetic
   extraction), ML Kit's `Text` graph is Mockito-mocked. Robolectric runs under its JUnit 4
   runner, executed on the JUnit Platform via `junit-vintage-engine`. Mockito's inline mock-maker
-  loads as a `-javaagent` (JDK 21+ forbids self-attach). See the `mockitoAgent` configuration in
-  `build.gradle.kts`. Covers `toPixelRect`, `centerWithin`, and the per-frame wire-map encoder
-  (`encodeFrame`/`encodeLine`, kept as file-level `internal` functions for this).
+  loads as a `-javaagent` (JDK 21+ forbids self-attach). See `testOptions` in `build.gradle.kts`.
+  Covers `FrameRegion`, `centerWithin`, and the per-frame wire-map encoder (`encodeFrame`, kept as
+  a file-level `internal` function for this).
 - **iOS native** (`example/ios/RunnerTests/`): `xcodebuild test -workspace
   example/ios/Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,…'
   -only-testing:RunnerTests`. Runs on a **simulator, not the host**, and tests helpers in place via
