@@ -315,7 +315,7 @@ style.
 
 - **One responsibility per file, and the filename names it.** A file holds one public/primary type,
   or one cohesive cluster of free functions. `FrameEncoding.kt` is the per-frame wire map,
-  `RegionOfInterest.kt` the ROI geometry. Don't let helper functions or a second helper class pile
+  `FrameCrop.kt` the YUV crop. Don't let helper functions or a second helper class pile
   up at the bottom of a driver file, so extract them and each file's path advertises its job.
   **Why:** findability, and a one-responsibility diff when that concern changes. (`lib/src/` already
   does this, one public type per file behind the barrel.)

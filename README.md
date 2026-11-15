@@ -279,7 +279,7 @@ behaviour changes the compiler won't catch:
 
 ## Going deeper
 
-Coordinate handling, the per-line confidence contract, the session state model, how
-region-of-interest differs across platforms, and what's next: all in
+Coordinate handling, the per-line confidence contract, the session state model, how the
+region-of-interest limits what's read, and what's next: all in
 [APPENDIX.md](https://github.com/LahaLuhem/text_sight/blob/main/APPENDIX.md). The longer guides live
 in [`doc/`](https://github.com/LahaLuhem/text_sight/tree/main/doc).
