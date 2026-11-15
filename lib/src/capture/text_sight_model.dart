@@ -7,8 +7,6 @@ import '../recognition/text_sight_readiness_state.dart';
 /// model is fetched from Play Services and requests made before it lands yield no results, so call
 /// [ensureReady] as the user enters an OCR feature and watch [readiness]. Always [ModelReady] on
 /// iOS and with Android's bundled model.
-// Nothing to construct here, so a primary constructor would only add a public member.
-// ignore: use_primary_constructors
 abstract final class TextSightModel {
   /// Ensures the model is present, resolving to [ModelReady] or to [ModelUnavailable] if it
   /// cannot be fetched (failure is a state, not a throw).

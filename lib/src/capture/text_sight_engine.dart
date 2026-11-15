@@ -5,8 +5,6 @@ import '../recognition/confidence_scale.dart';
 ///
 /// A pure namespace, like `TextSightModel`, but for what the engine's output *means* rather than
 /// whether it is ready.
-// Nothing to construct here, so a primary constructor would only add a public member.
-// ignore: use_primary_constructors
 abstract final class TextSightEngine {
   /// What a recognized line's confidence means here.
   ///
