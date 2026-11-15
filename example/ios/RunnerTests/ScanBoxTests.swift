@@ -7,13 +7,17 @@ import UIKit
 /// With a scan box set, Vision measures each line from the box's corner.
 @Suite("Line boxes with a scan box set")
 struct ScanBoxTests {
-  // The README's strip.
-  static let roi = RegionOfInterestMessage(left: 0.1, top: 0.4, width: 0.8, height: 0.2)
+  // Off-centre and half the frame's width, so a box measured from the wrong corner or left
+  // unscaled lands off its word.
+  static let roi = RegionOfInterestMessage(left: 0.15, top: 0.1, width: 0.5, height: 0.6)
 
   static let pageSize = CGSize(width: 1080, height: 1920)
 
-  // Inside the strip, and apart in both directions, so a box that's off either way shows.
-  static let words = [("ALPHA", CGPoint(x: 200, y: 800)), ("BRAVO", CGPoint(x: 600, y: 1040))]
+  // Inside the box, and apart in both directions, so a box that's off either way shows.
+  static let words = [("ALPHA", CGPoint(x: 200, y: 800)), ("BRAVO", CGPoint(x: 400, y: 1040))]
+
+  // Vision boxes the glyphs a little looser than they're drawn.
+  static let slack = CGSize(width: 16 / pageSize.width, height: 16 / pageSize.height)
 
   static var attributes: [NSAttributedString.Key: Any] {
     [.font: UIFont.boldSystemFont(ofSize: 64), .foregroundColor: UIColor.black]
@@ -40,9 +44,9 @@ struct ScanBoxTests {
     for (word, origin) in Self.words {
       let line = try #require(lines.first { $0.text.uppercased().contains(word) }, "\(word) unread")
       let drawn = Self.normalizedRect(of: word, at: origin)
-      let center = CGPoint(x: line.box.midX, y: line.box.midY)
+        .insetBy(dx: -Self.slack.width, dy: -Self.slack.height)
 
-      #expect(drawn.contains(center), "\(word) reported at \(line.box), drawn at \(drawn)")
+      #expect(drawn.contains(line.box), "\(word) reported at \(line.box), drawn at \(drawn)")
     }
   }
 

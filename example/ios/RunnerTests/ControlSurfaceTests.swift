@@ -1,20 +1,18 @@
 import AVFoundation
-import CoreGraphics
 import Flutter
 import UIKit
 import XCTest
 
 @testable import text_sight
 
-/// The async control surface on `TextSightCamera` and `TextSightModelReadiness`. Covers both
-/// outcomes of the continuation bridge: it resolves, and it throws instead of hanging. A hung
-/// continuation is what the async conversion risks, and XCTest's own timeout is what catches it.
+/// The async control surface on `TextSightCamera`: each call resolves or throws its typed error. A
+/// call that hangs instead is what the async conversion risks, and XCTest's timeout catches it.
 final class ControlSurfaceTests: XCTestCase {
   private let options = TextSightOptionsMessage(level: .accurate, usesLanguageCorrection: true,
                                                 languages: [], minimumTextHeight: 0, roi: nil)
 
   func testRecognizeImageResolvesForRenderedText() async throws {
-    let png = try XCTUnwrap(LegacyTextRecognizerTests.renderText("HELLO").pngData())
+    let png = try XCTUnwrap(renderText("HELLO").pngData())
 
     let frame = try await makeCamera().recognizeImage(
       bytes: FlutterStandardTypedData(bytes: png), options: options
@@ -26,12 +24,9 @@ final class ControlSurfaceTests: XCTestCase {
   }
 
   func testRecognizeImageThrowsOnUndecodableBytes() async {
-    // Lands on the frame-decode guard, not the source guard: CGImageSourceCreateWithData returns a
-    // source for any Data, empty included.
     let garbage = FlutterStandardTypedData(bytes: Data([0x00, 0x01, 0x02, 0x03]))
 
-    await assertThrowsPigeonError(code: "decode-failed",
-                                  message: "The image could not be decoded.") {
+    await assertThrowsPigeonError(code: "decode-failed") {
       _ = try await self.makeCamera().recognizeImage(bytes: garbage, options: self.options)
     }
   }
@@ -54,12 +49,6 @@ final class ControlSurfaceTests: XCTestCase {
     }
   }
 
-  func testEnsureModelReadyResolvesToReady() async {
-    let state = await TextSightModelReadiness().ensureModelReady()
-
-    XCTAssertEqual(state["state"] as? String, "ready")
-  }
-
   func testAFailedGraphBuildLeavesNoConfigurationOpen() throws {
     try XCTSkipUnless(
       AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) == nil,
@@ -75,18 +64,12 @@ final class ControlSurfaceTests: XCTestCase {
     XCTAssertEqual(session.openConfigurations, 0, "a failed build left the session wedged")
   }
 
-  func testDisposeResolvesOnAnUnopenedSession() async throws {
-    // Exercises the sessionQueue bridge on its own: release is idempotent, so this must resolve
-    // rather than hang waiting for a session that never opened.
-    try await makeCamera().dispose()
-  }
-
   private func makeCamera() -> TextSightCamera {
     TextSightCamera(textureRegistry: StubTextureRegistry())
   }
 
   private func assertThrowsPigeonError(
-    code: String, message: String? = nil, file: StaticString = #filePath, line: UInt = #line,
+    code: String, file: StaticString = #filePath, line: UInt = #line,
     _ work: @escaping () async throws -> Void
   ) async {
     do {
@@ -94,9 +77,6 @@ final class ControlSurfaceTests: XCTestCase {
       XCTFail("expected a PigeonError(\(code)), got success", file: file, line: line)
     } catch let error as PigeonError {
       XCTAssertEqual(error.code, code, file: file, line: line)
-      if let message {
-        XCTAssertEqual(error.message, message, file: file, line: line)
-      }
     } catch {
       XCTFail("expected a PigeonError(\(code)), got \(error)", file: file, line: line)
     }

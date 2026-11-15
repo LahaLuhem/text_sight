@@ -11,6 +11,10 @@ final class FrameGate {
   private var mailbox: AsyncStream<CVPixelBuffer>.Continuation?
   private var consumer: Task<Void, Never>?
 
+  /// The loop draining the mailbox, `nil` while idle. Tests read it to tell whether a frame got
+  /// through, and await it to know the loop has ended.
+  var consumerTask: Task<Void, Never>? { lock.withLock { consumer } }
+
   /// Hands over the newest frame, starting the consumer if there is not one. Never blocks, so the
   /// capture queue stays free.
   func offer(_ pixelBuffer: CVPixelBuffer) {

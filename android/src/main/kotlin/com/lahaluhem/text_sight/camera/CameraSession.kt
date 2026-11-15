@@ -182,7 +182,8 @@ internal class CameraSession(
     }
 
     private fun onOwnerStatus(status: SessionLifecycleOwner.Status) {
-        // Only the pause is reported from here. Coming back, the camera's own OPEN says active.
+        // Only the pause comes from here: CameraX's camera state rides a LiveData observed through
+        // this owner, which goes quiet while capped. Coming back, the camera's own OPEN says active.
         deriveSessionState(status, camera = null)?.let(onSessionState)
     }
 

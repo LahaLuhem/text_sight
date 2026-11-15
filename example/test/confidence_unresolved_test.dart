@@ -25,7 +25,11 @@ void main() {
   ) async {
     await tester.pumpWidget(const _Host(child: ConfidenceScaleNote()));
 
-    expect(find.textContaining('Coarse confidence'), findsNothing);
+    // Found by where it sits rather than what it says.
+    expect(
+      find.descendant(of: find.byType(ConfidenceScaleNote), matching: find.byType(Text)),
+      findsNothing,
+    );
   });
 }
 

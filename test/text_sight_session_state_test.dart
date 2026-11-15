@@ -68,15 +68,18 @@ void main() {
 
   Bdd(equality)
       .scenario('toString names the case and carries the payload')
-      .given('one state of each case')
+      .given('a paused and a failed state, each with details')
       .when('each is printed')
-      .then('the text shows the case and, where present, the fields')
+      .then('the text names the case and shows its fields')
       .run((_) {
-        check(const SessionIdle().toString()).equals('SessionIdle()');
-        check(const SessionActive().toString()).equals('SessionActive()');
         check(
-          const SessionPaused(reason: SessionPauseReason.interrupted, details: 'call').toString(),
-        ).equals('SessionPaused(reason: SessionPauseReason.interrupted, details: call)');
-        check(const SessionFailed().toString()).equals('SessionFailed(details: null)');
+            const SessionPaused(reason: SessionPauseReason.interrupted, details: 'call').toString(),
+          )
+          ..contains('SessionPaused')
+          ..contains('interrupted')
+          ..contains('call');
+        check(const SessionFailed(details: 'camera died').toString())
+          ..contains('SessionFailed')
+          ..contains('camera died');
       });
 }

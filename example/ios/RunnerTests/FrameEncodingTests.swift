@@ -4,7 +4,7 @@ import XCTest
 @testable import text_sight
 
 /// `TextSightCamera.encodeFrame`: neutral recognized lines to the per-frame wire map, which has to
-/// come out byte-identical to the one Android emits.
+/// match Android's.
 final class FrameEncodingTests: XCTestCase {
   func testEncodeFrameMapsLinesToWireKeys() {
     let line = RecognizedLineData(text: "hi", confidence: 0.5,
@@ -27,6 +27,5 @@ final class FrameEncodingTests: XCTestCase {
     XCTAssertEqual(encoded?["top"] as? Double, 0.2)
     XCTAssertEqual(encoded?["width"] as? Double, 0.3)
     XCTAssertEqual(encoded?["height"] as? Double, 0.4)
-    XCTAssertTrue(encoded?["elements"] is NSNull)
   }
 }

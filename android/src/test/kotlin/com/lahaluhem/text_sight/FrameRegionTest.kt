@@ -2,6 +2,7 @@ package com.lahaluhem.text_sight
 
 import android.graphics.Rect
 import com.lahaluhem.text_sight.recognition.FrameRegion
+import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -10,7 +11,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** What gets read when there's no box to cut out, or the box doesn't fit the frame. */
+/** What gets cut out of a frame, and the way back. The four turns are in [FrameRegionTurnsTest]. */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
 class FrameRegionTest {
@@ -51,5 +52,38 @@ class FrameRegionTest {
             // ML Kit throws on an empty image.
             assertTrue("$roi", !crop.isEmpty && Rect(0, 0, 640, 480).contains(crop))
         }
+    }
+
+    @Test
+    fun `what ML Kit reports lands where the text sits in the frame`() {
+        // Stored turned, so the crop and the box sit in different places.
+        val roi = RegionOfInterestMessage(left = 0.1, top = 0.2, width = 0.5, height = 0.3)
+        val region = FrameRegion(400, 300, 90, roi)
+        val crop = checkNotNull(region.crop)
+        // Some text inside the crop, in the frame as stored.
+        val text = Rect(crop.left + 5, crop.top + 10, crop.left + 25, crop.top + 18)
+        // ML Kit measures it from the crop's corner, after turning the crop upright.
+        val reported = Rect(text)
+            .apply { offset(-crop.left, -crop.top) }
+            .turned(90, crop.width(), crop.height())
+
+        assertEquals(text.turned(90, 400, 300), region.toFrame(reported))
+    }
+
+    @Test
+    fun `the crop starts and ends on even pixels and still covers the box`() {
+        // Every edge of this box lands on an odd pixel.
+        val roi = RegionOfInterestMessage(left = 0.1025, top = 0.21, width = 0.5, height = 0.3)
+        val (width, height) = 400 to 300
+        val crop = checkNotNull(FrameRegion(width, height, 0, roi).crop)
+        val box = Rect(
+            (roi.left * width).roundToInt(),
+            (roi.top * height).roundToInt(),
+            ((roi.left + roi.width) * width).roundToInt(),
+            ((roi.top + roi.height) * height).roundToInt(),
+        )
+
+        assertTrue("$crop", listOf(crop.left, crop.top, crop.right, crop.bottom).all { it % 2 == 0 })
+        assertTrue(crop.contains(box))
     }
 }

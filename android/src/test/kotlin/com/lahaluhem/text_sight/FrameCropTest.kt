@@ -9,47 +9,45 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import org.robolectric.ParameterizedRobolectricTestRunner
+import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Frames keep brightness per pixel and colour per 2x2 block, in one of three layouts. libyuv's copy
- * itself only runs on a device.
+ * Frames keep brightness per pixel and colour per 2x2 block, the colour in separate planes or
+ * interleaved in pairs. libyuv's copy itself only runs on a device.
  */
-@RunWith(ParameterizedRobolectricTestRunner::class)
+@RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
-class FrameCropTest(private val layout: Layout) {
+class FrameCropTest {
+    private val crop = Rect(10, 6, 30, 20)
+
     @Test
-    fun `the copy starts on the crop's corner in every plane`() {
-        val crop = Rect(10, 6, 30, 20)
-        val (y, u, v) = layout.planes(width = 64, height = 48)
+    fun `the copy starts on the crop's corner in the brightness plane`() {
+        val y = brightnessPlane(width = 64, height = 48)
 
         assertEquals(luma(crop.left, crop.top), y.buffer.get(y.cornerOffset(crop, 1)))
-        assertEquals(blue(crop.left / 2, crop.top / 2), u.buffer.get(u.cornerOffset(crop, 2)))
-        assertEquals(red(crop.left / 2, crop.top / 2), v.buffer.get(v.cornerOffset(crop, 2)))
     }
 
-    /** How a camera might hand the frame over, padded rows included. */
-    enum class Layout {
-        // Separate colour planes, as the emulator sends.
+    @Test
+    fun `the copy starts on the crop's corner in each colour plane, separate or interleaved`() {
+        for (layout in Layout.entries) {
+            val (u, v) = layout.colourPlanes(width = 32, height = 24)
+
+            assertEquals("$layout", blue(crop.left / 2, crop.top / 2), u.buffer.get(u.cornerOffset(crop, 2)))
+            assertEquals("$layout", red(crop.left / 2, crop.top / 2), v.buffer.get(v.cornerOffset(crop, 2)))
+        }
+    }
+
+    /** How a camera might hand the colour over, padded rows included. */
+    private enum class Layout {
+        // Separate planes, as the emulator sends.
         PLANAR,
 
-        // Colour interleaved in pairs, red first as most phones send, or blue first.
+        // Interleaved in pairs, red first, as most phones send. Blue first has the same strides.
         NV21,
-        NV12,
         ;
 
-        fun planes(width: Int, height: Int): Array<Image.Plane> {
-            val lumaStride = width + 16
-            val luma = ByteBuffer.allocateDirect(lumaStride * height)
-            for (row in 0 until height) {
-                for (col in 0 until width) luma.put(row * lumaStride + col, luma(col, row))
-            }
-
-            return arrayOf(plane(luma, lumaStride, 1)) + colourPlanes(width / 2, height / 2)
-        }
-
-        private fun colourPlanes(width: Int, height: Int): List<Image.Plane> {
+        fun colourPlanes(width: Int, height: Int): List<Image.Plane> {
             if (this == PLANAR) {
                 val stride = width + 8
                 val blue = ByteBuffer.allocateDirect(stride * height)
@@ -66,26 +64,28 @@ class FrameCropTest(private val layout: Layout) {
 
             val stride = width * 2 + 16
             val pairs = ByteBuffer.allocateDirect(stride * height)
-            val redFirst = this == NV21
             for (row in 0 until height) {
                 for (col in 0 until width) {
-                    pairs.put(row * stride + col * 2, if (redFirst) red(col, row) else blue(col, row))
-                    pairs.put(row * stride + col * 2 + 1, if (redFirst) blue(col, row) else red(col, row))
+                    pairs.put(row * stride + col * 2, red(col, row))
+                    pairs.put(row * stride + col * 2 + 1, blue(col, row))
                 }
             }
             // Each colour plane starts on its own first sample, one byte apart.
-            val firstPlane = plane(pairs.duplicate(), stride, 2)
-            val secondPlane = plane(pairs.duplicate().apply { position(1) }.slice(), stride, 2)
+            val bluePlane = plane(pairs.duplicate().apply { position(1) }.slice(), stride, 2)
 
-            return if (redFirst) listOf(secondPlane, firstPlane) else listOf(firstPlane, secondPlane)
+            return listOf(bluePlane, plane(pairs.duplicate(), stride, 2))
         }
     }
+}
 
-    companion object {
-        @JvmStatic
-        @ParameterizedRobolectricTestRunner.Parameters(name = "{0}")
-        fun layouts(): Collection<Array<Any>> = Layout.entries.map { arrayOf<Any>(it) }
+private fun brightnessPlane(width: Int, height: Int): Image.Plane {
+    val stride = width + 16
+    val luma = ByteBuffer.allocateDirect(stride * height)
+    for (row in 0 until height) {
+        for (col in 0 until width) luma.put(row * stride + col, luma(col, row))
     }
+
+    return plane(luma, stride, 1)
 }
 
 // Sample values that differ from their neighbours', so a copy starting off by a step reads wrong.

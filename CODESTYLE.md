@@ -17,6 +17,7 @@ CI, and the conventions below that they don't check are applied by hand, the way
 - [Formatting](#formatting)
 - [Constants & magic numbers](#constants--magic-numbers)
 - [Class structure](#class-structure)
+- [Source-file organization](#source-file-organization)
 - [Idioms](#idioms)
   - [Static dot shorthands (Dart 3.10+)](#static-dot-shorthands-dart-310)
   - [Drop redundant `<Type>` on collection literals](#drop-redundant-type-on-collection-literals)
@@ -33,6 +34,7 @@ CI, and the conventions below that they don't check are applied by hand, the way
   - [`@docImport` for dartdoc-only references](#docimport-for-dartdoc-only-references)
 - [DCM rules (applied by hand)](#dcm-rules-applied-by-hand)
 - [Testing](#testing)
+  - [Conventions](#conventions)
 - [Swift (iOS)](#swift-ios)
 - [Kotlin (Android)](#kotlin-android)
 - [Documentation conventions (Markdown)](#documentation-conventions-markdown)
@@ -99,17 +101,17 @@ style.
   general-programming initialisms below also expand, since shorthand that's "obvious" to the author
   is opaque to the next reader and indistinguishable from a typo:
 
-  | Don't write | Write instead             |
-  |-------------|---------------------------|
-  | `cb`        | `callback` (with the type-suffix rule below: `<context>Callback` if shared scope makes bare `callback` ambiguous) |
-  | `fn`        | `function` / `handler` / spell out the semantic role |
-  | `cfg`       | `config` |
-  | `idx`       | `index` (loop counters keep `i` / `j` per genre convention, see local-variable rule) |
-  | `tmp`       | `temporary` / a name describing what it actually holds |
-  | `req` / `res` / `resp` | `request` / `response` |
-  | `ctx`       | `context` (Flutter's `BuildContext` arg stays `context` by convention) |
-  | `evt`       | `event` |
-  | `pb` / `sb` | `pixelBuffer` / `sampleBuffer` (recurring in the Vision capture path) |
+  | Don't write            | Write instead                                                                                                     |
+  |------------------------|-------------------------------------------------------------------------------------------------------------------|
+  | `cb`                   | `callback` (with the type-suffix rule below: `<context>Callback` if shared scope makes bare `callback` ambiguous) |
+  | `fn`                   | `function` / `handler` / spell out the semantic role                                                              |
+  | `cfg`                  | `config`                                                                                                          |
+  | `idx`                  | `index` (loop counters keep `i` / `j` per genre convention, see local-variable rule)                              |
+  | `tmp`                  | `temporary` / a name describing what it actually holds                                                            |
+  | `req` / `res` / `resp` | `request` / `response`                                                                                            |
+  | `ctx`                  | `context` (Flutter's `BuildContext` arg stays `context` by convention)                                            |
+  | `evt`                  | `event`                                                                                                           |
+  | `pb` / `sb`            | `pixelBuffer` / `sampleBuffer` (recurring in the Vision capture path)                                             |
 
   This rule binds *every* identifier: fields, locals, parameters, pattern bindings
   (`switch (x) { final cb => … }` is **out**, so spell it). The only carve-outs are the genre
@@ -135,9 +137,9 @@ style.
   **`darwin`, not `ios`.** The constraint is Apple Vision, which a macOS target would share, and it
   matches the shared Apple source directory.
 
-  | Group it when                                                     | Leave it neutral when                                                                   |
-  |-------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
-  | It is an **option**, so setting it promises behaviour that changes | It is an **observation**: `TextSightModel.ensureReady()` resolving instantly on iOS still did what it promised |
+  | Group it when                                                      | Leave it neutral when                                                                                                              |
+  |--------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+  | It is an **option**, so setting it promises behaviour that changes | It is an **observation**: `TextSightModel.ensureReady()` resolving instantly on iOS still did what it promised                     |
   | The engine cannot do it at all, whatever the dependency            | The result differs but both platforms deliver it, e.g. `roi`, which Vision takes as a true region and Android delivers by cropping |
 
 - **Local-variable names carry a concise type-suffix.** Dart is strongly typed, but a
@@ -706,6 +708,24 @@ of the shared lints and treated as non-negotiable. Apply by hand (or via the
   `IntegrationTestWidgetsFlutterBinding`, not bare `testWidgets` / `expect`. The example package
   therefore carries `bdd_framework` + `checks` as dev-dependencies (same versions as the root).
   Run them with `flutter test integration_test -d <device>`.
+
+<a id="test-conventions"></a>
+
+### Conventions
+
+- **Test the package, not its dependencies.** What Flutter, material_ui or cupertino_ui does by
+  itself (a sheet's drag, a wheel's physics) is theirs to test. Test what the package adds.
+- **A test pins a behaviour a user would agree with.** A value that only carries it (a default, a
+  log line) isn't one: compare with its source or the state before.
+- **A guarantee the design rests on counts too,** like a release build dropping the unused look.
+- **One check, one scenario.** A check another scenario makes goes, one 2 scenarios share gets its
+  own, and each example row takes a branch no other row does.
+- **Assert what the user gets, not the string,** unless 2 messages on one screen mean different
+  things.
+- **Prove a regression test fails:** break what it guards, watch it go red, put it back. For a
+  "nothing happened" check, break the mechanism itself.
+- **`// coverage:ignore-*` only marks code no test can usefully reach.** Its reason goes on a `//`
+  line above, since text after the marker switches it off.
 
 ---
 

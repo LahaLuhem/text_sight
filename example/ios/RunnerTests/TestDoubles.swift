@@ -3,6 +3,7 @@ import CoreGraphics
 import CoreVideo
 import Flutter
 import ImageIO
+import UIKit
 import XCTest
 
 @testable import text_sight
@@ -17,6 +18,20 @@ func makeTestPixelBuffer() throws -> CVPixelBuffer {
   XCTAssertEqual(code, kCVReturnSuccess)
 
   return try XCTUnwrap(pixelBuffer)
+}
+
+/// Renders `string` as large black text on a white field, clear enough for reliable recognition.
+func renderText(_ string: String) -> UIImage {
+  let size = CGSize(width: 512, height: 160)
+
+  return UIGraphicsImageRenderer(size: size).image { context in
+    UIColor.white.setFill()
+    context.fill(CGRect(origin: .zero, size: size))
+    (string as NSString).draw(at: CGPoint(x: 24, y: 36), withAttributes: [
+      .font: UIFont.boldSystemFont(ofSize: 84),
+      .foregroundColor: UIColor.black,
+    ])
+  }
 }
 
 /// Counts open capture configurations. AVFoundation reference-counts begin/commit and exposes no
@@ -49,22 +64,12 @@ final class StubTextureRegistry: NSObject, FlutterTextureRegistry {
 final class ParkedRecognizer: TextRecognizer, @unchecked Sendable {
   let confidenceScale = ConfidenceScaleMessage.visionGraded
 
-  let started = XCTestExpectation(description: "the first frame reached the recognizer")
+  let started = XCTestExpectation(description: "a frame reached the recognizer")
   let cancelled = XCTestExpectation(description: "the parked recognition was cancelled")
-  /// Inverted, so waiting on it asserts that no second frame ever got through the gate.
-  let startedAgain: XCTestExpectation = {
-    let expectation = XCTestExpectation(description: "a second frame reached the recognizer")
-    expectation.isInverted = true
-
-    return expectation
-  }()
-
-  private let lock = NSLock()
-  private var starts = 0
 
   func recognize(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation,
                  config: RecognitionConfig) async throws -> [RecognizedLineData] {
-    if isFirstStart() { started.fulfill() } else { startedAgain.fulfill() }
+    started.fulfill()
 
     do {
       // Long enough that only cancellation ends the wait.
@@ -83,33 +88,53 @@ final class ParkedRecognizer: TextRecognizer, @unchecked Sendable {
 
     return []
   }
+}
 
-  /// Counts this entry and says whether it was the first.
-  private func isFirstStart() -> Bool {
-    lock.withLock {
-      starts += 1
+/// Returns a line even once cancelled, as the legacy backend's Vision call does after it starts.
+final class FinishesAnywayRecognizer: TextRecognizer, @unchecked Sendable {
+  let confidenceScale = ConfidenceScaleMessage.visionGraded
 
-      return starts == 1
-    }
+  let started = XCTestExpectation(description: "a frame reached the recognizer")
+
+  func recognize(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    started.fulfill()
+    // Only cancellation ends the wait, and the line still comes back.
+    try? await Task.sleep(nanoseconds: 30 * NSEC_PER_SEC)
+
+    return [RecognizedLineData(text: "late", confidence: 1,
+                               box: CGRect(x: 0, y: 0, width: 1, height: 1))]
+  }
+
+  func recognize(cgImage: CGImage, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    XCTFail("the live path must not take the still-image entry point")
+
+    return []
   }
 }
 
-/// Takes a fixed time and timestamps every entry, so a test can read the gap between them.
-final class TimedRecognizer: TextRecognizer, @unchecked Sendable {
+/// Holds each recognition until the test releases it, and hands over the frame it got. A held one
+/// ignores cancellation, so release it before teardown.
+final class HeldRecognizer: TextRecognizer, @unchecked Sendable {
   let confidenceScale = ConfidenceScaleMessage.visionGraded
 
-  private let latencyNanos: UInt64
+  /// Every frame that reached the recognizer, in order.
+  let frames: AsyncStream<CVPixelBuffer>
+  private let framesSink: AsyncStream<CVPixelBuffer>.Continuation
   private let lock = NSLock()
-  private var startNanos: [UInt64] = []
+  private var held: CheckedContinuation<Void, Never>?
 
-  init(latencyMs: Double) {
-    latencyNanos = UInt64(latencyMs * 1_000_000)
+  init() {
+    (frames, framesSink) = AsyncStream.makeStream()
   }
 
   func recognize(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation,
                  config: RecognitionConfig) async throws -> [RecognizedLineData] {
-    lock.withLock { startNanos.append(DispatchTime.now().uptimeNanoseconds) }
-    try await Task.sleep(nanoseconds: latencyNanos)
+    await withCheckedContinuation { continuation in
+      lock.withLock { held = continuation }
+      framesSink.yield(pixelBuffer)
+    }
 
     return []
   }
@@ -121,13 +146,52 @@ final class TimedRecognizer: TextRecognizer, @unchecked Sendable {
     return []
   }
 
-  /// (recognitions started, mean milliseconds between consecutive starts).
+  /// Lets the recognition in progress finish.
+  func release() {
+    let continuation = lock.withLock {
+      defer { held = nil }
+
+      return held
+    }
+    continuation?.resume()
+  }
+}
+
+/// Takes a fixed time and stamps every finish, so a test can read the gap between them. A cancelled
+/// recognition leaves no stamp.
+final class TimedRecognizer: TextRecognizer, @unchecked Sendable {
+  let confidenceScale = ConfidenceScaleMessage.visionGraded
+
+  private let latencyNanos: UInt64
+  private let lock = NSLock()
+  private var finishNanos: [UInt64] = []
+
+  init(latencyMs: Double) {
+    latencyNanos = UInt64(latencyMs * 1_000_000)
+  }
+
+  func recognize(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    try await Task.sleep(nanoseconds: latencyNanos)
+    lock.withLock { finishNanos.append(DispatchTime.now().uptimeNanoseconds) }
+
+    return []
+  }
+
+  func recognize(cgImage: CGImage, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    XCTFail("the live path must not take the still-image entry point")
+
+    return []
+  }
+
+  /// (recognitions finished, mean milliseconds between consecutive finishes).
   func stats() -> (Int, Double) {
     lock.withLock {
-      guard startNanos.count > 1 else { return (startNanos.count, 0) }
-      let span = Double(startNanos[startNanos.count - 1] - startNanos[0]) / 1_000_000
+      guard finishNanos.count > 1 else { return (finishNanos.count, 0) }
+      let span = Double(finishNanos[finishNanos.count - 1] - finishNanos[0]) / 1_000_000
 
-      return (startNanos.count, span / Double(startNanos.count - 1))
+      return (finishNanos.count, span / Double(finishNanos.count - 1))
     }
   }
 }

@@ -14,16 +14,6 @@ import 'package:text_sight/text_sight.dart';
 
 // Plain `testWidgets`: bdd_framework scenarios get no `WidgetTester`.
 void main() {
-  testWidgets('The view mounts with no Directionality above it', (tester) async {
-    final platform = await _pumpView(tester);
-    platform.previewPushes.add(_portrait);
-    await tester.pump();
-
-    check(tester.takeException()).isNull();
-    // The preview rendered, so the check above isn't vacuous.
-    check(find.byType(Texture).evaluate()).length.equals(1);
-  });
-
   testWidgets('The preview turns with native geometry, no capture needed', (tester) async {
     final platform = await _pumpView(tester);
 
@@ -115,7 +105,7 @@ const _portrait = (textureId: 7, size: Size(960, 1280), quarterTurns: 1);
 const _overlay = ValueKey('overlay');
 
 /// Mounts [view] (a plain one by default) top left, on a started controller native hasn't pushed
-/// to yet.
+/// to yet. Nothing above it gives a Directionality, so every test also shows the view needs none.
 Future<_PreviewPlatform> _pumpView(
   WidgetTester tester, {
   Size size = const Size(300, 600),

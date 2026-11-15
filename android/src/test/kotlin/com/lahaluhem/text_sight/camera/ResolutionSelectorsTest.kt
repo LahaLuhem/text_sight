@@ -33,12 +33,13 @@ class ResolutionSelectorsTest {
     }
 
     @Test
-    fun `each rung asks for a different size`() {
-        val sizes = CaptureResolutionMessage.entries.map {
-            analysisResolutionSelector(it).resolutionStrategy?.boundSize
+    fun `each rung asks for more pixels than the one below`() {
+        val areas = CaptureResolutionMessage.entries.map { rung ->
+            val size = requireNotNull(analysisResolutionSelector(rung).resolutionStrategy?.boundSize)
+            size.width * size.height
         }
 
-        assertEquals(sizes.size, sizes.distinct().size)
+        assertTrue("$areas", areas.zipWithNext().all { (lower, higher) -> lower < higher })
     }
 
     private companion object {

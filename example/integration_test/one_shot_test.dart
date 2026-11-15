@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:bdd_framework/bdd_framework.dart';
 import 'package:checks/checks.dart';
+import 'package:example/features/core/data/constants/core_constants.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -19,9 +20,9 @@ void main() {
       .scenario('recognizeImage recognizes a still from encoded bytes')
       .given('the bundled sample image bytes, already upright')
       .when('TextSight.recognizeImage is awaited on them')
-      .then('the capture is upright, sized <width> by <height>')
+      .then("the capture is upright, the sample's own size")
       .and('its recognized lines include <token>')
-      .example(val('width', 1000), val('height', 620), val('token', 'TextSight'))
+      .example(val('token', 'TextSight'))
       .run((ctx) async {
         final capture = await TextSight.recognizeImage(await _sampleBytes());
 
@@ -32,9 +33,9 @@ void main() {
       .scenario('recognizePath recognizes a still from a file path')
       .given('the bundled sample image written to a temp file, already upright')
       .when('TextSight.recognizePath is awaited on its path')
-      .then('the capture is upright, sized <width> by <height>')
+      .then("the capture is upright, the sample's own size")
       .and('its recognized lines include <token>')
-      .example(val('width', 1000), val('height', 620), val('token', 'TextSight'))
+      .example(val('token', 'TextSight'))
       .run((ctx) async {
         final capture = await TextSight.recognizePath(await _writeTempCopy(await _sampleBytes()));
 
@@ -42,10 +43,9 @@ void main() {
       });
 }
 
-const _asset = 'assets/sample_text.png';
-
 /// The bundled sample image's encoded bytes.
-Future<Uint8List> _sampleBytes() async => (await rootBundle.load(_asset)).buffer.asUint8List();
+Future<Uint8List> _sampleBytes() async =>
+    (await rootBundle.load(ConstMedia.sampleText.keyName)).buffer.asUint8List();
 
 /// Writes [bytes] to a temp file and returns its path, exercising the path entry point.
 Future<String> _writeTempCopy(Uint8List bytes) async {
@@ -55,19 +55,13 @@ Future<String> _writeTempCopy(Uint8List bytes) async {
   return file.path;
 }
 
-/// Checks [capture] is the row's sample: its size, which a turn would swap, and a line with the
+/// Checks [capture] is the bundled sample: its size, which a turn would swap, and a line with the
 /// token.
 void _checkUprightSample(BddContext ctx, TextSightCapture capture) {
-  check(capture.imageSize).equals(
-    Size(
-      (ctx.example.val('width') as int).toDouble(),
-      (ctx.example.val('height') as int).toDouble(),
-    ),
-  );
+  check(capture.imageSize).equals(ConstMedia.sampleText.size!);
 
   // OCR may vary inter-word spacing, so normalize before matching the strongest token.
   final token = (ctx.example.val('token') as String).toLowerCase();
   final joined = capture.lines.map((line) => line.text).join(' ').toLowerCase();
-  check<Iterable<Object?>>(capture.lines).isNotEmpty();
   check(joined.replaceAll(' ', '')).contains(token);
 }

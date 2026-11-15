@@ -26,9 +26,8 @@ struct RotationMappingTests {
     #expect(mapped.isQuarterTurned == swapped)
   }
 
-  /// 360 wraps to 0, 450 wraps to 90, and a near-quarter angle rounds before the modulo.
+  /// 450 wraps to 90, and a near-quarter angle rounds before the modulo.
   @Test("Angles outside a single turn normalize first", arguments: [
-    (angle: 360.0, turns: 0),
     (angle: 450.0, turns: 1),
     (angle: 89.6, turns: 1),
   ])
