@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui' show Size;
+import 'dart:ui' show Rect, Size;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,7 +8,8 @@ import 'package:text_sight/text_sight.dart';
 
 import 'support/bench_record.dart';
 
-/// Recognized frames per second, per level. Directional: the numbers depend on what the camera sees.
+/// Recognized frames per second, per level, whole and through the README's strip. Directional: the
+/// numbers depend on what the camera sees.
 /// Only recognized frames are visible from Dart, so the drop ratio needs native counters.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -27,10 +28,12 @@ void main() {
 
     final records = <Map<String, Object?>>[];
 
-    // Same four series as the one-shot, so the two reports line up.
+    // The one-shot's four series, so the two reports line up, each read whole and then through the
+    // strip, back to back so the pair sees the same phone temperature.
     final sweep = [
       for (final level in RecognitionLevel.values)
-        for (final corrected in const [false, true]) (level: level, corrected: corrected),
+        for (final corrected in const [false, true])
+          for (final roi in const [null, _strip]) (level: level, corrected: corrected, roi: roi),
     ];
 
     // Burn the device in first, or whichever candidate runs first reads ~75% high. A Sony XQ-BQ52
@@ -45,13 +48,18 @@ void main() {
     for (final entry in _reverseSweep ? sweep.reversed : sweep) {
       await controller.updateOptions(
         TextSightOptions(
+          roi: entry.roi,
           darwin: DarwinOptions(
             recognitionLevel: entry.level,
             usesLanguageCorrection: entry.corrected,
           ),
         ),
       );
-      final candidate = entry.corrected ? '${entry.level.name}+corrected' : entry.level.name;
+      final candidate = [
+        entry.level.name,
+        if (entry.corrected) 'corrected',
+        if (entry.roi != null) 'strip',
+      ].join('+');
 
       for (var iteration = 0; iteration < _iterations; iteration++) {
         final arrivals = <int>[];
@@ -131,6 +139,8 @@ Future<CameraPermissionStatus> _awaitCameraPermission(TextSightController contro
   return status;
 }
 
+// The README's.
+const _strip = Rect.fromLTWH(0.1, 0.4, 0.8, 0.2);
 const _permissionWindow = Duration(seconds: 45);
 const _iterations = int.fromEnvironment('ITERATIONS', defaultValue: 2);
 

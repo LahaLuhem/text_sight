@@ -134,7 +134,7 @@ The device run only does the profiles, no sweep, so `report` draws the profile c
 two it skipped. A chart with nothing behind it is never written, and `SUMMARY.md` names the gap.
 
 Third scenario, `--scenario live_throughput`, is the live camera one: recognized frames per second
-and the gap between them, per recognition level.
+and the gap between them, per recognition level, on the whole frame and through the README's strip.
 
 ```bash
 uv run python run.py run-device --scenario live_throughput
