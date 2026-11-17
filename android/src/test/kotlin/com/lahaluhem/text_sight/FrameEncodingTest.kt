@@ -48,14 +48,32 @@ class FrameEncodingTest {
 
     @Test
     fun `places a box from a cropped read where it sits in the whole frame`() {
-        // The crop starts at (200, 100), and ML Kit reports the line at the crop's corner.
-        val roi = RegionOfInterestMessage(left = 0.2, top = 0.1, width = 0.5, height = 0.5)
-        val text = textOf(listOf(line("CROP", Rect(0, 0, 100, 50))))
+        // The read starts at (200, 200), half the box's height above it, and ML Kit measures from there.
+        val roi = RegionOfInterestMessage(left = 0.2, top = 0.3, width = 0.5, height = 0.2)
+        val text = textOf(listOf(line("CROP", Rect(0, 100, 100, 150))))
 
         val line = encodeFrame(text, FrameRegion(1000, 1000, 0, roi), quarterTurns = 0).lines().single()
 
         assertEquals(0.2, line["left"] as Double, 1e-9)
-        assertEquals(0.1, line["top"] as Double, 1e-9)
+        assertEquals(0.3, line["top"] as Double, 1e-9)
+    }
+
+    @Test
+    fun `keeps only the lines centred in the box`() {
+        // Half the frame tall, so the read takes in the whole frame and the rule still has to apply.
+        val roi = RegionOfInterestMessage(left = 0.0, top = 0.25, width = 1.0, height = 0.5)
+        val text = textOf(
+            listOf(
+                line("INSIDE", Rect(100, 450, 900, 550)),
+                line("CUT, CENTRE INSIDE", Rect(100, 230, 900, 290)),
+                line("CUT, CENTRE OUTSIDE", Rect(100, 210, 900, 270)),
+                line("ABOVE THE BOX", Rect(100, 100, 900, 160)),
+            ),
+        )
+
+        val frame = encodeFrame(text, FrameRegion(1000, 1000, 0, roi), quarterTurns = 0)
+
+        assertEquals(listOf("INSIDE", "CUT, CENTRE INSIDE"), frame.lines().map { it["text"] })
     }
 
     @Suppress("UNCHECKED_CAST")
