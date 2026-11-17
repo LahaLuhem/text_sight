@@ -24,6 +24,7 @@ import com.lahaluhem.text_sight.await
 import com.lahaluhem.text_sight.recognition.FrameRegion
 import com.lahaluhem.text_sight.recognition.cropToNv21
 import com.lahaluhem.text_sight.recognition.encodeFrame
+import com.lahaluhem.text_sight.recognition.linesIn
 import io.flutter.plugin.common.EventChannel
 import io.flutter.view.TextureRegistry
 import java.io.ByteArrayInputStream
@@ -141,7 +142,7 @@ internal class TextSightCamera(
         }
 
         // ML Kit turned the still upright by its EXIF turn, so the boxes come back upright too.
-        return encodeFrame(visionText, region, quarterTurns = 0)
+        return encodeFrame(visionText.linesIn(region), region, quarterTurns = 0)
     }
 
     private fun decodeFailed(message: String): FlutterError = FlutterError("decode-failed", message)
@@ -179,7 +180,7 @@ internal class TextSightCamera(
 
         recognizer.process(input)
             .addOnSuccessListener(analysisExecutor) { visionText ->
-                val frame = encodeFrame(visionText, region, rotationDegrees / 90)
+                val frame = encodeFrame(visionText.linesIn(region), region, rotationDegrees / 90)
                 mainHandler.post { eventSink?.success(frame) }
             }
             .closeWhenSettled(imageProxy, cutOut)

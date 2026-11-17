@@ -1,35 +1,25 @@
 package com.lahaluhem.text_sight.recognition
 
-import com.google.mlkit.vision.text.Text
-
-/** The per-frame map the captures channel sends, in the same shape iOS sends. */
-internal fun encodeFrame(visionText: Text, region: FrameRegion, quarterTurns: Int): Map<String, Any?> {
+// The same shape iOS sends, since one Dart decoder reads both.
+internal fun encodeFrame(lines: List<RecognizedLineData>, region: FrameRegion, quarterTurns: Int): Map<String, Any?> {
     val width = region.uprightWidth.toDouble()
     val height = region.uprightHeight.toDouble()
-
-    val lines = visionText.textBlocks
-        .flatMap { block -> block.lines }
-        .mapNotNull { line ->
-            // The read reaches past the box, so a line counts only when its centre is inside.
-            val box = line.boundingBox?.let(region::toFrame)?.takeIf(region::keeps)
-                ?: return@mapNotNull null
-
-            mapOf(
-                "text" to line.text,
-                "confidence" to line.confidence.toDouble(),
-                "left" to box.left / width,
-                "top" to box.top / height,
-                "width" to box.width() / width,
-                "height" to box.height() / height,
-                // Held for word boxes in a later release.
-                "elements" to null,
-            )
-        }
 
     return mapOf(
         "imageWidth" to width,
         "imageHeight" to height,
         "quarterTurns" to quarterTurns,
-        "lines" to lines,
+        "lines" to lines.map { line ->
+            mapOf(
+                "text" to line.text,
+                "confidence" to line.confidence.toDouble(),
+                "left" to line.box.left / width,
+                "top" to line.box.top / height,
+                "width" to line.box.width() / width,
+                "height" to line.box.height() / height,
+                // Held for word boxes in a later release.
+                "elements" to null,
+            )
+        },
     )
 }
