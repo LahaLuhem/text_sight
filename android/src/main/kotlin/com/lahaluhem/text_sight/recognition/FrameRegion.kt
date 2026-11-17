@@ -4,7 +4,6 @@ import android.graphics.Rect
 import com.lahaluhem.text_sight.RegionOfInterestMessage
 import kotlin.math.roundToInt
 
-/** The part of a frame ML Kit reads, the way back from the boxes it reports, and which lines count. */
 internal class FrameRegion(
     storedWidth: Int,
     storedHeight: Int,
@@ -22,8 +21,8 @@ internal class FrameRegion(
         ?.let { pixelRect(it.left, it.top, it.left + it.width, it.top + it.height) }
         ?.takeUnless(::isWholeFrame)
 
-    // The box plus half its height above and below, so a line up to the box's height that its edge
-    // crosses isn't cut into fragments. Null when that's the whole frame, which needs no copy.
+    // Half the box's height past its top and bottom, since ML Kit turns a line cut along its length
+    // into fragments. A read that takes in the whole frame needs no copy.
     private val read: Rect? = roi?.takeIf { box != null }
         ?.let {
             val guard = it.height / 2
@@ -31,14 +30,17 @@ internal class FrameRegion(
         }
         ?.takeUnless(::isWholeFrame)
 
-    /** What to cut out of the frame as it's stored, or null to read all of it. */
     val crop: Rect? = read?.turnedBack()
 
-    /** A box ML Kit measured from the crop's corner, moved onto the whole frame. */
+    // ML Kit measures from the crop's corner, not the frame's.
     fun toFrame(reported: Rect): Rect = Rect(reported).apply { offset(read?.left ?: 0, read?.top ?: 0) }
 
-    /** Whether a line, measured on the whole frame, has its centre in the box. */
-    fun keeps(line: Rect): Boolean = box?.contains(line.centerX(), line.centerY()) ?: true
+    fun keep(lines: List<RecognizedLineData>): List<RecognizedLineData> {
+        val box = this.box ?: return lines
+
+        // The read reaches past the box, so a line counts when its centre is inside.
+        return lines.filter { box.contains(it.box.centerX(), it.box.centerY()) }
+    }
 
     private fun isWholeFrame(rect: Rect) = rect.width() == uprightWidth && rect.height() == uprightHeight
 

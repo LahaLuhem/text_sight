@@ -4,6 +4,7 @@ import android.graphics.Rect
 import com.google.mlkit.vision.text.Text
 import com.lahaluhem.text_sight.recognition.FrameRegion
 import com.lahaluhem.text_sight.recognition.encodeFrame
+import com.lahaluhem.text_sight.recognition.linesIn
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,7 +25,7 @@ class FrameEncodingTest {
             listOf(line("BETA", Rect(10, 50, 110, 80))),
         )
 
-        val frame = encodeFrame(text, FrameRegion(100, 200, 90), quarterTurns = 1)
+        val frame = frameOf(text, FrameRegion(100, 200, 90), quarterTurns = 1)
 
         assertEquals(200.0, frame["imageWidth"] as Double, 1e-9)
         assertEquals(100.0, frame["imageHeight"] as Double, 1e-9)
@@ -37,7 +38,7 @@ class FrameEncodingTest {
         val text = textOf(listOf(line("HELLO", Rect(100, 200, 400, 260), confidence = 0.97f)))
 
         // Not square and stored turned, so each side has to be divided by the upright one it matches.
-        val line = encodeFrame(text, FrameRegion(500, 1000, 90), quarterTurns = 1).lines().single()
+        val line = frameOf(text, FrameRegion(500, 1000, 90), quarterTurns = 1).lines().single()
 
         assertEquals(0.97f.toDouble(), line["confidence"] as Double, 1e-6)
         assertEquals(0.1, line["left"] as Double, 1e-9)
@@ -52,7 +53,7 @@ class FrameEncodingTest {
         val roi = RegionOfInterestMessage(left = 0.2, top = 0.3, width = 0.5, height = 0.2)
         val text = textOf(listOf(line("CROP", Rect(0, 100, 100, 150))))
 
-        val line = encodeFrame(text, FrameRegion(1000, 1000, 0, roi), quarterTurns = 0).lines().single()
+        val line = frameOf(text, FrameRegion(1000, 1000, 0, roi), quarterTurns = 0).lines().single()
 
         assertEquals(0.2, line["left"] as Double, 1e-9)
         assertEquals(0.3, line["top"] as Double, 1e-9)
@@ -71,10 +72,14 @@ class FrameEncodingTest {
             ),
         )
 
-        val frame = encodeFrame(text, FrameRegion(1000, 1000, 0, roi), quarterTurns = 0)
+        val frame = frameOf(text, FrameRegion(1000, 1000, 0, roi), quarterTurns = 0)
 
         assertEquals(listOf("INSIDE", "CUT, CENTRE INSIDE"), frame.lines().map { it["text"] })
     }
+
+    // The way both camera paths build a frame.
+    private fun frameOf(text: Text, region: FrameRegion, quarterTurns: Int) =
+        encodeFrame(text.linesIn(region), region, quarterTurns)
 
     @Suppress("UNCHECKED_CAST")
     private fun Map<String, Any?>.lines() = this["lines"] as List<Map<String, Any?>>
