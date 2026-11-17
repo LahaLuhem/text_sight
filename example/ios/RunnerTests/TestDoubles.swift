@@ -195,3 +195,25 @@ final class TimedRecognizer: TextRecognizer, @unchecked Sendable {
     }
   }
 }
+
+/// Reports the same lines for any frame or still, already on the frame, so a test controls exactly
+/// what the camera gets back from Vision.
+final class FixedLinesRecognizer: TextRecognizer, @unchecked Sendable {
+  let confidenceScale = ConfidenceScaleMessage.visionGraded
+
+  private let lines: [RecognizedLineData]
+
+  init(lines: [RecognizedLineData]) {
+    self.lines = lines
+  }
+
+  func recognize(pixelBuffer: CVPixelBuffer, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    lines
+  }
+
+  func recognize(cgImage: CGImage, orientation: CGImagePropertyOrientation,
+                 config: RecognitionConfig) async throws -> [RecognizedLineData] {
+    lines
+  }
+}

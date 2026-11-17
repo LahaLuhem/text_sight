@@ -13,12 +13,12 @@ struct RecognitionConfig {
 
   var region: FrameRegion { FrameRegion(roi) }
 
-  /// The same floor in the units Vision wants, which are a fraction of the scan box rather than the
-  /// frame. Without this a narrower box would quietly start reading smaller text.
+  /// The same floor in the units Vision wants, which are a fraction of the region it reads rather
+  /// than the frame. Without this a narrower box would quietly start reading smaller text.
   var visionTextHeightFraction: Float {
-    let boxHeight = Float(roi?.height ?? 1)
-    guard boxHeight > 0 else { return minimumTextHeight }
+    let readHeight = Float(region.visionRect.height)
+    guard readHeight > 0 else { return minimumTextHeight }
 
-    return min(minimumTextHeight / boxHeight, 1)
+    return min(minimumTextHeight / readHeight, 1)
   }
 }

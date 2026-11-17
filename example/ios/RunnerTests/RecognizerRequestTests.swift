@@ -10,10 +10,10 @@ import Vision
 struct RecognizerRequestTests {
   static let levels: [RecognitionLevelMessage] = [.fast, .accurate]
 
-  /// The scan box every region-of-interest case uses, and where Vision should put it. Vision's
-  /// region is lower-left normalized, so the expected y is 1 - (top + height).
+  /// The scan box every region-of-interest case uses, and the region Vision should read: the box
+  /// plus half its height above and below, lower-left normalized.
   static let roi = RegionOfInterestMessage(left: 0.1, top: 0.2, width: 0.3, height: 0.4)
-  static let flippedRoi = CGRect(x: 0.1, y: 0.4, width: 0.3, height: 0.4)
+  static let flippedRead = CGRect(x: 0.1, y: 0.2, width: 0.3, height: 0.8)
 
   static let languages = ["en-US", "fr"]
 
@@ -59,7 +59,7 @@ struct RecognizerRequestTests {
   }
 
   @available(iOS 18, *)
-  @Test("Modern: the scan box flips into Vision's lower-left space")
+  @Test("Modern: the read region flips into Vision's lower-left space")
   func modernRegion() {
     let request = ModernTextRecognizer.makeRequest(
       config: RecognitionConfig(level: .fast, usesLanguageCorrection: true,
@@ -69,7 +69,7 @@ struct RecognizerRequestTests {
     let region = request.regionOfInterest
 
     #expect(isClose(originX: region.origin.x, originY: region.origin.y,
-                    width: region.width, height: region.height, to: Self.flippedRoi))
+                    width: region.width, height: region.height, to: Self.flippedRead))
   }
 
   @Test("Legacy: the level maps straight through", arguments: RecognizerRequestTests.levels)
@@ -102,7 +102,7 @@ struct RecognizerRequestTests {
     #expect(request.recognitionLanguages == Self.languages)
   }
 
-  @Test("Legacy: the scan box flips into Vision's lower-left space")
+  @Test("Legacy: the read region flips into Vision's lower-left space")
   func legacyRegion() {
     let request = LegacyTextRecognizer.makeRequest(
       config: RecognitionConfig(level: .fast, usesLanguageCorrection: true,
@@ -112,7 +112,7 @@ struct RecognizerRequestTests {
     let region = request.regionOfInterest
 
     #expect(isClose(originX: region.origin.x, originY: region.origin.y,
-                    width: region.width, height: region.height, to: Self.flippedRoi))
+                    width: region.width, height: region.height, to: Self.flippedRead))
   }
 
   @available(iOS 18, *)
@@ -136,10 +136,10 @@ struct RecognizerRequestTests {
     #expect(request.minimumTextHeight == Self.textHeightFloor)
   }
 
-  // The floor is frame-relative in public, but Vision measures it against the scan box, so a
-  // 0.4-tall box has to be asked for 2.5x the number or the same text stops being readable.
+  // The floor is frame-relative in public, but Vision measures it against the region it reads, so a
+  // 0.8-tall read has to be asked for 1.25x the number or the same text stops being readable.
   @available(iOS 18, *)
-  @Test("Modern: the text-height floor is scaled to the scan box")
+  @Test("Modern: the text-height floor is scaled to the read region")
   func modernFloorScalesToRoi() {
     let request = ModernTextRecognizer.makeRequest(
       config: RecognitionConfig(level: .fast, usesLanguageCorrection: true,
@@ -147,10 +147,10 @@ struct RecognizerRequestTests {
                                 roi: Self.roi)
     )
 
-    #expect(request.minimumTextHeightFraction == Self.textHeightFloor / Float(Self.roi.height))
+    #expect(request.minimumTextHeightFraction == Self.textHeightFloor / Float(Self.flippedRead.height))
   }
 
-  @Test("Legacy: the text-height floor is scaled to the scan box")
+  @Test("Legacy: the text-height floor is scaled to the read region")
   func legacyFloorScalesToRoi() {
     let request = LegacyTextRecognizer.makeRequest(
       config: RecognitionConfig(level: .fast, usesLanguageCorrection: true,
@@ -158,7 +158,7 @@ struct RecognizerRequestTests {
                                 roi: Self.roi)
     )
 
-    #expect(request.minimumTextHeight == Self.textHeightFloor / Float(Self.roi.height))
+    #expect(request.minimumTextHeight == Self.textHeightFloor / Float(Self.flippedRead.height))
   }
 
   @available(iOS 18, *)

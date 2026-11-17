@@ -577,8 +577,8 @@ final class TextSightCamera: NSObject {
       !Task.isCancelled
     else { return }
 
-    emit(Self.encodeFrame(lines, imageWidth: imageWidth, imageHeight: imageHeight,
-                          quarterTurns: rotation.quarterTurns))
+    emit(Self.encodeFrame(config.region.keep(lines), imageWidth: imageWidth,
+                          imageHeight: imageHeight, quarterTurns: rotation.quarterTurns))
   }
 
   /// Runs `work` on `sessionQueue`, bridged to `async`. That queue owns `torchEnabled` and the
@@ -646,7 +646,7 @@ final class TextSightCamera: NSObject {
       let lines = try await recognizer.recognize(cgImage: cgImage, orientation: orientation,
                                                  config: config)
 
-      return Self.encodeFrame(lines,
+      return Self.encodeFrame(config.region.keep(lines),
                               imageWidth: isQuarterTurned ? pixelHeight : pixelWidth,
                               imageHeight: isQuarterTurned ? pixelWidth : pixelHeight,
                               quarterTurns: 0)
