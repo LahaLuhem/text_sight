@@ -16,6 +16,7 @@ from text_sight_bench.config import (
     PLATFORM_NAMES,
     PLATFORM_ORDER,
     PROFILE_ORDER,
+    STRIP_SUFFIX,
 )
 from text_sight_bench.stats import grouped_median, pct_delta
 
@@ -275,7 +276,7 @@ _LIVE_CAVEATS = (
     "versus recognized) is not here. That needs native counters.\n"
     "- A gap at the camera's frame interval (about 33 ms at 30 fps) means recognition is keeping "
     "up and the camera is the limit, not the recognizer.\n"
-    "- `level` is a no-op on Android, so its rows should match.\n"
+    "- `level` is a no-op on Android, so its rows should match, the strip ones among themselves.\n"
     "- **Your users will see better than this at first.** A cold phone boosts hard, so a short "
     "scan runs faster than a long one. The run burns the device in before measuring and keeps "
     "only the windows near the run's median rate, so this is the sustained floor, not the "
@@ -286,10 +287,13 @@ _LIVE_CAVEATS = (
 
 
 def _steady_windows(rows: pl.DataFrame, panel: pl.DataFrame) -> pl.DataFrame:
-    """The windows running near the whole run's median rate, or all of them if none do."""
-    # Judged against the whole run: a cool phone boosts and a hot one stalls, and with few
-    # windows each that drags a per-candidate median.
-    reference = panel["captures_per_second"].median()
+    """The windows running near their series' median rate, or all of them if none do."""
+    # Judged against the whole run, since a cool phone boosts and a hot one stalls, and with few
+    # windows each that drags a per-candidate median. The strip runs at its own rate, though, so
+    # whole-frame and strip windows are each judged among their own.
+    is_strip = rows["candidate"].str.ends_with(STRIP_SUFFIX).any()
+    series = panel.filter(pl.col("candidate").str.ends_with(STRIP_SUFFIX) == is_strip)
+    reference = series["captures_per_second"].median()
     if reference is None or reference <= 0:
         return rows
 
@@ -310,7 +314,8 @@ def render_live_summary_markdown(
     lines: list[str] = [
         "# Live recognition throughput",
         "",
-        "What the live path *sustains*, per recognition level. Windows where the phone was "
+        "What the live path *sustains*, per recognition level, on the whole frame and through "
+        "the README's strip. Windows where the phone was "
         "boosting or stalling are left out, so this is the rate an app actually holds.",
         "",
         _LIVE_SCOPE_NOTE,

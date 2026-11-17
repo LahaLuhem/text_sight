@@ -109,6 +109,21 @@ def test_a_boosting_or_stalling_window_is_left_out_of_the_sustained_rate() -> No
     assert stalled["captures_per_second"].median() == 4.5
 
 
+def test_a_boosting_strip_window_is_judged_among_the_strip_windows() -> None:
+    """The strip reads faster than the whole frame, so against the whole run every strip window
+    looks like a boost and none would be left out."""
+    panel = pl.DataFrame(
+        {
+            "candidate": ["fast"] * 4 + ["fast+strip"] * 3,
+            "captures_per_second": [4.0, 4.4, 4.5, 4.6, 12.0, 12.2, 19.0],
+        }
+    )
+
+    kept = markdown._steady_windows(panel.filter(pl.col("candidate") == "fast+strip"), panel)
+
+    assert kept["captures_per_second"].to_list() == [12.0, 12.2]
+
+
 def test_a_run_with_no_steady_window_keeps_them_all() -> None:
     """Better a noisy number than an empty table."""
     panel = pl.DataFrame({"candidate": ["fast"], "captures_per_second": [0.0]})
