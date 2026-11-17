@@ -22,6 +22,7 @@ import com.lahaluhem.text_sight.SessionStateMessage
 import com.lahaluhem.text_sight.TextSightOptionsMessage
 import com.lahaluhem.text_sight.await
 import com.lahaluhem.text_sight.recognition.FrameRegion
+import com.lahaluhem.text_sight.recognition.ShownLines
 import com.lahaluhem.text_sight.recognition.cropToNv21
 import com.lahaluhem.text_sight.recognition.encodeFrame
 import com.lahaluhem.text_sight.recognition.linesIn
@@ -60,6 +61,9 @@ internal class TextSightCamera(
     // Set on main, read on the analysis thread once per frame.
     @Volatile
     private var regionOfInterest: RegionOfInterestMessage? = null
+
+    // No lock, since only the analysis thread touches it, one frame at a time.
+    private val shownLines = ShownLines()
 
     init {
         capturesChannel.setStreamHandler(this)
@@ -163,7 +167,8 @@ internal class TextSightCamera(
         }
 
         val rotationDegrees = imageProxy.imageInfo.rotationDegrees
-        val region = FrameRegion(mediaImage.width, mediaImage.height, rotationDegrees, regionOfInterest)
+        val roi = regionOfInterest
+        val region = FrameRegion(mediaImage.width, mediaImage.height, rotationDegrees, roi)
         // ML Kit reads no region of its own, so a box means handing it a smaller image.
         val cutOut = region.crop?.let(mediaImage::cropToNv21)
         val input = if (cutOut == null) {
@@ -180,7 +185,8 @@ internal class TextSightCamera(
 
         recognizer.process(input)
             .addOnSuccessListener(analysisExecutor) { visionText ->
-                val frame = encodeFrame(visionText.linesIn(region), region, rotationDegrees / 90)
+                val lines = shownLines.linesIn(visionText, region, roi)
+                val frame = encodeFrame(lines, region, rotationDegrees / 90)
                 mainHandler.post { eventSink?.success(frame) }
             }
             .closeWhenSettled(imageProxy, cutOut)

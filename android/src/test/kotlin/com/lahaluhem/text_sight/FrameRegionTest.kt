@@ -2,6 +2,7 @@ package com.lahaluhem.text_sight
 
 import android.graphics.Rect
 import com.lahaluhem.text_sight.recognition.FrameRegion
+import com.lahaluhem.text_sight.recognition.RecognizedLineData
 import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -11,10 +12,13 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** What gets cut out of a frame, and the way back. The four turns are in [FrameRegionTurnsTest]. */
+/** The four turns are in [FrameRegionTurnsTest]. */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
 class FrameRegionTest {
+    // Its top edge sits at 250 px on a 1000 px frame.
+    private val edgeBox = RegionOfInterestMessage(left = 0.0, top = 0.25, width = 1.0, height = 0.5)
+
     @Test
     fun `no box reads the whole frame and keeps boxes as reported`() {
         val region = FrameRegion(640, 480, 90)
@@ -94,5 +98,25 @@ class FrameRegionTest {
 
         assertTrue("$crop", listOf(crop.left, crop.top, crop.right, crop.bottom).all { it % 2 == 0 })
         assertTrue(crop.contains(box))
+    }
+
+    @Test
+    fun `a line no frame showed doesn't come in past the edge`() {
+        // Its centre sits 5 px above the box's top edge at 250, and what was shown is elsewhere.
+        val edge = RecognizedLineData("EDGE", 1f, Rect(100, 225, 900, 265))
+
+        val kept = FrameRegion(1000, 1000, 0, edgeBox).keep(listOf(edge), shown = listOf(Rect(100, 500, 900, 540)))
+
+        assertTrue(kept.isEmpty())
+    }
+
+    @Test
+    fun `a shown line goes once its centre is over a quarter of its height past the edge`() {
+        // 15 px past the edge, for a line 40 px tall that was shown just below.
+        val edge = RecognizedLineData("EDGE", 1f, Rect(100, 215, 900, 255))
+
+        val kept = FrameRegion(1000, 1000, 0, edgeBox).keep(listOf(edge), shown = listOf(Rect(100, 225, 900, 265)))
+
+        assertTrue(kept.isEmpty())
     }
 }
