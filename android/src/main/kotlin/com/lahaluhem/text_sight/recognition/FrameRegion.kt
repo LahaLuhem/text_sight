@@ -35,11 +35,25 @@ internal class FrameRegion(
     // ML Kit measures from the crop's corner, not the frame's.
     fun toFrame(reported: Rect): Rect = Rect(reported).apply { offset(read?.left ?: 0, read?.top ?: 0) }
 
-    fun keep(lines: List<RecognizedLineData>): List<RecognizedLineData> {
+    fun keep(lines: List<RecognizedLineData>, shown: List<Rect> = emptyList()): List<RecognizedLineData> {
         val box = this.box ?: return lines
 
-        // The read reaches past the box, so a line counts when its centre is inside.
-        return lines.filter { box.contains(it.box.centerX(), it.box.centerY()) }
+        return lines.filter { line ->
+            // The read reaches past the box, so a line counts when its centre is inside.
+            if (box.contains(line.box.centerX(), line.box.centerY())) return@filter true
+
+            // One already on screen hangs on a bit past the edge, so a shaky hand doesn't blink it.
+            val outside = maxOf(box.top - line.box.centerY(), line.box.centerY() - box.bottom)
+
+            outside <= line.box.height() / 4 && shown.any { isSameLine(it, line.box) }
+        }
+    }
+
+    // Loose enough that a line the hand nudged between frames still matches.
+    private fun isSameLine(one: Rect, other: Rect): Boolean {
+        val overlap = Rect(one)
+
+        return overlap.intersect(other) && overlap.height() > minOf(one.height(), other.height()) / 2
     }
 
     private fun isWholeFrame(rect: Rect) = rect.width() == uprightWidth && rect.height() == uprightHeight
