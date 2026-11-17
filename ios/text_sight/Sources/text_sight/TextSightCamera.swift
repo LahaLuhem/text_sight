@@ -80,6 +80,9 @@ final class TextSightCamera: NSObject {
   /// The last geometry pushed, so an unchanged one isn't pushed again.
   private var preview: PreviewMessage?
 
+  // No lock, since only the gate's consumer touches it, one frame at a time.
+  private var shown: (roi: RegionOfInterestMessage?, boxes: [CGRect]) = (nil, [])
+
   // Recognizer config, stored as the Pigeon transport types and snapshotted into a
   // `RecognitionConfig` per frame for the recognizer (which builds its own value-typed request).
   private var recognitionLevel: RecognitionLevelMessage = .fast
@@ -577,8 +580,12 @@ final class TextSightCamera: NSObject {
       !Task.isCancelled
     else { return }
 
-    emit(Self.encodeFrame(config.region.keep(lines), imageWidth: imageWidth,
-                          imageHeight: imageHeight, quarterTurns: rotation.quarterTurns))
+    // A changed box starts with nothing shown.
+    let kept = config.region.keep(lines, shown: shown.roi == config.roi ? shown.boxes : [])
+    shown = (config.roi, kept.map(\.box))
+
+    emit(Self.encodeFrame(kept, imageWidth: imageWidth, imageHeight: imageHeight,
+                          quarterTurns: rotation.quarterTurns))
   }
 
   /// Runs `work` on `sessionQueue`, bridged to `async`. That queue owns `torchEnabled` and the
