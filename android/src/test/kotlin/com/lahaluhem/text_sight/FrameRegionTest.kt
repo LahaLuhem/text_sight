@@ -34,8 +34,17 @@ class FrameRegionTest {
     @Test
     fun `a box past the frame's edge stops at the edge`() {
         val roi = RegionOfInterestMessage(left = 0.8, top = 0.8, width = 0.5, height = 0.5)
+        val crop = checkNotNull(FrameRegion(1000, 500, 0, roi).crop)
 
-        assertEquals(Rect(800, 400, 1000, 500), FrameRegion(1000, 500, 0, roi).crop)
+        assertEquals(1000 to 500, crop.right to crop.bottom)
+    }
+
+    @Test
+    fun `a box whose read takes in the whole frame skips the copy`() {
+        // Half the frame tall and centred, so half its height above and below reaches both edges.
+        val roi = RegionOfInterestMessage(left = 0.0, top = 0.25, width = 1.0, height = 0.5)
+
+        assertNull(FrameRegion(640, 480, 90, roi).crop)
     }
 
     @Test

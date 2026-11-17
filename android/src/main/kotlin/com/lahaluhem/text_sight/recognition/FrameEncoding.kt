@@ -10,7 +10,9 @@ internal fun encodeFrame(visionText: Text, region: FrameRegion, quarterTurns: In
     val lines = visionText.textBlocks
         .flatMap { block -> block.lines }
         .mapNotNull { line ->
-            val box = line.boundingBox?.let(region::toFrame) ?: return@mapNotNull null
+            // The read reaches past the box, so a line counts only when its centre is inside.
+            val box = line.boundingBox?.let(region::toFrame)?.takeIf(region::keeps)
+                ?: return@mapNotNull null
 
             mapOf(
                 "text" to line.text,
