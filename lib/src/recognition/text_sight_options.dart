@@ -2,22 +2,22 @@ import 'dart:ui' show Rect;
 
 import 'darwin_options.dart';
 
-/// What the recognizer needs, shared by the live driver and the one-shot.
+/// Recognizer settings, shared by the live driver and the one-shot.
 ///
-/// Only [roi] works the same everywhere. Anything Vision alone can do sits under [darwin], so a
-/// setting a platform ignores cannot be reached without naming that platform. Session-only things
-/// like the torch live on the controller. No `copyWith`: clearing [roi] would need a sentinel.
+/// Vision-only knobs sit under [darwin], so nothing Android ignores can be set without naming the
+/// platform. The torch lives on the controller. No `copyWith`, since clearing [roi] needs a sentinel.
 final class const TextSightOptions({
-  /// The scan box to read: a normalized `[0, 1]` top-left `Rect`, or `null` for the whole frame.
+  /// The scan box, a normalized `[0, 1]` top-left `Rect`, or `null` for the whole frame.
   ///
-  /// Both platforms read only what's inside, so a line the box's edge crosses comes back cut. Line
-  /// boxes are still measured on the whole frame.
+  /// A line counts if its centre's inside, and comes back whole even past the top or bottom edge.
+  /// The sides still cut it. Live, a line on screen hangs on a little past the edge so it doesn't
+  /// blink. Boxes are measured on the whole frame.
   final Rect? roi,
 
-  /// Settings only Apple Vision honours. Android ignores every one of them.
+  /// Settings only Apple Vision honours.
   final DarwinOptions darwin = const DarwinOptions(),
 }) {
-  /// Creates recognizer options. Every field has a live-oriented default.
+  /// Defaults suit live scanning.
   this;
 
   @override

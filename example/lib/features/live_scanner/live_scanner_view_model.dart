@@ -38,7 +38,7 @@ final class LiveScannerViewModel() extends ViewModel {
 
   ValueListenable<BoxFit> get boxFitListenable => _boxFitNotifier;
 
-  /// The stand-in camera's current frame, `null` when a real camera is driving the session.
+  /// The stand-in camera's current frame, `null` with a real camera.
   ValueListenable<SimulatedFrame?>? get simulatedFrames => _fakeCamera?.frameListenable;
 
   /// The failure message, meaningful only while the status is [SessionStatus.failed].
@@ -67,7 +67,7 @@ final class LiveScannerViewModel() extends ViewModel {
     _shouldEnableTorchNotifier.value = next;
   }
 
-  /// Reads only the scan box, or the whole frame again.
+  /// Switches between the box and the whole frame.
   Future<void> onScanBoxPressed() => _controller.updateOptions(
     TextSightOptions(
       roi: _controller.options.roi == null ? _scanBox : null,
@@ -75,13 +75,13 @@ final class LiveScannerViewModel() extends ViewModel {
     ),
   );
 
-  /// Keeps the camera up but stops the recognizer, the thing to do when nobody reads the results.
+  /// Pauses the recognizer but keeps the camera up, for when nobody's reading the results.
   Future<void> onRecognitionToggled() =>
       _controller.isRecognizing ? _controller.pauseRecognition() : _controller.start();
 
   Future<void> _start() async {
-    // Fetch the on-device model first (instant on iOS / with the bundled model). Keeps model loading
-    // off app startup and lets the UI show download progress before the camera ever opens.
+    // The model first, so its download stays off app startup and shows progress before the camera
+    // opens. Instant on iOS and with the bundled model.
     _sessionStatusNotifier.value = .preparingModel;
     final readiness = await TextSightModel.ensureReady();
     if (readiness is ModelUnavailable) {
@@ -110,7 +110,7 @@ final class LiveScannerViewModel() extends ViewModel {
     }
   }
 
-  // What happens to the session after start() arrives here. A start() that fails is caught above.
+  // Session changes after start() land here. A failed start() is caught above.
   void _onSessionStateChanged() {
     switch (_controller.sessionState) {
       case SessionActive():
