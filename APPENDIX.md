@@ -17,17 +17,9 @@
 
 <!-- TOC end -->
 
-Consolidated source of truth for design decisions, rejected paths, and non-obvious
-technical trade-offs.
-
-READMEs, [`CODESTYLE.md`](./CODESTYLE.md), and [`.ai/AGENTS.md`](./.ai/AGENTS.md)
-reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
-
-> **Status:** the symlink, dependabot-automerge, primary-constructors, channel-topology,
-> coordinate-normalization, iOS-capture-strategy, model-readiness, known-limitations,
-> taskqueue-rejected, and public-API sections are written. `#no-bundling` and `#federation-deferred`
-> stay stubs, locked decisions whose rationale is filled in when the corresponding code lands.
-> Anchors are stable, and only stub bodies grow.
+Why things are the way they are: design decisions, rejected paths and trade-offs. READMEs,
+[`CODESTYLE.md`](./CODESTYLE.md) and [`.ai/AGENTS.md`](./.ai/AGENTS.md) link here by anchor, and the
+anchors stay put. `#no-bundling` and `#federation-deferred` are still stubs.
 
 ---
 
@@ -35,33 +27,21 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
 ## `AGENTS.md` and `CLAUDE.md` are symlinks into `.ai/`
 
-- **Decision:** the canonical text for both files lives under `.ai/`. The repo root holds
-  symlinks (`AGENTS.md → .ai/AGENTS.md`, `CLAUDE.md → .ai/CLAUDE.md`). A sub-scope guide
-  (e.g. `example/`) would follow the same pattern (`example/AGENTS.md →
-  example/.ai/AGENTS.md`) if one is ever added.
-- **Why:** Claude Code (and most other coding agents) auto-discover `CLAUDE.md` /
-  `AGENTS.md` at the project root, but two more loose Markdown files at the root add
-  visual noise to the file tree. Scoping the agent-guidance files under `.ai/` keeps them
-  together, and the root symlinks preserve auto-discovery.
-- **Committed vs. local:** the `.ai/` canonical files are committed, and the root symlinks are
-  **gitignored** (`/AGENTS.md`, `/CLAUDE.md` in [`.gitignore`](./.gitignore)), so nothing
-  in the build/lint/test pipeline depends on them. Each contributor (or their agent)
-  recreates the symlinks locally:
+- **Decision:** both files live in `.ai/`, and the root holds symlinks to them
+  (`AGENTS.md → .ai/AGENTS.md`). A guide for a sub-scope like `example/` would do the same.
+- **Why:** agents look for these files at the root, and two more loose Markdown files there clutter
+  the tree. The symlinks keep discovery working.
+- **The symlinks are gitignored**, so nothing in the build leans on them. Make them locally:
 
   ```bash
   ln -s .ai/AGENTS.md AGENTS.md
   ln -s .ai/CLAUDE.md CLAUDE.md
   ```
 
-  A **real file** at the repo root beats the symlink. If a contributor prefers a
-  committed root `AGENTS.md`/`CLAUDE.md`, that works too, and the `.ai/` copies stay the
-  project default.
-- **Cross-platform note:** symlinks survive `git clone` on macOS/Linux. On Windows hosts
-  without symlink support enabled, the file may show up as a small text file containing
-  the link target. If that ever bites a contributor, the fallback is to drop the symlinks
-  and keep real files at root, hand-syncing the content.
-- **`CODESTYLE.md` is not symlinked**: it sits directly at the repo root, since style
-  serves humans and agents alike and is not AI-specific.
+  A real file at the root wins, so that works too.
+- **On Windows** without symlink support, a link can turn up as a text file holding its target. Real
+  files at the root, synced by hand, are the fallback.
+- **`CODESTYLE.md` is a plain root file**, since style serves people as much as agents.
 
 ---
 
@@ -69,16 +49,16 @@ reference sections here by anchor (e.g. `APPENDIX.md#no-bundling`).
 
 ## Dependabot's PRs auto-merge through dartender, behind the required checks
 
-dartender's `ci.yml` arms GitHub's auto-merge (rebase) on every Dependabot PR, majors included, and
-the merge then waits only on the checks the rulesets require. What that means here:
+dartender's `ci.yml` turns on auto-merge (rebase) for every Dependabot PR, majors included, and the
+merge waits only on the checks the rulesets require. So:
 
 - **`plugin-ok` has to stay required.** The `dartender` ruleset requires only `ci / ok` and
-  `conventions / ok`, so without the repo's own `Protected` requiring `plugin-ok`, a bump would
-  merge without waiting on the native, codegen and `benchmark/app` checks.
-- **`/android` gradle bumps reach consumers** through the AAR's POM (ML Kit, Play Services,
-  CameraX), but get no changelog line, so check the Android deps before a release if one landed.
-- **Keep `required_signatures` off every ruleset.** A rebase merge on GitHub is unsigned, so it
-  would block every merge.
+  `conventions / ok`. Without the repo's own `Protected` ruleset requiring `plugin-ok`, a bump would
+  merge without the native, codegen and `benchmark/app` checks.
+- **`/android` Gradle bumps reach consumers** through the AAR's POM (ML Kit, Play Services, CameraX)
+  but get no changelog line, so check them before a release.
+- **Keep `required_signatures` off every ruleset.** GitHub's rebase merges are unsigned, so it would
+  block them all.
 
 ---
 
@@ -86,30 +66,30 @@ the merge then waits only on the checks the rulesets require. What that means he
 
 ## `use_primary_constructors` is on, with four narrow opt-outs
 
-Dart 3.13 lets a class declare its fields in the constructor header, and the lint pushes every
-class that way. Good fit for the data models, which lost a lot of boilerplate. Two places it
-bites, so those carry an `ignore` with the reason inline.
+Dart 3.13 lets a class declare its fields in the constructor header, and the lint pushes every class
+that way. It suits the data models, which shed a lot of boilerplate. Two places it bites, and each
+carries an `ignore` with its reason.
 
-**The Pigeon schema cannot have them.** Pigeon builds its message types by reading field
-declarations out of the class body, and a primary constructor leaves that body empty:
+**The Pigeon schema can't use them.** Pigeon reads message fields out of the class body, and a
+primary constructor leaves the body empty:
 
 | In the schema | What Pigeon does with it |
 |---|---|
 | `enum Foo() { ... }` | refuses it, "Pigeon doesn't support enhanced enums" |
 | `class Foo({required var double left});` | emits `class Foo { Foo(); }`, no fields, no error |
 
-The second row is the one to worry about. Codegen passes and every message then crosses the
-channel carrying nothing. That is why `pigeons/text_sight.dart` opts out for the whole file.
-CI's freshness job in [#channel-topology](#channel-topology) regenerates on every run, so it
-catches a schema committed without its output, but not an empty class committed with it.
+The second row is the dangerous one: codegen passes, and every message then crosses the channel
+empty. So `pigeons/text_sight.dart` opts out for the whole file. CI's freshness job
+([#channel-topology](#channel-topology)) catches a schema committed without its output, but not an
+empty class committed with it.
 
-**Namespaces have nothing to construct.** `TextSight`, `TextSightEngine` and `TextSightModel`
-are static-only and documented as never instantiated. The lint offers them a primary
-constructor anyway, and an empty `()` declares a public undocumented one, which
-`public_member_api_docs` then fails under CI's `--fatal-infos`. One-line ignore on each.
+**Namespaces have nothing to construct.** `TextSight`, `TextSightEngine` and `TextSightModel` are
+static-only. The lint still offers them a primary constructor, and an empty `()` declares a public
+undocumented one, which fails `public_member_api_docs` under CI's `--fatal-infos`. One-line ignore
+on each.
 
-`unnecessary_ignore` is also on, so the day a Pigeon or SDK release makes any of these four
-suppressions pointless, analyze will say so.
+`unnecessary_ignore` is on too, so analyze says so the day a Pigeon or SDK release makes any of the
+four pointless.
 
 ---
 
@@ -117,22 +97,18 @@ suppressions pointless, analyze will say so.
 
 ## No-bundling: native dependencies never touch the Dart `pubspec.yaml`
 
-> _Stub, to be written as the native sides land. This is the package's defining
-> principle and the reason it exists._
+> _Stub. This is why the package exists._
 >
-> Will document: why the recognition engines are declared **only** in platform build
-> files (ML Kit + CameraX in `android/build.gradle.kts`, and only system frameworks for
-> recognition and capture, `Vision` and `AVFoundation`, on the Apple side), so the
-> Dart `pubspec.yaml` declares **no** recognition library. The payoff: iOS links
-> **zero** third-party ML libraries, so the GoogleMLKit arm64 / Swift-Package-Manager
-> warnings that motivated this package cannot arise. Includes the rejected path
-> (`flutter_scalable_ocr` → `google_mlkit_text_recognition` as a *Dart* dep, which drags
-> GoogleMLKit into the iOS build), the "no `camera` Dart dep either, native capture per
-> platform" corollary, and the verification recipe
-> (`grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios` → no matches, grep since rg skips the
-> gitignored SPM manifest, and the example is SPM-based, so there is no `Podfile.lock`).
-> Cross-refs: [`CODESTYLE.md#swift-ios`](./CODESTYLE.md#swift-ios),
-> [`CODESTYLE.md#kotlin-android`](./CODESTYLE.md#kotlin-android), and the hard rules in
+> Will cover: the engines are declared only in platform build files (ML Kit and CameraX in
+> `android/build.gradle.kts`, and only system frameworks, `Vision` and `AVFoundation`, on Apple), so
+> the Dart `pubspec.yaml` names no recognition library and iOS links **zero** third-party ML. That
+> rules out the GoogleMLKit arm64 and SPM warnings that started this package. Also the rejected path
+> (`flutter_scalable_ocr` pulling `google_mlkit_text_recognition` in as a Dart dependency, which drags
+> GoogleMLKit into the iOS build), why there's no `camera` dependency either, and the check:
+> `grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios` finds nothing (grep, since rg skips the
+> gitignored SPM manifest, and the SPM example has no `Podfile.lock`). See
+> [`CODESTYLE.md#swift-ios`](./CODESTYLE.md#swift-ios),
+> [`CODESTYLE.md#kotlin-android`](./CODESTYLE.md#kotlin-android) and the hard rules in
 > [`.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules).
 
 ---
@@ -141,62 +117,47 @@ suppressions pointless, analyze will say so.
 
 ## Camera permission: requested natively, no permission package
 
-**Decision (2026-06-22).** text_sight requests camera permission itself, straight through the OS
-APIs, and bundles **no** permission package. The public surface is two methods on
-`TextSightController`: `checkCameraPermission()` (a prompt-free status read) and
-`requestCameraPermission()` (drives the system prompt), both returning a unified
-`CameraPermissionStatus { granted, denied, permanentlyDenied }`. `start()` stays permission-free, so
-the app keeps control of *when* the prompt appears.
+**Decision (2026-06-22).** text_sight asks for camera permission itself, through the OS APIs, and
+bundles no permission package. `TextSightController` has `checkCameraPermission()` (no prompt) and
+`requestCameraPermission()` (the system prompt), both returning
+`CameraPermissionStatus { granted, denied, permanentlyDenied }`. `start()` never asks, so the app
+picks when the prompt shows.
 
-**Why not bundle `permission_handler`.** The request primitive is already free on both platforms,
-`AVCaptureDevice.requestAccess` (AVFoundation) on iOS, `ActivityCompat.requestPermissions` plus a
-`RequestPermissionsResultListener` (the Flutter embedding + AndroidX) on Android, which is exactly
-what `permission_handler` wraps internally for *app* code. A plugin calls it directly (the
-`mobile_scanner` approach), so bundling buys nothing and costs plenty:
+**Why not bundle `permission_handler`.** The request is free on both platforms
+(`AVCaptureDevice.requestAccess`, and `ActivityCompat.requestPermissions` with a
+`RequestPermissionsResultListener`), and that's all `permission_handler` wraps. A plugin can call it
+directly, as `mobile_scanner` does. Bundling would cost:
 
-- It lands in **every** downstream user's transitive closure for one effectively-boolean question.
-- On iOS it makes consumers' lives *harder*, not easier: `permission_handler_apple` gates each
-  permission behind `GCC_PREPROCESSOR_DEFINITIONS` macros in the **Podfile**, and Apple's static
-  analyzer scans the binary for permission code at submission. Bundling it would force a Podfile
-  macro step on every consumer and drag a CocoaPods-shaped config into the SPM / no-`Podfile`
-  example, the opposite of removing boilerplate, and a direct hit on the package's
-  [no-bundling identity](#no-bundling-native-dependencies-never-touch-the-dart-pubspecyaml).
+- a package in every consumer's dependency tree for what's nearly a yes/no question.
+- on iOS, Podfile macros: `permission_handler_apple` gates each permission behind
+  `GCC_PREPROCESSOR_DEFINITIONS`, since Apple scans the binary for permission code at submission.
+  That's a CocoaPods step forced on every consumer, and a hit on
+  [no-bundling](#no-bundling-native-dependencies-never-touch-the-dart-pubspecyaml).
 
-So this is the no-bundling principle extended from the ML engines to permissions. Apps that already
-use `permission_handler` keep working unchanged. This adds an option, it does not remove one.
+Apps already using `permission_handler` keep working. This adds an option and takes none away.
 
-**What stays the consumer's job.** The iOS `NSCameraUsageDescription` string is app-specific and
-cannot be delegated. The Android `CAMERA` `<uses-permission>` ships in the plugin's *own* manifest
-and merges automatically. The request and the status read are all the plugin now owns.
+**What stays the app's job.** The iOS `NSCameraUsageDescription` string, which only the app can
+write. Android's `CAMERA` permission ships in the plugin's own manifest and merges in.
 
-**The Android cost: `ActivityAware`.** A runtime permission request needs a foreground `Activity`,
-which a plain `FlutterPlugin` never holds, since it gets only the application `Context`. So
-`TextSightPlugin` implements `ActivityAware` to capture the `ActivityPluginBinding`, registers a
-`RequestPermissionsResultListener`, and delegates the flow to `CameraPermissionRequester`. This is
-unavoidable *regardless of approach*. Even `permission_handler` needs an Activity, it just hides the
-plumbing. The capture pipeline binds to a headless `LifecycleOwner`, so Activity attach/detach never
-disturbs a running session. The eager `checkSelfPermission` / `authorizationStatus` guards already
-in `initialize()` stay as a defence-in-depth net (the request rides the same typed `@HostApi` as the
-rest of the control surface, see [#channel-topology](#channel-topology)).
+**Android needs `ActivityAware`.** A runtime request needs a foreground `Activity`, and a plain
+`FlutterPlugin` only gets the application `Context`. So `TextSightPlugin` takes the
+`ActivityPluginBinding`, registers the result listener and hands the flow to
+`CameraPermissionRequester`. Every approach needs this, `permission_handler` just hides it. Capture
+binds to a headless `LifecycleOwner`, so Activity attach and detach never touch a running session.
+The permission checks in `initialize()` stay as a second net.
 
-**The unified status contract hides a real platform asymmetry.** `granted`, then `denied` (not
-granted, but a request may still surface the prompt), then `permanentlyDenied` (no prompt will
-appear, only system settings can grant it). The platforms reach a refusal differently, and the enum
-papers over it:
+**One status, two platform behaviours underneath.** `denied` means a request may still show the
+prompt, `permanentlyDenied` means only system settings can grant it.
 
-- **iOS prompts exactly once.** After a decision, `requestAccess` resolves immediately with the
-  stored value and never re-prompts. So an iOS refusal, and `.restricted` (parental controls / an
-  MDM profile), maps to `permanentlyDenied`. `.notDetermined` maps to `denied`, since a request can
-  still show the dialog.
-- **Android distinguishes** a re-askable refusal from "don't ask again" via
-  `shouldShowRequestPermissionRationale`, checked *after* the result. A prompt-free `check` (no
-  Activity, and it must not trigger UI) cannot tell permanence apart, so it conservatively reports
+- **iOS prompts once.** After that, `requestAccess` returns the stored answer, so a refusal and
+  `.restricted` (parental controls, MDM) map to `permanentlyDenied`, and `.notDetermined` to `denied`.
+- **Android** tells a re-askable refusal from "don't ask again" with
+  `shouldShowRequestPermissionRationale` after the result. A prompt-free check can't, so it reports
   `denied`.
 
-The actionable split for callers is the whole point: `denied` → asking again may help,
-`permanentlyDenied` → route the user to system settings. The example dogfoods exactly this and, by
-dropping its own `permission_handler` dependency, doubles as the no-bundling proof for the
-permission path.
+That's the split callers act on: `denied`, ask again, `permanentlyDenied`, send them to settings. The
+example does exactly this, and with no `permission_handler` of its own it also proves the
+no-bundling claim for permissions.
 
 ---
 
@@ -204,94 +165,65 @@ permission path.
 
 ## Channel topology: Pigeon control API + `EventChannel` results + `Texture` preview
 
-**Decision.** Three concerns ride three different transports, deliberately, rather than being
-funnelled through one channel:
+**Decision.** Each kind of traffic gets the transport that fits its shape:
 
-- **Control + the one-shot recognize → typed codegen `@HostApi`.** The control surface
-  (`initialize` / `start` / `pauseRecognition` / `setOptions` / `setTorchEnabled` /
-  `checkCameraPermission` / `requestCameraPermission` / `dispose`) is request/response and benefits
-  from a generated, type-checked Dart↔native boundary. The static one-shot (`recognizeImage` /
-  `recognizePath`) is *also* request/response, so it rides the **same** `@HostApi` as two
-  `@async` methods that return the same self-describing per-frame map the results stream uses
-  (decoded Dart-side into a `TextSightCapture`), not the results stream below. This is why the
-  result models need no Pigeon twin. Natively each allocates a transient image handler and touches
-  no camera session, texture, or event sink. *(The codegen tool is **Pigeon**, see below.)*
-- **Live per-frame results → a plain `EventChannel` stream.** A camera delivers ~30 captures a
-  second, and modelling that as a Pigeon `@FlutterApi` callback fights the codegen's
-  request/response grain. An `EventChannel` is Flutter's idiomatic transport for a
-  high-frequency native→Dart push, and the controller re-exposes it as a
-  `Stream<TextSightCapture>`.
-- **Camera preview → a `Texture`** via the texture registry. Pixels are not a codegen concern
-  at all: the native side renders frames into a `FlutterTexture` and hands Dart only the
-  integer texture id, which `TextSightView` mounts in a `Texture` widget.
-- **Session state → a Pigeon `@FlutterApi`.** Rare, typed, request grain: one method carrying a
-  sealed `SessionStateMessage` that mirrors the public type case for case, leaving the frame wire
-  untouched. See [#session-state](#session-state).
-- **Preview geometry → the same `@FlutterApi`.** Its size and turns change with the session and
-  the device, not with recognition, so they can't ride the captures.
+- **Control and the one-shot → a typed Pigeon `@HostApi`.** `initialize`, `start`,
+  `pauseRecognition`, `setOptions`, `setTorchEnabled`, the permission calls and `dispose` are
+  request and response, and a generated boundary type-checks both ends. `recognizeImage` and
+  `recognizePath` are too, so they ride the same API as `@async` methods returning the same
+  self-describing map the live stream sends, which is why the result models need no Pigeon twin.
+  Natively they touch no session, texture or sink.
+- **Live results → a plain `EventChannel`.** About 30 captures a second fight the
+  request-and-response grain of a `@FlutterApi`. An `EventChannel` is Flutter's push stream, and the controller exposes it
+  as `Stream<TextSightCapture>`.
+- **The preview → a `Texture`.** Native renders into a `FlutterTexture` and hands Dart only its id.
+- **Session state and preview geometry → a Pigeon `@FlutterApi`.** Rare and typed. State is one
+  sealed message mirroring the public type ([#session-state](#session-state)), and geometry changes
+  with the session and device, not with recognition, so neither belongs on the captures.
 
-**Why split at all.** Each transport matches the *shape* of its traffic: typed
-request/response for control, an unbounded push-stream for results, a raw pixel surface for
-preview, a typed callback for the rare state change. Collapsing them (frames as `@HostApi`
-return values, or pixels over a method channel) means fighting the wrong tool on the hot path. The
-split also keeps the two drivers honest:
-live and static **share** the `@HostApi` recognizer surface and the result models, but only the
-*live* driver needs the `EventChannel` and the `Texture`, see
-[#public-api-via-single-export-file](#public-api-via-single-export-file).
+Squeezing them into one transport means fighting the wrong tool on the hot path. The split also
+shows the two drivers: both share the `@HostApi` and the result models, only live needs the stream
+and the texture ([#public-api-via-single-export-file](#public-api-via-single-export-file)).
 
-**Pigeon, not the Golubets fork** (`pigeon: ^27.1.0`, chosen 2026-06-17). Pigeon v27 covers the
-whole control surface this schema needs (a typed `@HostApi`, `@async` methods, and the message
-classes) and as the official Flutter-team tool it is the durable choice for a package others
-depend on. Golubets' genuine additions (user-defined generics, advanced sealed classes, default
-parameter values, true Swift-concurrency / Kotlin-coroutine codegen) go unused by this
-flat-model, hand-written-public-types design. The model-readiness work (2026-06-22) reconfirmed
-this head-on: its `TextSightReadinessState` *is* a sealed class, yet it stays hand-written and rides
-the readiness `EventChannel` as a decoded map, so Golubets' sealed-class codegen would still have
-gone unused. That, plus Golubets' own pub.dev page discouraging generated code in a published
-package's public API and requiring both ends on the same version, kept the package on Pigeon (see
-[#model-readiness](#model-readiness)). Low-risk and reversible: codegen is dev-time only and
-`messages.g.dart` is committed, so the fallback is to freeze it. (Pigeon's own
-`@EventChannelApi` could later type the results stream, but with `Rect`/`Size` models that can't
-cross Pigeon, the hand-written plain `EventChannel` above stays more direct.)
+**Pigeon, not the Golubets fork** (chosen 2026-06-17). Pigeon covers everything this schema needs,
+and as the Flutter team's tool it's the durable pick for a published package. Golubets' extras
+(generics, richer sealed classes, defaults, real async codegen) go unused by a design whose public
+types are hand-written. Model readiness confirmed it: its `TextSightReadinessState` is sealed but
+hand-written, decoded from a map, so the sealed-class codegen would still sit idle. Golubets' own
+page also discourages generated code in a published API and wants both ends on one version
+([#model-readiness](#model-readiness)). Reversible, since codegen is dev-time and the output is
+committed. Pigeon's `@EventChannelApi` could type the results stream one day, but `Rect` and `Size`
+can't cross Pigeon, so the plain channel stays simpler.
 
-**The per-frame wire format is a hand-written, self-describing map.** Each event on the captures
-`EventChannel` (`com.lahaluhem.text_sight/captures`) is a `Map`: top-level `imageWidth` /
-`imageHeight` (doubles, pixels post-rotation), `quarterTurns` (int, the analyzed frame's turns to
-upright, deprecated in Dart), plus `lines`, a `List` of per-line maps:
-`text` (String), `confidence` (double), `left` / `top` / `width` / `height` (the box, normalized
-`[0,1]` top-left per [#coordinate-normalization](#coordinate-normalization)), and `elements` (null
-in v1, reserved). `elements` rides the wire as a reserved slot so populating it later is additive.
-The Dart side decodes this in `PigeonTextSightPlatform`, and
-**each native side must emit exactly this shape.** Map-based, not positional, so adding a key is
-non-breaking and frames stay legible in logs.
+**The per-frame wire format is a hand-written, self-describing map.** Each event on
+`com.lahaluhem.text_sight/captures` carries `imageWidth` and `imageHeight` (doubles, pixels after
+turning), `quarterTurns` (int, deprecated in Dart), and `lines`, each with `text` (String),
+`confidence` (double), `left`, `top`, `width` and `height` (normalized, top-left, see
+[#coordinate-normalization](#coordinate-normalization)) and `elements` (null for now, reserved so
+filling it in is additive). `PigeonTextSightPlatform` decodes it, and **both native sides must emit
+exactly this shape.** Keys, not positions, so a new key breaks nothing and frames read in logs.
 
-**Generated code is committed and never hand-edited.** `messages.g.dart` is checked in (so
-consumers and CI need no codegen step) and regenerated from the schema, never patched. See
-[hard rule 7 in `.ai/AGENTS.md`](./.ai/AGENTS.md#hard-rules). Regeneration is **two steps**,
-`dart run tool/pigeon.dart` then `dart format lib/src/platform/messages.g.dart`, because Pigeon
-emits ~80-column Dart while the project's formatter gate (`page_width: 100`, applied tree-wide)
-would otherwise flag the output. Not plain `dart run pigeon`, which stamps its version into the
-headers and fails the codegen check.
+**Generated code is committed and never hand-edited.** `messages.g.dart` is checked in, so
+consumers and CI need no codegen, and it's regenerated, never patched
+([hard rule 7](./.ai/AGENTS.md#hard-rules)). Regenerating is `dart run tool/pigeon.dart`, then
+`dart format lib/src/platform/messages.g.dart`, since Pigeon emits narrower Dart than the 100-column
+format gate wants. Plain `dart run pigeon` stamps its version into the headers and fails the
+codegen check.
 
-**`copyWith` is generated too, and that is why one runtime dependency was accepted.** A
-hand-written `copyWith` compiles fine while silently missing a field added later, and no test can
-catch a field nobody wrote down anywhere. `copy_with_extension_gen` derives it from the fields, so
-the drift cannot happen rather than merely being detectable. The generator and `build_runner` are
-dev-only. The `copy_with_extension` annotation is a **runtime** dependency because the annotated
-source ships to consumers. Its own dependency list is just `meta`, which this package already
-declared, so the consumer-visible closure grows by exactly one package. A pure-Dart alternative was
-tried first and rejected: an all-required private constructor makes the drift a compile error, but
-declaring one needs `const DarwinOptions._(...)`, which `unnecessary_type_name_in_constructor`
-(enabled here, and fatal under CI's `--fatal-infos`) rejects, while the `._(...)` form the lint asks
-for does not parse on Dart 3.13. It would have cost a permanent lint suppression.
+**`copyWith` is generated too, for one runtime dependency.** A hand-written `copyWith` compiles
+while missing a field added later, and no test catches a field nobody wrote down.
+`copy_with_extension_gen` derives it from the fields, so that drift can't happen. The generator and
+`build_runner` are dev-only, but the `copy_with_extension` annotation ships with the source, so it's
+a runtime dependency. It only needs `meta`, which was already here, so consumers gain one package.
+The pure-Dart route was tried first: an all-required private constructor makes the drift a compile
+error, but `const DarwinOptions._(...)` fails `unnecessary_type_name_in_constructor` (fatal in CI),
+and the `._(...)` form the lint wants doesn't parse on Dart 3.13. It would have meant a permanent
+suppression.
 
 **CI regenerates and diffs.** The `codegen` job runs both generators, then
-`git add --intent-to-add .` and `git diff --exit-code`, so a generator emitting a brand-new file
-counts as stale too.
-The `dart format` pass is deterministic and mechanical, not a hand-edit, so it does not breach the
-never-patch rule, and a freshness check (regenerate-and-diff) must run the same format step before
-comparing. The bounding-box geometry these channels carry is specified in
-[#coordinate-normalization](#coordinate-normalization).
+`git add --intent-to-add .` and `git diff --exit-code`, so a brand-new generated file counts as
+stale too. The format pass is mechanical, not a hand-edit, so the freshness check runs it before
+comparing.
 
 ---
 
@@ -299,26 +231,26 @@ comparing. The bounding-box geometry these channels carry is specified in
 
 ## Session state: a value on the controller, pushed by native
 
-**Decision.** The capture session's state is a sealed `TextSightSessionState` value on the
-controller, fed by native over a Pigeon `@FlutterApi` and deduped once in Dart. The plugin pauses
-and resumes the session on its own, and the OS interrupts, revokes and fails cameras. Nothing in
-the contract carried that back.
+**Decision.** The session's state is a sealed `TextSightSessionState` on the controller, pushed by
+native over a Pigeon `@FlutterApi` and deduped once in Dart. The plugin pauses and resumes the
+session on its own, and the OS interrupts, revokes and fails cameras, and nothing used to carry
+that back.
 
-**A value, not events.** Broadcast `EventChannel`s replay nothing, so a late subscriber learns
+**A value, not events.** A broadcast `EventChannel` replays nothing, so a late listener would learn
 nothing until the next change. The controller folds the pushes into `sessionState`, subscribing on
-its first `start()`, before `initialize`, so it misses nothing of its own session. Construction
-stays platform-free, which keeps consumer tests that only construct one working.
+its first `start()` before `initialize`, so it misses nothing of its own session. Construction stays
+platform-free, so consumer tests that only construct one keep working.
 
-**A `@FlutterApi`, not the captures channel.** Tagging every frame to carry a signal that fires a
-few times per session taxed the hot path and forced a three-end wire re-contract. The FlutterApi
-leaves the frame wire byte-identical and types the state by codegen. The message is sealed, not
-flat: about 100 more generated lines per end on Pigeon 28, nothing hand-written, and invalid
-combinations become unrepresentable.
+**A `@FlutterApi`, not the captures channel.** Tagging every frame for a signal that fires a few
+times a session taxed the hot path and meant re-contracting the wire on three ends. The FlutterApi
+leaves the frame wire as it was and types the state through codegen. The message is sealed rather
+than flat, which costs some generated lines per end, nothing hand-written, and makes invalid
+combinations unrepresentable.
 
-**Ordering.** Frames and states both reach main in emission order, and the engine keeps that order
-on the way to Dart (engine behaviour, not a contract). Android emits on main. iOS starts each push
-on swift-async-queue's `MainActor.queue`, which keeps the order without waiting for Dart's reply.
-Capture-causal order is not promised: an in-flight recognition may land after a pause.
+**Ordering.** Frames and states reach main in emission order, and the engine keeps that order on the
+way to Dart (engine behaviour, not a contract). Android emits on main. iOS starts each push on
+swift-async-queue's `MainActor.queue`, which keeps the order without waiting for Dart's reply.
+Causal order isn't promised: a recognition in flight can land after a pause.
 
 | State                     | iOS                                                 | Android                                                                                                 |
 |---------------------------|-----------------------------------------------------|---------------------------------------------------------------------------------------------------------|
@@ -328,20 +260,20 @@ Capture-causal order is not promised: an in-flight recognition may land after a 
 | failed                    | `runtimeError`                                      | a critical `CameraState` error                                                                          |
 | idle                      | a real session released                             | a bound camera released                                                                                 |
 
-**Failure parks the session, `start()` unparks it.** iOS keeps a `hasFailed` input on its policy
-(`shouldRun = wanted && foreground && !failed`), Android parks the lifecycle owner. Neither retries
-on its own.
+**Failure parks the session, and `start()` unparks it.** iOS keeps `hasFailed` in its policy
+(`shouldRun = wanted && foreground && !failed`), and Android parks the lifecycle owner. Neither
+retries on its own.
 
-**The recognition gate stays.** Both natives skip recognition while nothing listens to `captures`.
+**The recognition gate stays.** Both sides skip recognition while nothing listens to `captures`.
 `pauseRecognition()` is the explicit verb for a listener that wants no work.
 
-**Android's camera state is blind while capped.** A `LiveData` observed through the owner delivers
-nothing at `CREATED` and only the latest value on return (unit-tested), so the cap reports the
-pause and the camera's own `OPEN` reports the return.
+**Android's camera state goes blind while capped.** `LiveData` observed through the owner delivers
+nothing at `CREATED` and only the latest value on return (unit-tested), so the cap reports the pause
+and the camera's own `OPEN` reports the return.
 
-**Deferred.** A native pull for the current state. A typed reason on `SessionFailed`. A `stop()`
-that releases the camera. Bounded auto-heal after `mediaServicesWereReset`. State handling in
-`TextSightView`. Native dedupe. Aggregated diagnostics as more `@FlutterApi` methods.
+**Deferred.** A native pull for the current state, a typed reason on `SessionFailed`, a `stop()` that
+releases the camera, bounded self-healing after `mediaServicesWereReset`, state handling in
+`TextSightView`, native dedupe, and diagnostics as more `@FlutterApi` methods.
 
 ---
 
@@ -349,86 +281,69 @@ that releases the camera. Bounded auto-heal after `mediaServicesWereReset`. Stat
 
 ## Coordinate normalization: top-left `[0,1]` in native code
 
-**Decision.** Every bounding box that crosses the channel is **normalized to `[0,1]` with a
-top-left origin, converted on the native side**, so the Dart overlay painter is
-platform-agnostic and never branches on platform.
+**Decision.** Native code turns every box into `[0,1]` from the top-left before it crosses the
+channel, so the Dart painter never branches on platform. The three sides disagree:
 
-The three coordinate systems that meet here disagree:
+- **Vision** reports `[0,1]` from the bottom-left, so Swift flips Y.
+- **ML Kit** reports pixels in the turned image, so Kotlin divides by its upright size.
+- **Flutter** wants `[0,1]` from the top-left, so the painter only scales by the overlay's size.
 
-- **Apple Vision** returns boxes normalized to `[0,1]` but with a bottom-left origin
-  (`VNRecognizedTextObservation.boundingBox`). The Swift side flips Y
-  (`top = 1 - (origin.y + height)`) before sending.
-- **ML Kit** returns pixel rects in the *rotated* image space. The Kotlin side divides by
-  the rotated image width/height to normalize.
-- **Flutter** wants top-left normalized, so the painter only scales a box by the overlay's size.
+**`TextSightCapture.imageSize`** is the analyzed image's pixel size, in the boxes' orientation. Only
+a consumer drawing over its own image needs it. `TextSightView`'s overlay already is the frame.
 
-Doing the conversion natively, where each side owns a small named helper (see
-[`CODESTYLE.md#swift-ios`](./CODESTYLE.md#swift-ios) and
-[`CODESTYLE.md#kotlin-android`](./CODESTYLE.md#kotlin-android)), establishes the unified
-contract *before* the channel, so the Dart layer carries no platform conditionals.
-
-**`TextSightCapture.imageSize`** is the analyzed image's pixel size, **in the boxes' orientation**.
-Only a consumer drawing over its own image needs it, with its own fit. `TextSightView`'s overlay is
-already the shown frame.
-
-**The preview texture is the one thing not pre-rotated.** Turning it natively costs a pass per
-frame. In Flutter a turn and a fit are a matrix and a rectangle on a draw the engine makes anyway.
-So native reports only what it alone knows, the upright size and the quarter turns, through
-`onPreviewChanged` ([#channel-topology](#channel-topology)). Captures don't carry them, so the
-preview is right before the first one and while recognition is paused.
+**The preview texture is the one thing not turned natively.** That would cost a pass per frame,
+where Flutter turns and fits it in the draw it makes anyway. So native reports only the upright
+size and the quarter turns, through `onPreviewChanged` ([#channel-topology](#channel-topology)),
+which keeps the preview right before the first capture and while recognition is paused.
 
 | Surface | Turns |
 |---|---|
 | iOS, Android's ImageReader `SurfaceProducer` (API 29+) | `sensor - display`. iOS reads it off `AVCaptureDevice.RotationCoordinator` |
 | Android's SurfaceTexture one (below API 29, Huawei at 29) | `0 - display`. It applies the sensor's turn itself (`handlesCropAndRotation()`) |
 
-`TextSightView` turns the texture, fits it (`contain` by default, centred), and gives the overlay
-the same rectangle, so boxes align **without a per-platform branch in Dart**.
+`TextSightView` turns the texture, fits it (`contain` by default, centred) and gives the overlay the
+same rectangle, so boxes line up with no platform branch in Dart.
 
-Recognition turns separately. Android keeps `ImageAnalysis.targetRotation` on the display with a
-`DisplayManager.DisplayListener`, since a headless session gets no orientation updates. iOS hands
-Vision the `RotationCoordinator`'s orientation. Captures still report that turn as the deprecated
-`quarterTurns`. Stills are read in their EXIF orientation (`CGImageSource`, `ExifInterface`), so the
-one-shot reports `0`.
+Recognition turns on its own. Android keeps `ImageAnalysis.targetRotation` on the display through a
+`DisplayManager.DisplayListener`, since a headless session gets no orientation updates, and iOS
+hands Vision the `RotationCoordinator`'s orientation. Stills are read in their EXIF orientation, so
+the one-shot reports no turn.
 
-**Region-of-interest uses the same contract.** The ROI is a `Rect` in the same normalized `[0,1]`
-top-left space as the output boxes (not pixels). The `const` `TextSightOptions` can't check its own
-range, so a debug `assert` at the controller does. Both drivers take it, the live one through the
-controller and the one-shot per call, and `null` means the whole frame.
+**The ROI lives in the same space**, as a normalized `Rect`, not pixels. `TextSightOptions` is
+`const` and can't check its own range, so a debug `assert` at the controller does.
 
-Every path reads only the box. One `FrameRegion` per platform decides what the engine reads and
-moves every box it reports back onto the frame, so the two can't drift apart:
+Every path reads the box plus half its height above and below. One `FrameRegion` per platform
+decides what the engine reads, which lines count and how each box gets back onto the frame, so the
+paths can't drift apart:
 
 | Path                   | What limits the read                                                    | Why boxes need moving back                        |
 |------------------------|-------------------------------------------------------------------------|---------------------------------------------------|
 | iOS, live and one-shot | The request's `regionOfInterest`, flipped to Vision's bottom-left space | Vision measures each box from the region's corner |
 | Android one-shot       | A crop of the bitmap as stored, with its EXIF turn handed to ML Kit     | ML Kit measures from the crop's corner            |
-| Android live           | libyuv cuts the box out of the YUV planes into an NV21 buffer           | Same                                              |
+| Android live           | libyuv cuts the read out of the YUV planes into an NV21 buffer          | Same                                              |
 
-A line the box's edge crosses comes back cut on every path. Both engines drop a line the edge slices
-deep and return fragments for a shallow slice, and no rule on box position tells those fragments
-from good lines ([#3](https://github.com/LahaLuhem/text_sight/issues/3)). Vision measures its
-text-height floor against the region too, so the floor is divided by the box's height on the way in
-([#public-api-via-single-export-file](#public-api-via-single-export-file)).
+**Why the read reaches past the box.** Cut a line along its length and the engines return fragments
+or nothing, depending on the depth, so edge lines flicker as the hand drifts, and no rule on box
+position tells those fragments from good lines. Read past the edge and a line centred inside comes
+back whole. The sides still cut, since lines run on past them anyway. Live, a line already on screen
+holds a little past the edge, since boxes shift a few pixels between reads. The taller read costs
+`accurate` some small text ([#3](https://github.com/LahaLuhem/text_sight/issues/3) has the
+numbers). Vision measures its text-height floor against the region it reads, so the floor is
+divided by that height on the way in.
 
 **Why the Android live crop goes through libyuv.** ML Kit takes no region and ignores
-`Image.cropRect`, so a smaller buffer is the only way to read less. libyuv-android copies the box out
-of planar, NV21 and NV12 memory with no loops of ours, faster than a hand-written copy, for a native
-library in every install. [#3](https://github.com/LahaLuhem/text_sight/issues/3) has the sizes and
-timings.
+`Image.cropRect`, so the only way to read less is a smaller buffer. libyuv-android copies the read
+out of planar, NV21 and NV12 memory with no loops of ours, faster than a hand-written copy, at the
+cost of a native library in every install
+([#3](https://github.com/LahaLuhem/text_sight/issues/3) has sizes and timings).
 
 **Keep the crop in libyuv-android's native `Nv21Buffer`.** ML Kit's NV21 `fromByteBuffer` reads a
 buffer's backing array from index 0 and ignores `arrayOffset()`. On Android,
 `ByteBuffer.allocateDirect` is array-backed with a non-zero offset, so swapping it in makes ML Kit
 read a shifted image and quietly return fewer lines.
 
-**Orientation is an input, not an afterthought.** Recognition silently degrades if it is
-wrong: the Apple side must pass the correct `CGImagePropertyOrientation`, the Android side the
-`ImageProxy`'s `rotationDegrees`. The normalization above assumes the image has already been
-interpreted in its display orientation. Cross-refs:
-[#channel-topology](#channel-topology) (the transport that carries these boxes) and
-[#public-api-via-single-export-file](#public-api-via-single-export-file) (the `RecognizedLine`
-model and the `Rect` ROI).
+**Orientation is an input.** Get it wrong and recognition quietly gets worse, so iOS passes the
+right `CGImagePropertyOrientation` and Android the `ImageProxy`'s `rotationDegrees`.
 
 ---
 
@@ -436,63 +351,40 @@ model and the `Rect` ROI).
 
 ## iOS capture & recognition strategy: roll-your-own AVCapture + Swift Vision
 
-**Decision.** The iOS live path is roll-your-own `AVCaptureSession` + Vision → `FlutterTexture`,
-mirroring the Android `TextSightCamera`. The primary recognizer is Vision's
-**Swift `RecognizeTextRequest`** (the WWDC 2024 API) with a legacy `VNRecognizeTextRequest` fallback
-for iOS 15-17 (the hybrid, below). The **deployment floor is 15.0** (`Package.swift`). iOS 18+
-runs the modern path, and a future macOS target would floor at 15.0 for it (the same API's macOS
-availability).
+**Decision.** iOS live runs its own `AVCaptureSession` and Vision into a `FlutterTexture`, mirroring
+Android's `TextSightCamera`. The recognizer is Vision's Swift `RecognizeTextRequest` (WWDC 2024),
+with the legacy `VNRecognizeTextRequest` for iOS 15 to 17. The floor is iOS 15 (`Package.swift`),
+and a macOS target would sit at 15 for the same API.
 
-**Why roll-your-own, not `DataScannerViewController`.** VisionKit's `DataScannerViewController`
-(iOS 16+, A12+) is turnkey, but it is a UIKit view controller that **owns its own camera preview
-and result overlay**. It cannot render into a `FlutterTexture`, so adopting it would force iOS onto
-a `UiKitView` platform-view path while Android renders to a `Texture`, so the two platforms would
-diverge structurally, and the unified contract already built and verified on Android (the captures
-`EventChannel`, the consumer-supplied `overlayBuilder`, the normalized-`Rect` ROI, per-line
-confidence) would not survive. There is also **no turnkey live-text equivalent on Android** to pair
-it with: Google's turnkey, Play-services-delivered scanner UIs are the **Code Scanner** (barcodes
-only) and the **Document Scanner** (a capture-crop-enhance flow returning an image/PDF, not a live
-per-frame OCR stream). Live text on Android is always CameraX + ML Kit wired by hand. A turnkey
-route would therefore be both a worse fit *and* asymmetric. Roll-your-own keeps one architecture
-across platforms and shares a future macOS `darwin/` (Vision is identical there).
+**Why not `DataScannerViewController`.** VisionKit's scanner is turnkey, but it owns its own preview
+and overlay and can't render into a `FlutterTexture`. iOS would need a platform view while Android
+draws to a `Texture`, and the shared contract (the captures channel, `overlayBuilder`, the normalized
+ROI, per-line confidence) wouldn't survive. Android has no turnkey live-text scanner to pair it with
+either: Google's are the Code Scanner (barcodes) and the Document Scanner (a capture flow returning an
+image or PDF). So a turnkey route would fit worse and split the platforms. Our own keeps one
+architecture, and a future macOS target shares it, since Vision is the same there.
 
-**Why the Swift `RecognizeTextRequest`, not `VNRecognizeTextRequest`.** It is the API Apple steers
-new code toward (Swift concurrency / `async`-`await`, `Sendable`, value-typed
-`RecognizedTextObservation`s), and it keeps this package on the vendor-forward stack, the same
-posture that puts Android on CameraX + ML Kit v2 and that the whole no-bundling effort embodies (off
-GoogleMLKit-on-iOS). It runs the **same** Vision text engine as the legacy request, so this is a
-modernity / ergonomics choice, **not** an accuracy or capability gain. Same engine turned out not to
-mean same defaults, though: the modern request ships with a text-height floor and the legacy one
-does not, so the same photo read on iOS 17 and came back empty on 18+. Both now set every knob
-rather than inheriting one. `topCandidates(1)` confidence and a normalized `regionOfInterest` both
-carry over. The modern API *was* an iOS 18 floor, the hybrid below recovers iOS 15-17 through the
-legacy request while iOS 18+ keeps the modern path.
+**Why the Swift request.** It's where Apple points new code (async, `Sendable`, value types), the
+same vendor-forward posture as CameraX and ML Kit v2 on Android. It runs the same text engine as the
+legacy request, so it's an ergonomics pick, not an accuracy one. The defaults differ, though: the
+modern request ships a text-height floor and the legacy one doesn't, so one photo read on iOS 17 and
+came back empty on 18. Both now set every knob instead of inheriting any.
 
-**Backwards-compatible hybrid (iOS 15-17), as built (issue #5).** The floor is 15.0, raised from the
-original 13.0 once Flutter 3.47 made 15 its own minimum, leaving 13 and 14 unreachable. A
-`TextRecognizer` protocol abstracts two backends: `ModernTextRecognizer` (`@available(iOS 18, *)`,
-the Swift `RecognizeTextRequest`) and `LegacyTextRecognizer` (`VNRecognizeTextRequest`, iOS 15-17,
-*not* deprecated), and `TextRecognizerFactory.make()` is the **single** `#available(iOS 18, *)`
-site, resolved once at `TextSightCamera` init (kept out of the ~30 fps path). Both backends emit the
-identical neutral `RecognizedLineData` and move every box through the one `FrameRegion`
-([#coordinate-normalization](#coordinate-normalization)), so only request construction differs.
-**iOS 18+ devices pay nothing:** they take the same `RecognizeTextRequest` path as before,
-`#available` is one cached OS-version compare (not a per-frame tax), and the legacy code never runs
-there. The legacy `perform` is *synchronous*, so it runs on a dedicated serial queue bridged to
-`async` via a continuation, never blocking the cooperative pool.
+**The hybrid for iOS 15 to 17 (issue #5).** The floor went from 13 to 15 once Flutter 3.47 made 15
+its own minimum. A `TextRecognizer` protocol has two backends, `ModernTextRecognizer`
+(`@available(iOS 18, *)`) and `LegacyTextRecognizer` (not deprecated), and
+`TextRecognizerFactory.make()` is the one `#available` check, made once at `TextSightCamera` init,
+off the per-frame path. Both emit the same neutral `RecognizedLineData` through one `FrameRegion`
+([#coordinate-normalization](#coordinate-normalization)), so only building the request differs.
+iOS 18 pays nothing for it. The legacy `perform` is synchronous, so it runs on its own serial queue
+behind a continuation and never blocks the cooperative pool.
 
-**Lowering the floor was *not* recognizer-only: the rotation gotcha (option C).** Dropping below 18
-also exposed `AVCaptureDevice.RotationCoordinator` (iOS 17+) in the *capture* pipeline, and the
-earlier "only the recognizer-construction site branches" guess was wrong. Rather than carry a second
-rotation pipeline (the pre-17 `UIDevice` / `videoOrientation` path) for a device population we
-**do not expect in practice**: iOS 15-16 is a vanishing slice by 2026, and most iOS-17-capable
-devices also run 18, so the coordinator is gated `@available(iOS 17, *)` and on iOS 15-16 rotation
-is **not tracked** (`currentRotationAngle` stays 0): basic, un-rotated *live* capture (the one-shot
-is unaffected, since it reads EXIF). Recognition still works, and the live preview just won't follow
-device rotation. This degraded fallback (**option C**) was chosen for near-free 15-16 reach at low
-maintenance. The full pre-17 rotation path (**option A**) is
-**deferred until real bug reports from actual 15-16 users justify it** (caveated in the
-[README](./README.md)). Cross-ref: [#channel-topology](#channel-topology).
+**Rotation below iOS 17 isn't tracked (option C).** Going below 18 also exposed
+`AVCaptureDevice.RotationCoordinator` (iOS 17+) in capture, not only in the recognizer. A second,
+pre-17 rotation pipeline for a vanishing slice of devices wasn't worth it, so the coordinator is
+gated to iOS 17 and on 15 and 16 the live preview doesn't follow rotation (`currentRotationAngle`
+stays 0). Recognition still works, and the one-shot reads EXIF anyway. The full pre-17 path
+(option A) waits for real reports from 15 and 16 users, and the [README](./README.md) says so.
 
 ---
 
@@ -500,60 +392,45 @@ maintenance. The full pre-17 rotation path (**option A**) is
 
 ## Model readiness and the bundled / unbundled axis (Android)
 
-**Decision.** The on-device recognition model loads lazily and under app control, never on the
-app-startup path, and whether it is **bundled or unbundled** is a build-time choice. Two orthogonal
-axes, settled 2026-06-22:
+**Decision (2026-06-22).** The model loads lazily under the app's control, never at startup, and
+bundling it is a build-time choice. Two separate axes:
 
-- **Runtime readiness: `TextSightModel.ensureReady()` + `TextSightModel.readiness`.** Mode-agnostic:
-  both the live and one-shot drivers recognize through the same model, so the API sits on neither
-  driver but on its own `TextSightModel` namespace. `ensureReady()` resolves to a terminal
-  `TextSightReadinessState` (`ModelReady` / `ModelUnavailable`), and `readiness` streams
-  `ModelDownloading(progress)` in between. The app calls it when entering an OCR feature, so model
-  loading is backgrounded rather than blocking launch.
-- **Build-time bundling: the `com.lahaluhem.text_sight.useBundled` gradle flag.** Default unbundled
-  (~260 KB/script, fetched via Google Play Services), and `=true` bundles the model into the APK (~4
-  MB/script/arch, instant + offline). The ML Kit Kotlin API is identical across the two artifacts,
-  so the switch is a pure dependency swap in `android/build.gradle.kts`, and the recognizer code
-  (`TextSightCamera`) is untouched.
+- **Runtime: `TextSightModel.ensureReady()` and `TextSightModel.readiness`.** Both drivers use the
+  same model, so the API sits on its own namespace. `ensureReady()` resolves to `ModelReady` or
+  `ModelUnavailable`, and `readiness` streams `ModelDownloading(progress)` in between. The app calls
+  it when entering an OCR feature, so loading never blocks launch.
+- **Build time: the `com.lahaluhem.text_sight.useBundled` Gradle flag.** Unbundled by default (a few
+  hundred KB per script, fetched through Play Services), or bundled into the APK (megabytes per
+  script and architecture, instant and offline). ML Kit's Kotlin API is the same for both, so the
+  flag only swaps a dependency in `android/build.gradle.kts`.
 
-**Why two axes, not one.** Bundling is a packaging decision the *app developer* makes once, at build
-time, the only place an Android dependency-variant switch can live, so it is a `gradle.properties`
-flag (the mechanism `mobile_scanner` uses, inverted because our default is unbundled). Borrowing
-that *mechanism* does not make the Dart API a `mobile_scanner` clone. The readiness API is designed
-on its own terms. Readiness is a *runtime* concern the app drives per session. The two interact but
-are not the same lever: with the bundled model `ensureReady()` resolves instantly (the model is in
-the APK), with the unbundled model it may download. The Kotlin side learns which from
-`BuildConfig.USE_BUNDLED` (fed by the flag) and short-circuits to ready when bundled.
+**Why two axes.** Bundling is a packaging call the app makes once, at build time, the only place an
+Android dependency swap can live, so it's a `gradle.properties` flag (`mobile_scanner`'s mechanism,
+inverted since our default is unbundled, and only the mechanism: the Dart API is our own).
+Readiness is a runtime thing per session. They touch: bundled, `ensureReady()` resolves at once,
+unbundled, it may download. Kotlin reads which from `BuildConfig.USE_BUNDLED`.
 
-**Why lazy-by-default, with no install-time prefetch.** ML Kit's unbundled model has three delivery
-paths: an install-time `com.google.mlkit.vision.DEPENDENCIES` manifest meta-data, an explicit
-`ModuleInstallClient` download, or download-on-first-use. The plugin's `AndroidManifest.xml`
-deliberately **omits** the meta-data: it merges into *every* consumer, so it would force an
-OCR-model download at install for apps that may never use the feature, the opposite of lazy. The
-default is therefore download-on-first-use, with `ensureReady()`, backed by `ModuleInstallClient`
-(`areModulesAvailable` → `installModules` + an `InstallStatusListener` for progress), as the
-app-controlled trigger. A consumer that genuinely wants eager prefetch re-adds the meta-data in
-their own app manifest. (Removing the meta-data is a behavioural change from the prior build, not an
-API one: first use now downloads instead of install time.)
+**Why lazy, with no install-time prefetch.** The unbundled model can arrive through a
+`com.google.mlkit.vision.DEPENDENCIES` manifest entry at install, an explicit `ModuleInstallClient`
+download, or on first use. The plugin's manifest leaves the entry out, since it merges into every
+consumer and would download the model at install for apps that never use OCR. So it's
+first-use, with `ensureReady()` (`areModulesAvailable`, then `installModules` with an
+`InstallStatusListener` for progress) as the app's trigger. An app wanting prefetch adds the entry to
+its own manifest.
 
-**Failure is a state, not a throw.** The unbundled model needs Google Play Services, absent on
-GMS-less / offline devices, and a download can fail. Both surface as `ModelUnavailable` with a typed
-`reason` (`playServicesUnavailable` / `downloadFailed`), a state the consumer renders rather than a
-crash ([hard rule 11](.ai/AGENTS.md#hard-rules)). None of it applies on iOS: Vision is a system
-framework, so readiness is always `ModelReady` and `ensureReady()` is an instant no-op.
+**Failure is a state, not a throw.** The unbundled model needs Play Services, missing on GMS-less
+devices, and a download can fail. Both arrive as `ModelUnavailable` with a typed `reason`
+(`playServicesUnavailable`, `downloadFailed`) for the app to render
+([hard rule 11](.ai/AGENTS.md#hard-rules)). On iOS, Vision ships with the OS, so readiness is always
+`ModelReady` and `ensureReady()` returns at once.
 
-**Transport reuses the existing split** ([#channel-topology](#channel-topology)).
-`ensureModelReady()` is one `@async` Pigeon control method returning the terminal-state map, and
-`readiness` is a plain `EventChannel` (`com.lahaluhem.text_sight/readiness`) of self-describing
-maps, hand-decoded into the sealed `TextSightReadinessState` exactly as the captures stream decodes
-into `TextSightCapture`. The sealed type is **hand-written public Dart, never generated**, which is
-why a sealed result type did *not* push the package onto Golubets (that analysis lives in
-[#channel-topology](#channel-topology)).
+**Transport reuses the split** ([#channel-topology](#channel-topology)). `ensureModelReady()` is one
+`@async` Pigeon method returning the final state, and `readiness` is a plain `EventChannel`
+(`com.lahaluhem.text_sight/readiness`) of maps, decoded by hand into the sealed type the way captures
+are. The sealed type is hand-written, which is why it didn't push the package onto Golubets.
 
-**The no-bundling contract is untouched.** That rule ([#no-bundling](#no-bundling)) is iOS-only, so
-no third-party ML library in the *Apple* build. Android bundled-vs-unbundled is a separate,
-legitimate axis: ML Kit is declared only in `android/build.gradle.kts` either way, and the bundled
-artifact never reaches the Dart `pubspec.yaml`.
+**No-bundling holds.** That rule ([#no-bundling](#no-bundling)) is about the Apple build. Bundled or
+not, ML Kit is declared only in `android/build.gradle.kts` and never reaches the Dart `pubspec.yaml`.
 
 ---
 
@@ -561,14 +438,13 @@ artifact never reaches the Dart `pubspec.yaml`.
 
 ## Federation deferred: one plugin package for v1
 
-> *Stub, to be written if/when federation is reconsidered.*
+> *Stub, written if federation comes back up.*
 >
-> Will document why v1 is a **single plugin package** declaring all platforms, rather than
-> a federated set (`text_sight_platform_interface` + `text_sight_ios` +
-> `text_sight_android`). Federation earns its complexity only when third parties add
-> platforms or independent per-platform versioning is needed, and neither applies yet. The
-> `plugin_platform_interface` dependency is already in place so the boundary can be drawn
-> later without a disruptive restructure.
+> Will cover why v1 is one package for all platforms, not a federated set
+> (`text_sight_platform_interface` plus per-platform packages). Federation pays off only when third
+> parties add platforms or each platform needs its own versions, and neither applies.
+> `plugin_platform_interface` is already a dependency, so the boundary can be drawn later without a
+> restructure.
 
 ---
 
@@ -576,33 +452,27 @@ artifact never reaches the Dart `pubspec.yaml`.
 
 ## Known limitations, performance, and deferred work
 
-A running list of what v1 does *not* do well yet. The **active backlog is tracked as GitHub issues**
-(<https://github.com/LahaLuhem/text_sight/issues>). What stays *here* is the permanent rationale
-that isn't a backlog item:
+The backlog lives in [GitHub issues](https://github.com/LahaLuhem/text_sight/issues). This keeps
+the lasting rationale that isn't a backlog item.
 
-**Platform capability differences (inherent, not bugs).** Everything under `TextSightOptions.darwin`
-is Apple Vision only, and Android ignores it: the ML Kit Latin recognizer has no accuracy dial, no
-language correction, no language selection and no text-height floor. The group is the API saying so,
-rather than a dartdoc nobody reads. Per-line `confidence` is supplied by both, but the scales are
-**not comparable**. These are engine properties, not defects.
+**The platforms differ, and that's not a bug.** Everything under `TextSightOptions.darwin` is Vision
+only: ML Kit's Latin recognizer has no accuracy dial, language correction, language choice or
+text-height floor. The group says so in the API rather than in a dartdoc nobody reads. Both report
+per-line confidence, on scales that don't compare.
 
-**The two platforms capture different shapes, and cannot be matched.** Android runs 4:3, the
-sensor's own shape. iOS has no 4:3 HD preset, so it runs 16:9. Forcing Android to match would crop
-away page for nothing. `CaptureResolution` picks the size, the shape stays the platform's.
+**The platforms capture different shapes.** Android runs 4:3, the sensor's own shape. iOS has no 4:3
+HD preset, so it runs 16:9. Matching them would crop page away for nothing. `CaptureResolution` picks
+the size, and the shape stays the platform's.
 
-**Background auto-pause (both platforms).** The live session stops itself when the app leaves the
-foreground and restarts on return, torch intent re-asserted, and `sessionState` reports it
-([#session-state](#session-state)). Rationale: both OSes forcibly gate the camera for backgrounded
-apps anyway (iOS interrupts the session, Android revokes the camera from idle UIDs), so leaning on
-that meant inheriting OS-owned recovery timing and a torch that silently stayed off after return.
-Android derives the headless session owner's state from `ProcessLifecycleOwner` capped by the
-session's intent, and iOS listens for the background/foreground notifications and stops/starts the
-`AVCaptureSession` on its session queue.
+**The live session pauses itself in the background** and restarts on return with the torch put
+back, and `sessionState` reports it ([#session-state](#session-state)). Both OSes cut a backgrounded
+app's camera anyway, so leaning on that meant OS-owned recovery timing and a torch silently left off.
+Android derives the headless owner's state from `ProcessLifecycleOwner`, capped by the session's
+intent, and iOS stops and starts the `AVCaptureSession` on its queue from the background and
+foreground notifications.
 
-**Federation is deferred (and likely unneeded).** v1 ships as one package, and the split into a
-platform-interface package + per-platform implementations is only worth it if third parties add
-platforms ([#federation-deferred](#federation-deferred)). Not tracked as an issue, so revisit only
-if that need actually arises.
+**Federation is deferred, and likely never needed** ([#federation-deferred](#federation-deferred)).
+It isn't an issue, so it comes back only if third parties start adding platforms.
 
 ---
 
@@ -610,31 +480,30 @@ if that need actually arises.
 
 ## `@TaskQueue` on the control channel: measured, rejected for now
 
-`@TaskQueue(type: TaskQueueType.serialBackgroundThread)` moves a host method's message decode off
-the platform thread. Attractive for `recognizeImage`, the one control method carrying a real
-payload. It was measured on both platforms and **not kept**: it helps Android, clearly hurts iOS,
-and the annotation is per-method with no per-platform form.
+`@TaskQueue(type: TaskQueueType.serialBackgroundThread)` moves a host method's decode off the
+platform thread, which tempts for `recognizeImage`, the one control method with a real payload. It
+was measured on both platforms and **not kept**: it helps Android, clearly hurts iOS, and the
+annotation is per method with no per-platform form.
 
-Measured by `benchmark/app/integration_test/platform_thread_bench_test.dart`, which pings the
-synchronous `checkCameraPermission` while 40 undecodable 8 MiB payloads cross the channel, so the
-number is the channel hop and not inference. Read `p50` only, since `max` swings 2.4x run to run.
+`benchmark/app/integration_test/platform_thread_bench_test.dart` pings the synchronous
+`checkCameraPermission` while 40 undecodable 8 MiB payloads cross the channel, so it times the hop,
+not inference. Read `p50` only, since `max` swings 2.4x run to run.
 
-Criterion, fixed before the after-run: loaded `p50` at or under 300 us in two of three runs.
+Criterion, set before the after-run: loaded `p50` at or under 300 us in two of three runs.
 
 | Platform         | baseline loaded `p50`                | with `@TaskQueue`                          |
 |------------------|--------------------------------------|--------------------------------------------|
 | Android emulator | 524 / 669 / 459 us                   | **216 / 233 / 319 us**                     |
 | iOS simulator    | 110 / 104 / 113 / 124 / 116 / 115 us | **33 / 95 / 2295 / 2483 / 2553 / 2632 us** |
 
-Android's ranges do not overlap. iOS goes from tight and unimodal to bimodal, four of six runs about
-20x worse. Six runs a side because the first iOS run (33 us) looked like a win and was not. Why iOS
-degrades is unconfirmed, possibly contention on the serial queue `makeBackgroundTaskQueue` returns.
+Android's ranges don't overlap. iOS goes from tight to bimodal, four of six runs about 20x worse, and
+six runs a side because the first iOS run (33 us) looked like a win and wasn't. Why iOS degrades is
+unconfirmed, possibly contention on the queue `makeBackgroundTaskQueue` returns.
 
-**What would change the answer.** Per-platform annotation support, a different payload profile (the
-effect is payload-driven, so `recognizePath` and `ensureModelReady` were never candidates), real
-hardware instead of an emulator and simulator, or an upstream fix on the iOS side. `initialize` and
-`dispose` stay out regardless: they touch the texture registry and CameraX `LiveData`, which reject
-non-main threads.
+**What would change the answer.** Per-platform annotations, a different payload profile (the effect
+is payload-driven, so `recognizePath` and `ensureModelReady` were never candidates), real hardware,
+or an upstream fix on iOS. `initialize` and `dispose` stay out regardless, since the texture registry
+and CameraX `LiveData` reject non-main threads.
 
 ---
 
@@ -642,127 +511,73 @@ non-main threads.
 
 ## Public API funnelled through `lib/text_sight.dart`
 
-**Decision.** `lib/text_sight.dart` is the only file consumers import. It holds
-`export 'src/…';` lines and nothing else. Every implementation file lives under `lib/src/`, and
-is private by convention. Dart has no hard public/private boundary below `lib/`, so this funnel
-is how the ecosystem signals private intent, and it gives one file to audit before a release.
-Moving code *within* `lib/src/` is free, but moving a symbol into or out of the re-export list is
-semver-visible (minor to add, major to remove or change a signature). Prefer `show` over `hide`
-if a partial export ever becomes necessary.
+**Decision.** Consumers import only `lib/text_sight.dart`, which holds `export 'src/…';` lines and
+nothing else. Dart has no hard private boundary below `lib/`, so this is how a package says "the
+rest is private", and it leaves one file to audit before a release. Moving code inside `lib/src/` is
+free. Adding to the exports is a minor, removing or changing one a major. Prefer `show` over `hide`
+for a partial export.
 
-**Layering.** Both drivers funnel down through one federation seam:
+**Layering.** Both drivers go through one federation seam:
 
 ```text
-PUBLIC   barrel re-exports: TextSightController · TextSightView · TextSight (one-shot)
-         · TextSightCapture · RecognizedLine · RecognizedElement
-         · RecognitionLevel · TextSightOptions · DarwinOptions · TextSightSessionState
-   │  both drivers delegate down ↓
-SEAM     TextSightPlatform extends PlatformInterface   (federation boundary; one impl for now)
+PUBLIC   the barrel: both drivers, the view, the result models and options
+   │
+SEAM     TextSightPlatform extends PlatformInterface   (the federation boundary, one impl for now)
    │
 IMPL     codegen @HostApi + @FlutterApi  +  EventChannel  +  TextureRegistry
 ```
 
-The platform-interface seam is drawn now even though federation is deferred
-([#federation-deferred](#federation-deferred)): both the live controller and the static
-one-shot delegate to `TextSightPlatform.instance`, so a later split into a
-`text_sight_platform_interface` plus per-platform packages is mechanical, not a rewrite.
+The seam is there before federation is ([#federation-deferred](#federation-deferred)), so splitting
+out a `text_sight_platform_interface` later is mechanical rather than a rewrite.
 
-**Module layout (`lib/src/`).** The recognizer is the core, and capture is a seam, not a mode flag.
-The directories make that physical:
+**Module layout.** One recognizer, two drivers, and the folders say so: `recognition/` holds the
+capture-agnostic models and config, `capture/` both drivers (live `TextSightController`, one-shot
+`TextSight`) and their session types, `view/` the widget, and `platform/` the seam with its
+Pigeon implementation. Each public type gets its own file
+([`CODESTYLE.md#naming`](./CODESTYLE.md#naming)).
 
-```text
-lib/
-├── text_sight.dart                   barrel: export 'src/…'; only
-└── src/
-    ├── recognition/                  capture-agnostic CORE: result models + recognizer config
-    │   ├── text_sight_capture.dart
-    │   ├── recognized_line.dart
-    │   ├── recognized_element.dart
-    │   ├── confidence_scale.dart
-    │   ├── recognition_level.dart
-    │   ├── text_sight_options.dart
-    │   ├── darwin_options.dart
-    │   ├── darwin_options.g.dart            generated copyWith
-    │   ├── normalized_roi.dart
-    │   └── text_sight_readiness_state.dart
-    ├── capture/                      the two DRIVERS over the one recognizer
-    │   ├── text_sight_controller.dart       live-camera driver (v1)
-    │   ├── text_sight_session_state.dart    the camera session's state, as native reports it
-    │   ├── camera_permission_status.dart    the camera-permission state
-    │   ├── capture_resolution.dart          how many pixels the camera feeds the recognizer
-    │   ├── text_sight.dart                  TextSight one-shot static driver
-    │   ├── text_sight_engine.dart           facts about the device's recognition engine
-    │   └── text_sight_model.dart            controls and observes model readiness
-    ├── view/
-    │   └── text_sight_view.dart             Texture-backed widget (+ overlay builder)
-    └── platform/
-        ├── text_sight_platform.dart         the federation seam
-        ├── pigeon_text_sight_platform.dart  the default implementation (Pigeon + EventChannel)
-        └── messages.g.dart                  generated control channel (never hand-edited)
-```
+**Result-model contracts.**
 
-`recognition/` holds only capture-agnostic types, and `capture/` puts both drivers
-(`TextSightController` live, `TextSight` one-shot) together so the "one recognizer, two drivers"
-seam shows in the tree. Each public type gets its own file (per
-[`CODESTYLE.md#naming`](./CODESTYLE.md#naming)).
+- **`RecognizedLine.confidence` is a `double` in `[0,1]`, never null**, since both engines give a
+  per-line value (ML Kit v2 through `Text.Line.getConfidence()`). The scales don't compare, across
+  platforms or iOS versions. The modern `RecognizeTextRequest` (18+) is **coarse**, often `1.0`, and
+  the legacy `VNRecognizeTextRequest` (15-17) is **graded**: the same image scored about `0.5` on
+  iOS 15 for lines the 18+ path scored `1.0` (on a device). On the modern path the value follows
+  `recognitionLevel`, not the text: the bundled sample read `0.5` throughout at `fast` and `1.0` at
+  `accurate` (iOS 26.2 Simulator). So `accurate` buys a different constant, not gradation.
+  `TextSightEngine.confidenceScale` says which scale you have, and `isRankable` answers the question
+  most consumers have.
 
-**Result-model contracts.** The capture-agnostic types the barrel exposes:
+  Unbundled ML Kit below Google Play services 22.30 reports `0` for every line. There's no runtime
+  gate for it: those devices are years stale and shrinking, and a nullable field to model them would
+  tax every consumer. If it ever matters, it becomes a `ConfidenceScale` value, not a per-line null.
+- **`RecognizedLine.elements` is a reserved `List<RecognizedElement>?`**, `null` until word-level
+  elements ship, so filling them in later is a minor. `RecognizedElement` is `text`, `boundingBox`
+  and a nullable `confidence`, since whether both engines give per-word values is still open.
+- **Both result types are immutable and `const`-constructible.** They hold their lists without a
+  defensive copy, since a `const` instance gets a `const` list
+  ([`CODESTYLE.md`](./CODESTYLE.md#listunmodifiable-over-unmodifiablelistview)).
 
-- **`RecognizedLine.confidence` is `double`, range `[0,1]`.** Both engines supply a per-line
-  confidence: Apple Vision, and (re-verified for the pinned `play-services-mlkit-text-recognition`
-  19.0.1) ML Kit v2 via `Text.Line.getConfidence()`, so it is never null and the type says so.
-  The scales are **not comparable**, across platforms or across iOS versions: the modern
-  `RecognizeTextRequest` (18+) reports **coarse** values (frequently `1.0`), the legacy
-  `VNRecognizeTextRequest` (15-17) is **graded**, and the same image scored `~0.5` on iOS 15 for
-  lines the 18+ path scored `1.0` (device-verified). On the modern path that flat value tracks
-  `recognitionLevel` rather than the text: every line of the bundled sample read `0.5` at `fast`
-  and `1.0` at `accurate` (iOS 26.2 Simulator). So reaching for `accurate` buys no gradation, only
-  a different constant, which is what `visionCoarse.isRankable == false` is there to tell you.
-  `TextSightEngine.confidenceScale` names which one you have, and `isRankable` answers the only
-  question most consumers actually have.
+**Configuration.**
 
-  On Android below Google Play services 22.30 the unbundled ML Kit returns `0` for every line
-  instead of a real value. No runtime gate is built for it: those devices are years stale and
-  shrinking, and keeping the field nullable to model them would tax every consumer forever. If it
-  ever matters it becomes a `ConfidenceScale` value, not a per-line null.
-- **`RecognizedLine.elements` is a reserved `List<RecognizedElement>?`.** Word-level elements
-  are part of the model shape from v1 but stay **`null` until the feature ships**, so
-  populating them later is an additive minor, not a breaking change. `RecognizedElement` is
-  intentionally minimal: `text` · `boundingBox` · `confidence?`. Its confidence stays nullable
-  where a line's is not, because whether both engines report a per-word value is unsettled until
-  the feature ships.
-- **Both result types are capture-agnostic, immutable, and `const`-constructible**, with
-  `toString`. They hold their lists directly, with no defensive copy, since a `const` instance is
-  passed a `const` (immutable) list (see
-  [`CODESTYLE.md`](./CODESTYLE.md#listunmodifiable-over-unmodifiablelistview)).
+- **`TextSightOptions` is the one recognizer config for both drivers**: `roi` plus a `darwin` group.
+  The live driver takes it on the controller, the one-shot per call, where it raises the level to
+  `accurate`.
+- **`DarwinOptions` holds what only Vision can do**, so the platform is named once and a new Vision
+  knob doesn't touch `TextSightOptions`. `preferredLanguages` is an `Iterable<Locale>`, since what's
+  supported depends on platform and OS version, so a closed enum would misstate it. It maps to tags
+  through `Locale.toLanguageTag()` at the seam. `minimumTextHeight` is a fraction of the **frame**,
+  divided on the way in by the height of the region Vision reads, so it stays the same text size
+  whatever the box.
+- **The torch isn't in `TextSightOptions`.** It's a live-session thing and a still has none, so the
+  type keeps recognizer config (shared) apart from session config (live only).
+- **`roi` is a `Rect`**, the same type as the output boxes rather than a twin
+  ([#coordinate-normalization](#coordinate-normalization)).
 
-**Configuration.** One config type, reused across both drivers:
-
-- **`TextSightOptions` is the one source-agnostic recognizer config**: `roi` plus a `darwin` group,
-  accepted by *both* drivers. The live driver takes it on `TextSightController`, and the static
-  one-shot takes it per call, raising `darwin.recognitionLevel` to `.accurate` where the live
-  default is `.fast`. Not a per-driver duplicate.
-- **`DarwinOptions` holds what only Apple Vision can do**: `recognitionLevel`,
-  `usesLanguageCorrection`, `preferredLanguages`, `minimumTextHeight`. Grouping states the platform
-  once instead of prefixing each field, and a new Vision knob is a field here rather than a change
-  to `TextSightOptions`. `preferredLanguages` is `Iterable<Locale>`, not raw BCP-47 strings, since a
-  closed enum would misstate a platform- and OS-version-dependent capability, so the type stays
-  structured-but-open and maps to tags via `Locale.toLanguageTag()` at the seam. `minimumTextHeight`
-  is a fraction of the **frame**, divided by the scan-box height on the way to Vision (which
-  measures it against the region of interest), so narrowing the box never changes what is readable.
-- **`torchEnabled` is a controller-only parameter, deliberately *not* in `TextSightOptions`.**
-  Torch is a live-session concern and a static image has none, so folding it into the shared
-  recognizer config would be a category error. The seam, expressed in the type system:
-  recognizer config is shared across drivers, session config is not.
-- **`roi` is a `Rect`** in normalized `[0,1]` top-left space (the same type as the output
-  boxes, not a bespoke twin), and its range is validated by a debug `assert` at the controller
-  (the `const` `TextSightOptions` can't run a check in its own constructor). See
-  [#coordinate-normalization](#coordinate-normalization).
-
-**The static one-shot is a separate driver, not a session mode.** `TextSight.recognizeImage` /
-`.recognizePath` return a `Future<TextSightCapture>` and need no controller, camera permission,
-texture, or session. They share only the recognizer and result models with the live path, and ride
-the `@HostApi` ([#channel-topology](#channel-topology)).
+**The one-shot is its own driver, not a session mode.** `TextSight.recognizeImage` and
+`.recognizePath` return a `Future<TextSightCapture>` with no controller, permission, texture or
+session. They share only the recognizer and result models with the live path, over the `@HostApi`
+([#channel-topology](#channel-topology)).
 
 ---
 
@@ -770,82 +585,59 @@ the `@HostApi` ([#channel-topology](#channel-topology)).
 
 ## Developing the Android module standalone in Android Studio
 
-**Decision.** The plugin's `android/` carries a little standalone-development scaffolding so it
-can be opened directly in Android Studio (`File > Open > android/`) with full symbol resolution,
-including `io.flutter.*`. This is *not* Flutter's default plugin layout. `flutter create
---template=plugin` produces an `android/` that resolves only inside an app build. The additions:
+**Decision.** `android/` carries a little scaffolding so it opens on its own in Android Studio
+(`File > Open > android/`) with everything resolving, `io.flutter.*` included. Flutter's plugin
+template doesn't do this: its `android/` only resolves inside an app build. The additions:
 
-- **`android/settings.gradle.kts`**: a `pluginManagement {}` block pinning the AGP version, so
-  `plugins { id("com.android.library") }` resolves when `android/` is the Gradle root. (No Kotlin
-  plugin. Standalone uses AGP 9's built-in Kotlin, see the migration note below.)
-- **`android/gradle.properties`**: `useAndroidX` + JVM args only. (No `newDsl`/`builtInKotlin`
-  opt-out flags, and the standalone build runs AGP 9's built-in Kotlin + new DSL.)
-- **`android/build.gradle.kts`**: an `if (project == rootProject)` block that adds the Flutter
-  engine embedding (`io.flutter:flutter_embedding_debug:1.0.0-<engine.version>`) as `compileOnly`
-  plus `testImplementation`, reading the version from the pinned SDK so it tracks the channel rather
-  than being hardcoded. Both configurations are needed: `compileOnly` covers the main source set
-  only, so without the second the unit tests cannot resolve `io.flutter.*` and the standalone build
-  fails to compile them.
+- **`android/settings.gradle.kts`**: a `pluginManagement {}` block pinning AGP, so
+  `id("com.android.library")` resolves with `android/` as the Gradle root. No Kotlin plugin, since
+  standalone uses AGP 9's built-in Kotlin.
+- **`android/gradle.properties`**: `useAndroidX` and JVM args, with no `newDsl` or `builtInKotlin`
+  opt-outs.
+- **`android/build.gradle.kts`**: an `if (project == rootProject)` block adding the Flutter engine
+  embedding (`io.flutter:flutter_embedding_debug:1.0.0-<engine.version>`) as `compileOnly` and
+  `testImplementation`, versioned from the pinned SDK so it follows the channel. `compileOnly` only
+  covers main sources, so without the second the unit tests can't resolve `io.flutter.*`.
 - the **Gradle wrapper** (`gradlew`, `gradle/wrapper/`).
 
-**Why Flutter doesn't do this for you.** A plugin's `android/` is a library module that Flutter only
-ever builds as a *subproject* of a host app (`FlutterAppPluginLoaderPlugin` does
-`settings.include(":<plugin>")`). In that context the app supplies AGP/Kotlin, so the plugin's
-`settings.gradle.kts` is ignored as a subproject, and `dev.flutter.flutter-gradle-plugin`, applied
-**only by apps**, injects the engine. So Flutter's supported way to develop plugin native code is to
-open **`example/android`**, where everything resolves out of the box. The bare `android/` folder is
-off that path: nothing provides `io.flutter`, and the engine is versioned by hash and meant to come
-from the consuming app, so the template declares neither AGP versions nor the engine. Making it
-resolve standalone requires coupling to a specific engine version (the `engine.version` read above),
-which Flutter avoids baking into every generated plugin.
+**Why Flutter doesn't.** Flutter only builds a plugin's `android/` as a subproject of an app, which
+supplies AGP and Kotlin, and only apps apply `dev.flutter.flutter-gradle-plugin`, which injects the
+engine. So the supported way to work on plugin native code is `example/android`. Standalone, nothing
+provides `io.flutter`, and making it resolve ties the build to an engine version, which Flutter
+won't bake into every generated plugin.
 
-**Why it's safe for consumers.** Every addition is read only when `android/` is the Gradle root:
-a subproject's `settings.gradle.kts` and root `gradle.properties` are ignored in an app build, and
-the engine block is guarded by `project == rootProject` (false in-app). The whole lot is also
-excluded from the published package via [`.pubignore`](./.pubignore), and a consuming app builds the
-plugin with its own Gradle and never sees it. Both paths are verified to compile `lib` + the unit
-tests: `example/android` (in-app) and `android/` standalone, with the engine resolving standalone
-and the guard skipping it in-app.
+**Why consumers never see it.** Each addition only applies with `android/` as the root: an app build
+ignores a subproject's `settings.gradle.kts` and root `gradle.properties`, and the engine block is
+guarded by `project == rootProject`. It's all [`.pubignore`](./.pubignore)d too. Both paths compile
+`lib` and the unit tests: in-app through `example/android`, and standalone.
 
-**Wrapper hygiene.** The wrapper is committed (standard Gradle practice, since it pins the Gradle
-version for reproducible builds, see the `!/gradle/wrapper/gradle-wrapper.jar` un-ignore in
-`android/.gitignore`) but `.pubignore`d, so contributors get zero-setup standalone builds while the
-tarball stays lean. `android/local.properties` (gitignored) must set `flutter.sdk` for the engine to
-resolve standalone, and the build logs a one-line hint if it's missing (app builds never need it).
+**The wrapper is committed** (it pins Gradle, see the `!/gradle/wrapper/gradle-wrapper.jar`
+un-ignore in `android/.gitignore`) but `.pubignore`d, so standalone builds need no setup and the
+tarball stays lean. `android/local.properties` (gitignored) has to set `flutter.sdk` for the engine
+to resolve standalone, and the build logs a hint when it's missing.
 
-**AGP 9 built-in Kotlin, standalone only.** The standalone build runs AGP 9's **built-in Kotlin +
-new DSL**: no `org.jetbrains.kotlin.android` plugin, no `builtInKotlin`/`newDsl` opt-out flags, and
-no `sourceSets { java.srcDirs("src/main/kotlin") }` block (AGP 9 includes `src/main/kotlin` /
-`src/test/kotlin` by default). This clears the AGP-9 deprecation warnings (`android {}` legacy
-extension, `kotlin.android` "no longer required", the opt-out flags) **in the standalone window**.
-The **example app cannot follow**: Flutter 3.44's `flutter build` migrator actively re-adds
-`android.builtInKotlin=false` / `android.newDsl=false` to `example/android/gradle.properties` on
-every build, so the in-app build, and its AGP-9 deprecation warnings, stays on legacy AGP until
-Flutter itself migrates. The shared `build.gradle.kts` works in both contexts: built-in Kotlin
-standalone, and AGP's legacy auto-apply of `kotlin.android` (using the example's pinned Kotlin
-version) in-app. One consequence of the new DSL: `junit-platform-launcher` must be declared
-explicitly on the test runtime classpath for `useJUnitPlatform()`, since the legacy DSL provided it
-implicitly.
+**AGP 9's built-in Kotlin, standalone only.** No `org.jetbrains.kotlin.android` plugin, no opt-out
+flags and no `sourceSets` block (AGP 9 includes `src/main/kotlin` and `src/test/kotlin` itself), which
+clears AGP 9's deprecation warnings in the standalone window. The example can't follow: Flutter's
+`flutter build` migrator re-adds `android.builtInKotlin=false` and `android.newDsl=false` to
+`example/android/gradle.properties` on every build, so the in-app build stays on legacy AGP until
+Flutter migrates. The shared `build.gradle.kts` works both ways. One catch of the new DSL:
+`junit-platform-launcher` has to be declared on the test runtime classpath for
+`useJUnitPlatform()`, which the legacy DSL supplied.
 
-**`compileSdk` = latest *stable*, never preview.** `build.gradle.kts` pins `compileSdk = 36`
-(Android 16, Flutter 3.44's `flutter.compileSdkVersion` default), not a newer/preview level. AGP
-records a library's `compileSdk` as the AAR's **`minCompileSdk`**, forcing every consumer to compile
-against at least that, and since pub.dev ships this plugin as **source**, a higher value would also
-require consumers to have that SDK platform installed, hard-breaking stock-Flutter apps. AGP ≥ 9.2
-*enforces* this (9.0 silently skipped it, which is how the example built before). This is the one
-spot where the vendor-forward instinct misfires: it governs the plugin's own API floor (and
-`minSdk`), not the compileSdk imposed on downstream apps. CameraX + ML Kit need nothing past stable
-36.
+**`compileSdk` is the latest stable, never a preview.** AGP records a library's `compileSdk` as the
+AAR's `minCompileSdk`, so every consumer must compile against at least that, and since pub.dev ships
+the plugin as source, a higher level also needs that SDK installed, breaking stock Flutter apps. AGP
+9.2 and up enforces it (9.0 didn't, which is how the example once built). The vendor-forward
+instinct governs the plugin's own floor (`minSdk`), not what it forces on apps. CameraX and ML Kit
+need nothing past stable.
 
-**AGP 9.2.1 on Gradle 9.6.0, no configuration cache (yet).** Both contexts run AGP 9.2.1, which
-requires Gradle ≥ 9.4.1 (so the example wrapper moved 9.1.0 → 9.6.0 to match standalone). Two known
-non-fixables, both upstream: the *"Project object as a dependency notation"* Gradle-10 deprecation
-comes from AGP's own `VariantDependenciesBuilder` (test-variant wiring, still present in the latest
-stable, harmless until Gradle 10), and **configuration cache stays off** because AGP 9.2.1's
-`JdkImageInput` (javac system-modules) isn't CC-serializable under Gradle 9.6, so a strict-mode CC
-build fails storing the entry. Both are AGP's to fix, so re-evaluate when next bumping AGP.
+**No configuration cache yet.** Two upstream issues seen on AGP 9.2.1 and Gradle 9.6.0: AGP's own
+`VariantDependenciesBuilder` raises the *"Project object as a dependency notation"* Gradle 10
+deprecation (harmless until Gradle 10), and its `JdkImageInput` isn't configuration-cache-safe, so a
+strict cached build fails storing the entry. Both are AGP's to fix, so check again on the next AGP
+bump.
 
-**Cost / fallback.** Off the supported path, the setup tracks the engine version (automatically, via
-`engine.version`) and ships a few `.pubignore`d dev-only files, in exchange for a lean plugin-only
-IDE window instead of the full example app. If it ever becomes a maintenance drag, the fallback is
-the supported path: delete the scaffolding and open `example/android`.
+**Cost and fallback.** The scaffolding tracks the engine version (automatically) and adds a few
+`.pubignore`d files, for a lean plugin-only IDE window. If it ever drags, delete it and open
+`example/android`.
