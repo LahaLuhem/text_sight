@@ -53,9 +53,9 @@ dev_dependencies:
 
   # Generators. The exact ones are the codegen job's to bump, with the output they make.
   build_runner: ^2.16.1
-  copy_with_extension_gen: 18.0.0
+  copy_with_extension_gen: 18.0.1
   # tool/pigeon.dart reaches into Pigeon's internals, so read its bumps carefully.
-  pigeon: 29.1.0
+  pigeon: 30.0.4
 
   # Testing
   bdd_framework: ">=4.0.7 <6.0.0"
