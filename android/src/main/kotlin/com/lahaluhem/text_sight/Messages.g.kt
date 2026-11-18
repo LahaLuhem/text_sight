@@ -207,8 +207,10 @@ enum class RecognitionLevelMessage(val raw: Int) {
   ACCURATE(1);
 
   companion object {
+    private val pigeonValues = values()
+
     fun ofRaw(raw: Int): RecognitionLevelMessage? {
-      return values().firstOrNull { it.raw == raw }
+      return pigeonValues.getOrNull(raw)
     }
   }
 }
@@ -220,8 +222,10 @@ enum class ConfidenceScaleMessage(val raw: Int) {
   ML_KIT(2);
 
   companion object {
+    private val pigeonValues = values()
+
     fun ofRaw(raw: Int): ConfidenceScaleMessage? {
-      return values().firstOrNull { it.raw == raw }
+      return pigeonValues.getOrNull(raw)
     }
   }
 }
@@ -233,8 +237,10 @@ enum class CaptureResolutionMessage(val raw: Int) {
   HIGH(2);
 
   companion object {
+    private val pigeonValues = values()
+
     fun ofRaw(raw: Int): CaptureResolutionMessage? {
-      return values().firstOrNull { it.raw == raw }
+      return pigeonValues.getOrNull(raw)
     }
   }
 }
@@ -246,8 +252,10 @@ enum class CameraPermissionStatusMessage(val raw: Int) {
   PERMANENTLY_DENIED(2);
 
   companion object {
+    private val pigeonValues = values()
+
     fun ofRaw(raw: Int): CameraPermissionStatusMessage? {
-      return values().firstOrNull { it.raw == raw }
+      return pigeonValues.getOrNull(raw)
     }
   }
 }
@@ -258,8 +266,10 @@ enum class SessionPauseReasonMessage(val raw: Int) {
   INTERRUPTED(1);
 
   companion object {
+    private val pigeonValues = values()
+
     fun ofRaw(raw: Int): SessionPauseReasonMessage? {
-      return values().firstOrNull { it.raw == raw }
+      return pigeonValues.getOrNull(raw)
     }
   }
 }
