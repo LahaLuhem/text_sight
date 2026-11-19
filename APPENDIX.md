@@ -326,10 +326,10 @@ paths can't drift apart:
 or nothing, depending on the depth, so edge lines flicker as the hand drifts, and no rule on box
 position tells those fragments from good lines. Read past the edge and a line centred inside comes
 back whole. The sides still cut, since lines run on past them anyway. Live, a line already on screen
-holds a little past the edge, since boxes shift a few pixels between reads. The taller read costs
-`accurate` some small text ([#3](https://github.com/LahaLuhem/text_sight/issues/3) has the
-numbers). Vision measures its text-height floor against the region it reads, so the floor is
-divided by that height on the way in.
+holds a little past the edge, since boxes shift a few pixels between reads. On an iPhone the taller
+read costs `accurate` a little small text at 1080p and helps it at 4K
+([#3](https://github.com/LahaLuhem/text_sight/issues/3) has the numbers). Vision measures its
+text-height floor against the region it reads, so the floor is divided by that height on the way in.
 
 **Why the Android live crop goes through libyuv.** ML Kit takes no region and ignores
 `Image.cropRect`, so the only way to read less is a smaller buffer. libyuv-android copies the read
@@ -463,6 +463,24 @@ per-line confidence, on scales that don't compare.
 **The platforms capture different shapes.** Android runs 4:3, the sensor's own shape. iOS has no 4:3
 HD preset, so it runs 16:9. Matching them would crop page away for nothing. `CaptureResolution` picks
 the size, and the shape stays the platform's.
+
+**Both engines shrink a big frame before reading it**, so past a point more pixels buy no finer
+print. Measured in November 2026 with rows of known font sizes drawn into frames of many shapes
+([#3](https://github.com/LahaLuhem/text_sight/issues/3) has the method and the rest of the numbers):
+
+| Engine, where measured | Shrinks the frame to | Smallest font size read in a frame that fits |
+|---|---|---|
+| ML Kit unbundled 19.0.2 and bundled 16.0.1, Galaxy S24 and an API 37 emulator | A long side of about 2,400 px, whatever the pixel count | 8.5 px |
+| Vision `fast`, iPhone 16 on iOS 27.2 and the iOS 26.2 Simulator | A short side of about 1,900 px | 12.5 to 16 px |
+| Vision `accurate`, iPhone 16 on iOS 27.2 | About 1080p, for camera-shaped frames | 11 px |
+
+- **A box is read at its own size.** Android crops, and Vision's `regionOfInterest` reads exactly
+  like a crop, so a box keeps the detail a big frame loses. That makes small print the box's job
+  live, and puts Android's `high` just past ML Kit's size.
+- **The simulator's `accurate` isn't the iPhone's:** it reads finer, jumps with a few px of shift and
+  runs several times slower. Judge `accurate` on a phone.
+- **Both engines can return nothing at all** for a frame whose text sits near their floor.
+- **Reading big images in pieces** is [#137](https://github.com/LahaLuhem/text_sight/issues/137).
 
 **The live session pauses itself in the background** and restarts on return with the torch put
 back, and `sessionState` reports it ([#session-state](#session-state)). Both OSes cut a backgrounded

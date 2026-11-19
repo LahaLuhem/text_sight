@@ -281,8 +281,8 @@ struct TextSightOptionsMessage: Hashable, CustomStringConvertible {
   /// Whether the recognizer fixes likely misreads against a lexicon. Vision only.
   var usesLanguageCorrection: Bool
   var languages: [String]
-  /// Smallest text to read, as a fraction of the scan box. Vision shrinks the image to suit, so 0
-  /// keeps every pixel. ML Kit has no such dial, so Android ignores it.
+  /// Smallest text to read, as a fraction of the frame height. ML Kit has no such dial, so Android
+  /// ignores it.
   var minimumTextHeight: Double
   var roi: RegionOfInterestMessage? = nil
 

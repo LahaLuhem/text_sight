@@ -338,8 +338,8 @@ data class TextSightOptionsMessage (
   val usesLanguageCorrection: Boolean,
   val languages: List<String>,
   /**
-   * Smallest text to read, as a fraction of the scan box. Vision shrinks the image to suit, so 0
-   * keeps every pixel. ML Kit has no such dial, so Android ignores it.
+   * Smallest text to read, as a fraction of the frame height. ML Kit has no such dial, so Android
+   * ignores it.
    */
   val minimumTextHeight: Double,
   val roi: RegionOfInterestMessage? = null
