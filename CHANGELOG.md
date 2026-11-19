@@ -1,6 +1,17 @@
 ## [Unreleased]
+### Added
+- \[#69\] TextSightView.fit, contain by default
+
+### Deprecated
+- \[#69\] TextSightController.textureId and TextSightCapture.quarterTurns, since TextSightView turns the preview itself
+
+### Removed
+- The iOS podspec: text_sight ships through SwiftPM only
+
 ### Fixed
-- Fit the camera preview from native geometry
+- \[#69\] TextSightView no longer stretches the preview
+- \[#70\] TextSightView no longer needs a Directionality
+- \[#3\] roi: Android reads only the box, iOS boxes map onto the whole frame, edge lines stay whole
 
 ## [1.0.0] - 2026-09-15
 ### Added
