@@ -1,17 +1,20 @@
-## [Unreleased]
+## [1.0.1] - 2026-11-19
 ### Added
 - \[#69\] TextSightView.fit, contain by default
 
+### Changed
+- build(deps): bump copy\_with\_extension and copy\_with\_extension\_gen
+
 ### Deprecated
 - \[#69\] TextSightController.textureId and TextSightCapture.quarterTurns, since TextSightView turns the preview itself
-
-### Removed
-- The iOS podspec: text_sight ships through SwiftPM only
 
 ### Fixed
 - \[#69\] TextSightView no longer stretches the preview
 - \[#70\] TextSightView no longer needs a Directionality
 - \[#3\] roi: Android reads only the box, iOS boxes map onto the whole frame, edge lines stay whole
+
+### Removed
+- The iOS podspec: text\_sight ships through SwiftPM only
 
 ## [1.0.0] - 2026-09-15
 ### Added
@@ -83,7 +86,7 @@
 - Recognizer configuration on the controller: region of interest (a normalized `Rect`), recognition level, language preferences, and torch.
 - A unified result model — per-line confidence and normalized `[0,1]` top-left bounding boxes, identical across platforms, with a rotation-aware preview.
 
-[Unreleased]: https://github.com/LahaLuhem/text_sight/compare/1.0.0...HEAD
+[1.0.1]: https://github.com/LahaLuhem/text_sight/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/LahaLuhem/text_sight/compare/0.2.2...1.0.0
 [0.2.2]: https://github.com/LahaLuhem/text_sight/compare/0.2.1...0.2.2
 [0.2.1]: https://github.com/LahaLuhem/text_sight/compare/0.2.0...0.2.1
