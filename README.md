@@ -2,7 +2,6 @@
 [![Coverage Status](https://coveralls.io/repos/github/LahaLuhem/text_sight/badge.svg?branch=main)](https://coveralls.io/github/LahaLuhem/text_sight?branch=main)
 [![Pub Version](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/LahaLuhem/text_sight/pulls)
-[![Pub Package](https://img.shields.io/pub/v/text_sight.svg)](https://pub.dev/packages/text_sight)
 [![Pub Points](https://img.shields.io/pub/points/text_sight?logo=dart)](https://pub.dev/packages/text_sight/score)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://github.com/LahaLuhem/text_sight/blob/main/LICENSE)
 [![GitHub issues](https://img.shields.io/github/issues/LahaLuhem/text_sight.svg)](https://github.com/LahaLuhem/text_sight/issues)
@@ -20,7 +19,7 @@
   </tr>
 </table>
 
-<p align="center"><sub>iOS gives every line the same confidence, so the tier colours are off there. See <a href="#api-at-a-glance">API at a glance</a>.</sub></p>
+<p align="center"><sub>iOS 18 and newer give every line the same confidence, so the tier colours are off there. See <a href="#api-at-a-glance">API at a glance</a>.</sub></p>
 
 <!-- TOC start (generated with https://github.com/derlin/bitdowntoc) -->
 
@@ -49,14 +48,14 @@
 Most cross-platform OCR plugins run Google ML Kit on *both* platforms, which quietly drags
 `GoogleMLKit` into your iOS build. text_sight doesn't.
 
-|                                         |                                                                                                                                                                                    |
-|-----------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|                                         |                                                                                                                                                                                   |
+|-----------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **No ML framework in your iOS app**     | iOS recognition is Apple Vision, which is already part of the OS. No GoogleMLKit or other ML library to ship, so your iOS build stays smaller. CI fails the moment one sneaks in. |
-| **Android fetches its model on demand** | The ML Kit model stays unbundled by default, so your APK carries a ~260 KB stub instead of the whole thing. Want it baked in? One line of Gradle.                                  |
-| **`fast` or `accurate`, per call**      | Switch mid-session. On one live page `accurate` read 15 lines where `fast` got 9, for roughly 4x the time. iOS only, since ML Kit's Latin recognizer has no such knob.             |
-| **No permission package**               | `requestCameraPermission()` goes straight to AVFoundation and the Android permission flow. Already using `permission_handler`? That still works.                                   |
-| **The same boxes everywhere**           | Every box is normalized `[0, 1]` from the top-left on both platforms, so your overlay never branches on `Platform`.                                                                |
-| **Camera optional**                     | One-shot recognition reads bytes or a file path. No camera, no permission, runs anywhere.                                                                                          |
+| **Android fetches its model on demand** | The ML Kit model stays unbundled by default, so your APK carries a ~260 KB stub instead of the whole thing. Want it baked in? One line of Gradle.                                 |
+| **`fast` or `accurate`, per call**      | Switch mid-session. On one live page `accurate` read 15 lines where `fast` got 9, for roughly 4x the time. iOS only, since ML Kit's Latin recognizer has no such knob.            |
+| **No permission package**               | `requestCameraPermission()` goes straight to AVFoundation and the Android permission flow. Already using `permission_handler`? That still works.                                  |
+| **The same boxes everywhere**           | Every box is normalized `[0, 1]` from the top-left on both platforms, so your overlay never branches on `Platform`.                                                               |
+| **Camera optional**                     | One-shot recognition reads bytes or a file path. No camera, no permission, runs anywhere.                                                                                         |
 
 Nothing recognition-related ever reaches your `pubspec.yaml`, so the two platforms can't bleed into
 each other.
@@ -94,9 +93,9 @@ final capture = await TextSight.recognizeImage(bytes); // or .recognizePath('/ph
 
 ### Tweak it mid-session
 
-Hand the controller a **region of interest** to scan just a scan-box. Everything Apple Vision alone
-can do sits under `darwin`, so a setting Android ignores can't be reached without naming the
-platform.
+Hand the controller a **region of interest** to read only inside a scan box. Everything Apple
+Vision alone can do sits under `darwin`, so a setting Android ignores can't be reached without
+naming the platform.
 
 ```dart
 final controller = TextSightController(
@@ -189,10 +188,10 @@ One import gets you everything: `package:text_sight/text_sight.dart`.
 | `TextSightOptions`                      | region of interest, plus a `darwin` group of Vision-only knobs                                              |
 | `TextSightCapture` and `RecognizedLine` | results: text, normalized box, confidence                                                                   |
 | `TextSightSessionState`                 | what the camera session is doing: idle, active, paused, failed                                              |
-| `TextSightEngine`                       | what this device's engine is like, e.g. `confidenceScale`                                                   |
+| `TextSightEngine`                       | what this device's engine is like, through its `confidenceScale`                                            |
 | `ConfidenceScale`                       | what a confidence number means here, and whether it ranks                                                   |
 | `TextSightModel`                        | Android model readiness, `ensureReady()` plus a stream                                                      |
-| `DarwinOptions`                         | `recognitionLevel`, `usesLanguageCorrection`, `preferredLanguages`, `minimumTextHeight`. iOS and macOS only |
+| `DarwinOptions`                         | `recognitionLevel`, `usesLanguageCorrection`, `preferredLanguages`, `minimumTextHeight`. iOS only           |
 | `RecognitionLevel`                      | `fast` or `accurate`, inside `DarwinOptions`                                                                |
 | `CaptureResolution`                     | how many pixels the camera feeds the recognizer                                                             |
 | `CameraPermissionStatus`                | granted, denied, permanently denied                                                                         |
@@ -262,9 +261,9 @@ Nothing to do. The manifest already has what it needs.
 
 ## The recognition model
 
-iOS is free here, Vision ships with the OS. Android pulls its ML Kit model from Play Services on
-first use, so your APK carries a ~260 KB stub instead of the whole thing. Warm it up with
-`TextSightModel.ensureReady()` when your scanner opens, or bundle it:
+iOS has nothing to fetch, since Vision ships with the OS. Android pulls its ML Kit model from Play
+Services on first use, so your APK carries a ~260 KB stub instead of the whole thing. Warm it up
+with `TextSightModel.ensureReady()` when your scanner opens, or bundle it:
 [doc/android-model.md](https://github.com/LahaLuhem/text_sight/blob/main/doc/android-model.md).
 
 ## Performance

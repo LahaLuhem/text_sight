@@ -73,8 +73,8 @@ abstract final class Payloads() {
     required int maxTextLen,
   }) {
     final textSpan = maxTextLen - minTextLen + 1;
-    // Materialized once on purpose, since lines are rng-derived and re-read by every
-    // codec each iteration, so a lazy re-generating Iterable would re-draw per pass.
+    // Materialized once, since every codec re-reads the lines each iteration and a lazy Iterable
+    // would draw new random ones on every pass.
     final lines = List.generate(
       lineCount,
       (_) => BenchLine(

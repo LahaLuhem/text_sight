@@ -13,7 +13,6 @@ import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** `deriveSessionState`: owner status plus camera state in, the state to report (or nothing) out. */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
 internal class SessionStateDerivationTest(

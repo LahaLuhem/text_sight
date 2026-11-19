@@ -15,7 +15,7 @@ from text_sight_bench.subcommands import runner
 
 @pytest.fixture(autouse=True)
 def _no_poll_delay(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Polling cadence is timing, not logic, so drop it and let the loop runs at full speed."""
+    """Polling cadence is timing, not logic, so drop it and let the loop run at full speed."""
     monkeypatch.setattr(runner, "_GRANT_POLL_SECONDS", 0)
     monkeypatch.setattr(runner, "_REGRANT_POLL_SECONDS", 0)
 

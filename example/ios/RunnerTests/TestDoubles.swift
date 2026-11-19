@@ -8,8 +8,6 @@ import XCTest
 
 @testable import text_sight
 
-// Shared fakes and fixtures for the RunnerTests target.
-
 /// A blank BGRA buffer, all `handle` needs to stand in for a captured frame.
 func makeTestPixelBuffer() throws -> CVPixelBuffer {
   var pixelBuffer: CVPixelBuffer?
@@ -224,5 +222,20 @@ final class ScriptedRecognizer: TextRecognizer, @unchecked Sendable {
 
       return frames[min(next, frames.count - 1)]
     }
+  }
+}
+
+/// Fails unless `work` throws a `PigeonError` with `code`.
+func assertThrowsPigeonError(
+  code: String, file: StaticString = #filePath, line: UInt = #line,
+  _ work: @escaping () async throws -> Void
+) async {
+  do {
+    try await work()
+    XCTFail("expected a PigeonError(\(code)), got success", file: file, line: line)
+  } catch let error as PigeonError {
+    XCTAssertEqual(error.code, code, file: file, line: line)
+  } catch {
+    XCTFail("expected a PigeonError(\(code)), got \(error)", file: file, line: line)
   }
 }

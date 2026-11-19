@@ -10,10 +10,9 @@ version = "0.1.0"
 description = "Benchmark orchestration + reporting for the text_sight captures-transport codec."
 requires-python = ">=3.10"
 
-# polars (Rust-backed) for analysis, seaborn/matplotlib for the committed
-# README charts. pyarrow bridges polars -> pandas at the seaborn boundary.
-# No scipy/jinja2, since there is no `compare` (Mann-Whitney) layer yet and the
-# markdown is plain f-strings.
+# polars for analysis, seaborn and matplotlib for the committed charts, and pyarrow to hand polars
+# frames to seaborn. No scipy or jinja2: there's no compare layer yet, and the markdown is plain
+# f-strings.
 dependencies = [
     "polars>=1.0,<3.0",
     "matplotlib>=3.8,<4.0",

@@ -25,29 +25,24 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
 ## Stack
 
 - **It's a plugin, not a pure package**: it needs native code (Swift/Vision,
-  Kotlin/ML Kit). For v1 a **single plugin package** declares both platforms. Full
-  federation is deferred ([`APPENDIX.md#federation-deferred`](../APPENDIX.md#federation-deferred)).
+  Kotlin/ML Kit). One plugin package declares both platforms, and splitting it per platform is
+  deferred ([`APPENDIX.md#federation-deferred`](../APPENDIX.md#federation-deferred)).
 - **Flutter and Dart floors** are pinned in `pubspec.yaml`, and `.fvmrc` pins the Flutter
   channel for local use. They comfortably clear the Dart 3.10 static-dot-shorthand floor the
   code style leans on.
 - **iOS, Swift**, using the system frameworks Vision + AVFoundation (+ CoreMedia / CoreVideo).
-  `AVCaptureSession` → a `TextRecognizer` hybrid: Vision's Swift `RecognizeTextRequest` (the WWDC
-  2024 API) on iOS 18+, the legacy `VNRecognizeTextRequest` on iOS 15-17, picked once via a factory,
-  with preview to a `FlutterTexture`. iOS 15.0 deployment floor (Flutter's own floor since 3.47),
-  and iOS 15-16 get degraded, un-rotated capture (no `RotationCoordinator`)
+  `AVCaptureSession` feeds a `TextRecognizer`: Vision's Swift `RecognizeTextRequest` on iOS 18+,
+  the older `VNRecognizeTextRequest` on iOS 15-17, picked once by a factory. The preview goes to a
+  `FlutterTexture`. The floor is iOS 15.0 (Flutter's own since 3.47), and iOS 15-16 don't follow
+  rotation, having no `RotationCoordinator`
   ([`APPENDIX.md#ios-capture-strategy`](../APPENDIX.md#ios-capture-strategy)). Ships through
-  SwiftPM only (`ios/text_sight/Package.swift`), since CocoaPods is going read-only. It bundles
-  neither ML Kit nor any library that duplicates a system framework, since the no-bundling line is
-  *prefer-native*, not *zero-dependency* (hard rule 2).
+  SwiftPM only (`ios/text_sight/Package.swift`), since CocoaPods is going read-only (hard rule 2).
 - **Android, Kotlin**, using CameraX + ML Kit text recognition. `ImageAnalysis`
-  (`STRATEGY_KEEP_ONLY_LATEST`) → `TextRecognition` client, preview via `Texture`. ML Kit +
-  CameraX are declared only in `android/build.gradle.kts`. The module stays on Flutter's
-  built-in Kotlin (Gradle Kotlin-DSL, `plugins {}`), never the legacy
-  `apply plugin: 'kotlin-android'`, which re-introduces the KGP deprecation warning this
-  package exists to avoid.
+  (`STRATEGY_KEEP_ONLY_LATEST`) feeds a `TextRecognition` client, and the preview goes to a
+  `Texture`. ML Kit + CameraX are declared only in `android/build.gradle.kts`, and the module stays
+  on Flutter's built-in Kotlin (hard rule 3).
 - **Channel topology** ([`APPENDIX.md#channel-topology`](../APPENDIX.md#channel-topology)):
-  the typed control API (initialize / start / pause-recognition / set-options / toggle-torch /
-  dispose) is Pigeon codegen (`@HostApi`). Per-frame results stream over a plain
+  the control calls are Pigeon codegen (`@HostApi`). Per-frame results stream over a plain
   `EventChannel`, the camera preview is a `Texture`, and session state and preview geometry come
   back over a Pigeon `@FlutterApi`. Pigeon is a dev dependency, so it costs consumers nothing at
   runtime.
@@ -55,13 +50,11 @@ the package's reason to exist. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no
   writes `copyWith` for the public value types. Both outputs are committed, and CI's
   `codegen` job regenerates and fails if anything differs, so neither can drift from its
   source.
-- **`dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it, for pedantic static analysis,
-  and the lint posture is deliberately strict (`strict-casts` / `strict-inference` /
-  `strict-raw-types` + the `errors:`-promoted block in
+- **`dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it. The lints are strict on
+  purpose (`strict-casts` / `strict-inference` / `strict-raw-types` + the `errors:` block in
   [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
-  which `analysis_options.yaml` includes). Pedantic mode is intentional, not negotiable.
-  **`flutter_test`** for Dart unit/widget tests. On the native sides, detekt and SwiftLint gate the
-  Kotlin and the Swift in `plugin.yml`, and the rest of their conventions are applied by hand
+  which `analysis_options.yaml` includes). **`flutter_test`** for Dart tests. detekt and SwiftLint
+  gate the native code in `plugin.yml`, and the rest of their conventions are applied by hand
   ([`CODESTYLE.md`](../CODESTYLE.md)).
 - **Published to pub.dev.** `.pubignore` controls the tarball. `CHANGELOG.md`, the
   `version:` field in `pubspec.yaml`, and the release tag move together in the Release run,
@@ -79,31 +72,30 @@ text_sight/
 │                            NO recognition lib (dev: Pigeon + build_runner codegen, test tooling)
 ├── pigeons/text_sight.dart  Pigeon schema for the typed control API (@HostApi)
 ├── lib/
-│   ├── text_sight.dart            Public entry; `export 'src/…';` only
-│   └── src/                       Private by convention; one public type per file
-│       ├── recognition/           Capture-agnostic core: TextSightCapture, RecognizedLine,
-│       │                          RecognizedElement, RecognitionLevel, TextSightOptions,
-│       │                          DarwinOptions (Vision-only knobs)
-│       ├── capture/               Two drivers, one recognizer: text_sight_controller.dart
-│       │                          (live) + text_sight.dart (TextSight one-shot static)
-│       ├── view/                  text_sight_view.dart: Texture-backed widget (+ overlay)
-│       └── platform/              text_sight_platform.dart (federation seam) +
+│   ├── text_sight.dart            Public entry, only `export 'src/…';` lines
+│   └── src/                       Private by convention, one public type per file
+│       ├── options/               Data: TextSightOptions, DarwinOptions (Vision only), the enums
+│       ├── results/               Data: TextSightCapture, RecognizedLine, ConfidenceScale
+│       ├── states/                Data: session, readiness and permission states
+│       ├── camera/                Live: TextSightController + TextSightView
+│       ├── recognition/           One-shot TextSight, TextSightModel, TextSightEngine
+│       └── platform/              text_sight_platform.dart (the platform seam) +
 │                                  messages.g.dart (GENERATED by Pigeon, never hand-edit)
 ├── ios/                     iOS plugin (Swift + Vision + AVFoundation)
-│   ├── text_sight/Package.swift  SwiftPM manifest; its one dependency is swift-async-queue
+│   ├── text_sight/Package.swift  SwiftPM manifest, whose one dependency is swift-async-queue
 │   ├── .swiftlint.yml            SwiftLint for the plugin Swift (RunnerTests: example/ios/.swiftlint.yml)
-│   └── text_sight/Sources/text_sight/   AVCaptureSession + Vision (RecognizeTextRequest / VNRecognizeTextRequest hybrid) + FlutterTexture
+│   └── text_sight/Sources/text_sight/   AVCaptureSession + Vision, in concept folders
 ├── android/                 Android plugin (Kotlin + CameraX + ML Kit)
-│   ├── build.gradle.kts          ML Kit + CameraX deps live ONLY here; built-in Kotlin
-│   ├── detekt.yml                detekt config (deviations only; --input android/src from repo root)
-│   └── src/main/kotlin/com/lahaluhem/text_sight/   CameraX + ML Kit, grouped by responsibility (camera/ recognition/ permission/ readiness/)
+│   ├── build.gradle.kts          ML Kit + CameraX deps live ONLY here, built-in Kotlin
+│   ├── detekt.yml                detekt config (deviations only, run from the repo root)
+│   └── src/main/kotlin/com/lahaluhem/text_sight/   CameraX + ML Kit, same concept folders
 ├── example/                 Runnable demo, also the no-bundling test harness
 ├── analysis_options.yaml    Includes dartender's shared lints
 ├── .pubignore               Files excluded from `flutter pub publish`
 ├── .editorconfig            Text-file conventions (Dart 2 / Swift 2 / Kotlin 4 / shell 2 / …)
 ├── .fvmrc                   FVM channel pin
-├── .github/workflows/       CI: dartender's ci, conventions, changelog, release, publish,
-│                            local plugin
+├── .github/workflows/       CI: dartender's callers (ci, codegen, conventions, changelog,
+│                            release, publish) + this repo's plugin.yml
 ├── CHANGELOG.md             Release log (bot-appended on merge, finalised by the Release run)
 ├── README.md                pub.dev landing page (hook line + topics)
 ├── APPENDIX.md              Design rationale (anchor-keyed)
@@ -111,47 +103,47 @@ text_sight/
 └── .ai/                     This file + CLAUDE.md (symlinked at root)
 ```
 
+Where a new file goes, on all three platforms:
+[`CODESTYLE.md#source-file-organization`](../CODESTYLE.md#source-file-organization).
+
 **Platform support is iOS + Android**: the only platforms declared in `pubspec.yaml`'s
 `plugin:` block. Adding another platform target is an explicit-conversation change (hard
 rule 13).
 
 ## Hard rules
 
-1. **No-bundling: recognition libraries never enter the Dart `pubspec.yaml`.** This is the
-   load-bearing rule. ML Kit + CameraX are declared **only** in `android/build.gradle.kts`.
-   The iOS side imports **only system frameworks** (`Vision`, `AVFoundation`). The Dart
-   `pubspec.yaml` declares **no** recognition library, only `flutter`,
-   `plugin_platform_interface` and pure-Dart helpers (`meta`, `copy_with_extension`). **Do not
-   add `camera`, `google_mlkit_*`, or any recognition package as a Dart dependency**. That's the
-   exact mistake (`flutter_scalable_ocr`'s
-   iOS podspec dragging in GoogleMLKit) this package exists to avoid. Native capture +
-   native recognition per platform, always. See
-   [`APPENDIX.md#no-bundling`](../APPENDIX.md#no-bundling).
+1. **No-bundling: recognition libraries never enter the Dart `pubspec.yaml`.** The load-bearing
+   rule. ML Kit + CameraX are declared **only** in `android/build.gradle.kts`, and iOS recognizes
+   and captures with system frameworks (rule 2). The Dart `pubspec.yaml` declares only `flutter`,
+   `plugin_platform_interface` and pure-Dart helpers (`meta`, `copy_with_extension`). **Never add
+   `camera`, `google_mlkit_*` or any recognition package as a Dart dependency**:
+   `flutter_scalable_ocr`'s iOS podspec dragging in GoogleMLKit is the exact mistake this package
+   exists to avoid. See [`APPENDIX.md#no-bundling`](../APPENDIX.md#no-bundling).
 2. **Ship through `Package.swift` only, and recognize and capture with Apple's own
    frameworks.** No podspec, since CocoaPods is going read-only. The bar is *prefer-native*, not
-   *zero-dependency*: **never** add a recognition/camera lib or anything that duplicates a system
-   framework Apple already ships (`Vision`, `AVFoundation`), since that's rule 1, and `GoogleMLKit`
-   is the exact mistake we exist to avoid. A small, maintained SPM library is fine where it leaves
-   less code here, even when a native route exists, since code is a liability. swift-async-queue,
-   which orders the pushes to Dart, is the one so far.
+   *zero-dependency*: **never** add a recognition or camera library, or anything that duplicates a
+   system framework (`Vision`, `AVFoundation`). A small, maintained SPM library is fine where it
+   leaves less code here, even when a native route exists, since code is a liability.
+   swift-async-queue, which orders the pushes to Dart, is the one so far.
 3. **The Android module stays on built-in Kotlin.** Use Flutter's Gradle `plugins {}` DSL,
    never the legacy `apply plugin: 'kotlin-android'` + buildscript classpath, since the legacy
    path emits the KGP deprecation warning this package is fighting.
-4. **Normalize coordinates to top-left `[0,1]` in native code.** Vision gives normalized bottom-left
-   boxes, ML Kit gives pixel rects in rotated space, and Flutter wants top-left normalized. Convert
-   on each native side so the Dart overlay is platform-agnostic and never branches. See
+4. **Normalize coordinates to top-left `[0,1]` in native code.** Vision gives normalized
+   bottom-left boxes, ML Kit gives pixel boxes in the upright image, and Flutter wants top-left
+   normalized. Convert on each native side so the Dart overlay never branches. See
    [`APPENDIX.md#coordinate-normalization`](../APPENDIX.md#coordinate-normalization).
-5. **Never queue frames, apply backpressure.** iOS: a single in-flight `VNImageRequest` +
-   `alwaysDiscardsLateVideoFrames`. Android: `STRATEGY_KEEP_ONLY_LATEST` **and** a mandatory
-   `imageProxy.close()` in `addOnCompleteListener` (the next frame isn't delivered until the
-   current proxy closes). Run recognition off the platform main thread, and marshal results back
-   to main for the `EventChannel` sink.
+5. **Never queue frames, apply backpressure.** iOS: one recognition in flight, newest frame next
+   (`FrameGate`), + `alwaysDiscardsLateVideoFrames`. Android: `STRATEGY_KEEP_ONLY_LATEST` **and**
+   a mandatory `imageProxy.close()` once each task settles (`closeWhenSettled`), since the next
+   frame isn't delivered until the current proxy closes. Run recognition off the platform main
+   thread, and hop back to main for the `EventChannel` sink.
 6. **The public API lives only in `lib/text_sight.dart`.** That barrel re-exports from
    `lib/src/`, and the `src/` subtree is private by convention. Don't make users import
    `package:text_sight/src/…`. See
    [`APPENDIX.md#public-api-via-single-export-file`](../APPENDIX.md#public-api-via-single-export-file).
-7. **Generated code is never hand-edited.** `lib/src/platform/messages.g.dart` is Pigeon's output,
-   regenerate it from `pigeons/text_sight.dart`, don't patch it.
+7. **Generated code is never hand-edited.** Pigeon's `messages.g.dart` and `Messages.g.*` come
+   from `pigeons/text_sight.dart` (`dart run tool/pigeon.dart`), and `darwin_options.g.dart` from
+   build_runner. Regenerate, don't patch.
 8. **No `print()` in library code.** Diagnostic output is the caller's responsibility.
    `avoid_print` is a warning in the shared lints.
 9. **No `dynamic` escape hatches.** `strict-casts`, `strict-inference`, and
@@ -211,45 +203,38 @@ up. [dartender's Releasing](https://github.com/LahaLuhem/dartender#releasing) ha
 Three test layers, three runners. Each covers only logic that runs off the device. The capture
 and recognition pipeline itself (CameraX + ML Kit, AVCaptureSession + Vision) isn't unit-tested.
 
-- **Dart** (`test/`): `flutter test`. Pigeon control-channel, captures-stream and session-state
-  decode against a mocked host.
+- **Dart** (`test/`): `flutter test`. The controller and the view against a fake platform, and
+  the Pigeon platform against a mocked host.
 - **Android native** (`android/src/test/`): `flutter build apk --config-only` in `example/`,
   then `./gradlew :text_sight:testDebugUnitTest` in `example/android/`, as CI does. Robolectric
   gives real Android types like `Rect`, and Mockito stands in for ML Kit's `Text` and the camera's
-  image planes. Covers `FrameRegion`, where the crop starts in each plane, and `encodeFrame` (a
-  file-level `internal` function so tests can reach it). libyuv's copy itself needs a device.
+  image planes. libyuv's copy itself needs a device.
 - **iOS native** (`example/ios/RunnerTests/`): `xcodebuild test -workspace
   example/ios/Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,…'
   -only-testing:RunnerTests`. Runs on a **simulator, not the host**, and tests helpers in place via
-  `@testable import text_sight` (they're `internal`, not `private`, for this). Covers
-  `displayRotation` (capture-angle → quarterTurns/orientation) and `makeRequest` (level,
-  language-correction, language list, lower-left ROI flip).
-  - **Why not a standalone host SPM test target:** the plugin's `Package.swift` declares
-    `FlutterFramework` via a path that only resolves inside Flutter's ephemeral build
-    (`example/ios/Flutter/ephemeral/Packages/.packages/`), so `swift test` can't resolve the
-    package standalone, and a sibling SPM package the plugin depends on would break the example
-    build (Flutter only links its own entries into `.packages/`). Simulator XCTest keeps
-    `Package.swift` untouched, which the no-bundling contract requires.
+  `@testable import text_sight` (they're `internal`, not `private`, for this). Stand-in
+  recognizers cover what would need a camera.
+  - **Not a host `swift test`:** `Package.swift` finds `FlutterFramework` by a path that only
+    resolves inside Flutter's build of the example, so the package can't resolve on its own.
   - **Two setup gotchas:** (1) the `RunnerTests` target's `IPHONEOS_DEPLOYMENT_TARGET` must be ≥
-    the plugin's iOS floor (15.0) or SPM rejects the link, and (2) on a platform-version mismatch
-    against `FlutterGeneratedPluginSwiftPackage`, run `flutter build ios --config-only` first to
-    regenerate the (ephemeral) SPM manifests.
+    the plugin's iOS floor (15.0) or SPM rejects the link, and (2) run
+    `flutter build ios --config-only --debug --simulator` in `example/` first. It regenerates the
+    SPM manifests, and a leftover device build otherwise leaves the test host unable to link.
 
 Native unit-test deps are `test`-scoped only and never reach the published AAR or a consumer's
 transitive closure, so they don't touch the no-bundling contract (hard rule 1).
 
 ## Style
 
-Full guide: [`../CODESTYLE.md`](../CODESTYLE.md) (covers Dart, Swift and Kotlin).
-The lint posture is deliberately strict (see the shared lints). Top-level rules to
-keep in working memory:
+Full guide: [`../CODESTYLE.md`](../CODESTYLE.md) (Dart, Swift and Kotlin). The rules to keep in
+mind:
 
 - Type-annotate every public symbol, and `final` by default for fields and locals.
 - Nullability is explicit (no `as T` on `T?`), and `RecognizedLine.confidence` is never null,
   since both engines supply it.
 - 100-column line width (`formatter.page_width: 100`), and `.editorconfig` mirrors it for every
   other text file.
-- No magic numbers in `lib/` code, so pull to named `static const`s.
+- No magic numbers in `lib/` code. Name them as `static const`s.
 - Public symbols carry `///` dartdoc explaining *why*, not *what*.
 - **Native:** system-frameworks-only on iOS, ML Kit/CameraX confined to gradle on Android
   (the no-bundling import discipline), run recognition off the main thread, and honour the
@@ -260,29 +245,22 @@ sections, markdown conventions) go to [`../CODESTYLE.md`](../CODESTYLE.md).
 
 ## Guidelines for any AI agent
 
-- **Always ask before making technical choices.** When the task admits more than one
-  reasonable approach (the iOS strategy, roll-your-own AVCapture+Vision vs wrapping
-  `DataScannerViewController`, Pigeon vs Golubets, whether a symbol belongs in the public
-  barrel or stays under `lib/src/`, the unified confidence contract, whether to add a
-  dependency, etc.), **stop and ask**. Present the options with trade-offs, say which you'd
-  pick and why, then wait. Don't silently pick one and build. This applies even when a
-  choice feels small, since small choices compound.
-- **Mark recommendations with `★`.** Prefix your preferred option in every set with `★` so
-  the user can scan and reply by echoing or overriding (e.g. "★ for 1-4, change 5 to B").
-- **Refactor first when it sets up the change.** When a feature would land cleaner, more
-  stable, or more scalable on a different structure than today's, do the enabling,
-  behavior-preserving refactor as its own step *before* the feature, instead of bolting it
-  onto a shape that doesn't fit and paying for that on every later change. Long-term health
-  of the repo outranks the speed of any single change. A preparatory refactor is itself a
-  technical choice: propose it first the same way you would any other (above), keep it
-  behavior-preserving, and scope it to what the change rests on.
-- **Verify the no-bundling actually held.** After adding `text_sight` to the example and
-  building iOS, `grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios` must return **no matches**
-  (grep, since rg skips the gitignored SPM manifest), and no ML Kit package may appear in the iOS
-  Swift Package Manager graph (the example is SPM-based,
-  so there is no `Podfile.lock`, and the generated `FlutterGeneratedPluginSwiftPackage` manifest is
-  the authoritative iOS dependency list). This is the package's core acceptance check, so run it
-  whenever the native dependency surface could have shifted.
+- **Always ask before making technical choices.** When a task admits more than one reasonable
+  approach (wrapping `DataScannerViewController` or not, Pigeon or another codegen, whether a
+  symbol belongs in the barrel, whether to add a dependency), **stop and ask**. Give the options
+  with their trade-offs, say which you'd pick and why, then wait. Small choices count too, since
+  they compound.
+- **Mark recommendations with `★`,** so the user can reply by echoing or overriding ("★ for 1-4,
+  change 5 to B").
+- **Refactor first when it sets up the change.** If a feature would land cleaner on a different
+  structure, do the behaviour-preserving refactor as its own step first, rather than bolting the
+  feature onto a shape that fights it. Propose it like any other choice, and scope it to what the
+  change rests on.
+- **Verify the no-bundling held.** After an iOS build of the example,
+  `grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios` must find nothing (grep, since rg skips the
+  gitignored SPM manifest). The example is SPM-based, so the generated
+  `FlutterGeneratedPluginSwiftPackage` manifest is the real iOS dependency list. Run it whenever
+  the native dependency surface could have shifted.
 - **Document new user-facing API in the README.** Any new public class, widget, method, or
   configuration option must be added to the README in the same change. Rationale + design
   trade-offs belong in `APPENDIX.md`, and the README is the user-facing entry point.

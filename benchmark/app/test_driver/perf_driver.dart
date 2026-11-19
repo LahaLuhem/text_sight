@@ -1,5 +1,4 @@
-// perf_driver is a flutter_driver driver (run via `flutter drive`), not a `flutter test` file, so it
-// does not follow the `_test.dart` naming convention.
+// A `flutter drive` driver, not a `flutter test` file, so it has no `_test.dart` name.
 // ignore_for_file: prefer-correct-test-file-name
 
 import 'dart:convert';

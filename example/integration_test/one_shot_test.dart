@@ -8,9 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:text_sight/text_sight.dart';
 
-/// On-device smoke test for the static one-shot driver: it runs the real native
-/// recognizer (Apple Vision / ML Kit) over the bundled sample image and asserts a
-/// populated, upright capture comes back through each entry point.
+/// Runs the real recognizer over the bundled sample through both one-shot calls, on a device.
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -47,7 +45,7 @@ void main() {
 Future<Uint8List> _sampleBytes() async =>
     (await rootBundle.load(ConstMedia.sampleText.keyName)).buffer.asUint8List();
 
-/// Writes [bytes] to a temp file and returns its path, exercising the path entry point.
+/// Writes [bytes] to a temp file and returns its path.
 Future<String> _writeTempCopy(Uint8List bytes) async {
   final file = File('${Directory.systemTemp.path}/text_sight_it_sample.png');
   await file.writeAsBytes(bytes);
@@ -55,8 +53,7 @@ Future<String> _writeTempCopy(Uint8List bytes) async {
   return file.path;
 }
 
-/// Checks [capture] is the bundled sample: its size, which a turn would swap, and a line with the
-/// token.
+/// Checks [capture] is the sample: its size, which a turn would swap, and a line with the token.
 void _checkUprightSample(BddContext ctx, TextSightCapture capture) {
   check(capture.imageSize).equals(ConstMedia.sampleText.size!);
 

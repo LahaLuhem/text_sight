@@ -1,6 +1,6 @@
-Plugin-package code style: Dart, Swift, Kotlin, and shell. Project facts (goal,
-stack, repo layout, hard rules) live in [`.ai/AGENTS.md`](./.ai/AGENTS.md). Design
-rationale lives in [`APPENDIX.md`](./APPENDIX.md).
+Plugin-package code style for Dart, Swift and Kotlin. Project facts (goal, stack, repo layout,
+hard rules) live in [`.ai/AGENTS.md`](./.ai/AGENTS.md), design rationale in
+[`APPENDIX.md`](./APPENDIX.md).
 
 The lint posture is deliberately strict (see
 [dartender's shared lints](https://github.com/LahaLuhem/dartender/blob/main/lints/lib/analysis_options.yaml),
@@ -53,10 +53,10 @@ CI, and the conventions below that they don't check are applied by hand, the way
   `parameter_assignments` forbids the actual bad behaviour (mutating a parameter inside
   the body).
 - **Nullability is explicit.** Use `T?` everywhere a value can be missing.
-  `cast_nullable_to_non_nullable` is on, so `as T` on a `T?` will fail lint. This matters
-  Equally, don't declare `T?` for a state that cannot occur: `RecognizedLine.confidence` was
-  `double?` while both engines always supplied one, and the nullability only ever taught consumers
-  the `?? 1` idiom that turns "unknown" into "perfect".
+  `cast_nullable_to_non_nullable` is on, so `as T` on a `T?` fails lint. Equally, don't declare
+  `T?` for a state that can't occur: `RecognizedLine.confidence` was `double?` while both engines
+  always supplied one, and the nullability only taught consumers the `?? 1` idiom that turns
+  "unknown" into "perfect".
 - **Constrain generic type parameters to `<T extends Object>` by default.** Unbounded
   `<T>` lets `null` and `dynamic` satisfy `T`, the same failure modes the explicit-
   nullability rule and the [`dynamic`-escape-hatch ban](./.ai/AGENTS.md#hard-rules)
@@ -94,12 +94,10 @@ style.
 
 ## Naming
 
-- **Prefer abbreviations over initialisms for domain terms.** In code, comments, dartdocs, and log
-  messages alike, expand. Widely-known protocol initialisms (HTTP, DNS, TCP, TLS, …), platform-name
-  initialisms (iOS, OS), and the domain initialisms this package is *about* (OCR, ROI for
-  region-of-interest) stay as-is once introduced. novel project terms get spelt out. The
-  general-programming initialisms below also expand, since shorthand that's "obvious" to the author
-  is opaque to the next reader and indistinguishable from a typo:
+- **Spell out abbreviations,** in code, comments, dartdoc and log messages alike. Well-known
+  protocol initialisms (HTTP, DNS, TLS), platform names (iOS, OS) and the terms this package is
+  *about* (OCR, ROI) stay as they are once introduced. Everything else is spelt out, since shorthand
+  that's obvious to the author is opaque to the next reader and looks like a typo:
 
   | Don't write            | Write instead                                                                                                     |
   |------------------------|-------------------------------------------------------------------------------------------------------------------|
@@ -130,17 +128,16 @@ style.
 
   **Group, don't prefix per field.** `darwin.recognitionLevel`, not `darwinRecognitionLevel`. The
   platform is stated once, a new Vision knob is one field inside `DarwinOptions` rather than a
-  change to `TextSightOptions`, and no member repeats the prefix. Vision has six knobs with no ML
-  Kit twin against one genuinely shared option, so a flat scheme would leave the neutral field lost
-  among prefixed ones.
+  change to `TextSightOptions`, and no member repeats the prefix. Vision has far more knobs than the
+  one option both engines share (`roi`), so a flat scheme would bury the neutral field among
+  prefixed ones.
 
-  **`darwin`, not `ios`.** The constraint is Apple Vision, which a macOS target would share, and it
-  matches the shared Apple source directory.
+  **`darwin`, not `ios`.** The constraint is Apple Vision, which a macOS target would share.
 
   | Group it when                                                      | Leave it neutral when                                                                                                              |
   |--------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
   | It is an **option**, so setting it promises behaviour that changes | It is an **observation**: `TextSightModel.ensureReady()` resolving instantly on iOS still did what it promised                     |
-  | The engine cannot do it at all, whatever the dependency            | The result differs but both platforms deliver it, e.g. `roi`, which Vision takes as a true region and Android delivers by cropping |
+  | The engine cannot do it at all, whatever the dependency            | The result differs but both platforms deliver it, like `roi`, which Vision takes as a true region and Android delivers by cropping |
 
 - **Local-variable names carry a concise type-suffix.** Dart is strongly typed, but a
   reader without IDE inlay-hints can't see the inferred type, so the *name* has to do
@@ -173,9 +170,8 @@ style.
   overlayBuilder: (context, capture, constraints) => _LinePainter(capture.lines),
   ```
 
-  Applies in dartdoc examples too, and `(_)` is the idiomatic Dart form and users
-  copy-pasting will inherit it. **Doesn't apply** to genre-conventional single-letter
-  names (`i`/`j` in counters, `e` in `catch (e)`).
+  Applies in dartdoc examples too, since users copy them. **Doesn't apply** to genre-conventional
+  single-letter names (`i`/`j` in counters, `e` in `catch (e)`).
 - **Don't rename callback params to disambiguate from a same-named outer-scope
   variable.** Dart's lexical scoping always picks the innermost binding, so there's no
   ambiguity for the compiler, and a reader who knows the scoping rule sees the intent
@@ -184,15 +180,11 @@ style.
   *both* the inner and outer same-named variable, then document the distinction in the
   **dartdoc on the callback**, not in the parameter name.
 - **Files mirror their primary public symbol.** `TextSightController` lives in
-  `text_sight_controller.dart`, `TextSightView` in `text_sight_view.dart`, and each result
-  model and config type gets its own file under `src/recognition/` (`TextSightCapture` in
-  `text_sight_capture.dart`, `RecognizedLine` in `recognized_line.dart`, and so on). The
-  `lib/src/` tree groups by concern: `recognition/` (capture-agnostic models + config),
-  `capture/` (the live + static drivers), `view/`, `platform/`. See
-  [`APPENDIX.md#public-api-via-single-export-file`](./APPENDIX.md#public-api-via-single-export-file).
-  `file_names` enforces snake_case, and the file ↔ symbol pairing is by convention.
-  Pigeon-generated code lives in `messages.g.dart` (the `.g.` marks it generated, never
-  hand-edit it).
+  `text_sight_controller.dart`, `RecognizedLine` in `recognized_line.dart`, one type per file behind
+  the barrel ([why](./APPENDIX.md#public-api-via-single-export-file)). Folders follow
+  [Source-file organization](#source-file-organization). `file_names` enforces snake_case, and the
+  file to symbol pairing is by convention. Pigeon's output is `messages.g.dart` (the `.g.` marks it
+  generated, so never hand-edit it).
 
 ---
 
@@ -200,15 +192,13 @@ style.
 
 ## Formatting
 
-- **Wrap text-file content at 100 columns.** `formatter.page_width: 100` in
-  the shared lints is authoritative for Dart code, and `.editorconfig`'s
-  `max_line_length = 100` mirrors it for every other text file. Markdown and **dartdoc
-  comments** follow the same cap manually, since `dart format` does *not* reflow doc-comment
-  prose, so a `///`-block hand-wrapped at 70 / 80 columns stays narrow forever unless
-  someone refactors it. Default to ~95 columns of content (the leading `///` and its space
-  count toward the limit) so a single trailing word doesn't push the line over. Reflow
-  opportunistically when touching a doc block, and don't churn unrelated files just to
-  widen them.
+- **Wrap text-file content at 100 columns.** `formatter.page_width: 100` in the shared lints rules
+  Dart code, and `.editorconfig`'s `max_line_length = 100` mirrors it for every other text file.
+  Markdown and **comments** are wrapped by hand, since `dart format` doesn't reflow them, so a
+  block wrapped at 80 stays narrow until someone rewraps it. In comments, aim at 100 and let the
+  word that straddles it finish the line, rather than wrapping early. Markdown stops at 100, since
+  CI's rumdl fails anything past it (`rumdl fmt` rewraps). Rewrap when you touch a block, not as a
+  sweep of files you aren't changing.
 - **Blank lines separate logical chunks within a method.** Group guard checks, setup,
   the main action, and finalisation with one blank line between groups. Lets readers
   scan past chunks they don't need without re-parsing them line-by-line. This applies on
@@ -222,12 +212,7 @@ style.
 
 ## Constants & magic numbers
 
-- **No magic numbers in `lib/` code.** Pull constants to named `static const`s with a
-  descriptive identifier. Tuning knobs that ride on a public type (the default
-  `RecognitionLevel`, the default language list, the default region-of-interest) belong
-  as `static const`s on the class that owns them (`TextSightController` /
-  the options type), so call sites read `TextSightController.defaultLanguages` and the
-  origin is obvious.
+- **No magic numbers in `lib/` code.** Name them as `static const`s on the class that owns them.
 - **Inline single-use defaults, and don't promote to a named `kDefault…` constant.** A
   `kDefaultXxx` (or a public `static const` default) earns its name when the value is
   read from **more than one place**, typically a field default *and* a build-time
@@ -240,7 +225,7 @@ style.
        same value. With only one reader, there's nothing to diverge from.
 
   A dartdoc reference (`Defaults to [kDefaultXxx]`) does **not** count as a second
-  reader, since once inlined the dartdoc just spells out the literal: ``Defaults to `false` ``.
+  reader, since once inlined the dartdoc spells out the literal: ``Defaults to `false` ``.
 
 > Native-side magic numbers (recognition thresholds, pixel formats, EXIF orientation
 > codes) follow the same rule, so name them. See [Swift](#swift-ios) /
@@ -256,13 +241,13 @@ style.
   The data models (`TextSightCapture`, `RecognizedLine`, `RecognizedElement`), the config
   (`TextSightOptions`), the controller, and the view are all `final`, since nothing is meant to
   subclass or implement them. **Why:** with no external subtype possible, adding a field or
-  method is never a breaking change, so the surface stays evolvable under semver. Seal *before*
-  first publish, since relaxing `final` later is non-breaking, tightening *to* it is not, so the
+  method is never a breaking change, so the surface stays evolvable under semver. Seal from the
+  start, since relaxing `final` later breaks nothing and tightening *to* it does, so the
   default is "seal until a consumer has a real reason to extend." The one deliberately open class
-  is the `TextSightPlatform` federation boundary (per-platform packages subclass it). A pure
+  is the `TextSightPlatform` seam (a per-platform package would subclass it). A pure
   static namespace is `abstract final class` (`TextSight`). Enums and Pigeon-generated message
   classes are exempt, being already sealed or never hand-edited.
-- **Any class with fields and constructors: fields → constructors → other members.**
+- **Any class with fields and constructors: fields, then constructors, then other members.**
   Lets a reader scan the state shape first, then how to construct it, then how to use
   it. Within constructors, unnamed first, then factories. Static helpers go after the
   methods. Applies to the result types (`TextSightCapture`, `RecognizedLine`), the
@@ -287,7 +272,7 @@ style.
       );
   ```
 
-  **Why.** A param that gets silently dropped is a footgun: the user sets it, confirms
+  **Why.** A param that gets silently dropped is a trap: the user sets it, confirms
   via the dartdoc that it's wired, and never realises the value isn't reaching the
   native side. An `assert` fires the first time the invalid combination runs in debug
   mode, with a message pointing at the fix. Prefer compile-time exclusivity (two named
@@ -300,7 +285,7 @@ style.
   `TextSightController` (constructor and `updateOptions`) and the static `TextSight` one-shot,
   never the `const` options type itself.
 - **Value types override `toString`.** Immutable data classes (`TextSightCapture`,
-  `RecognizedLine`, the options/ROI records) implement `toString()` returning
+  `RecognizedLine`, the options classes) implement `toString()` returning
   `'ClassName(field1: value1, field2: value2)'`. The default `Instance of 'ClassName'`
   is hostile in logs, exception traces, and `print` debugging. Include every field with
   a meaningful string representation, as an expression-bodied one-liner placed after the
@@ -315,28 +300,43 @@ style.
 
 ## Source-file organization
 
-- **One responsibility per file, and the filename names it.** A file holds one public/primary type,
-  or one cohesive cluster of free functions. `FrameEncoding.kt` is the per-frame wire map,
-  `FrameCrop.kt` the YUV crop. Don't let helper functions or a second helper class pile
-  up at the bottom of a driver file, so extract them and each file's path advertises its job.
-  **Why:** findability, and a one-responsibility diff when that concern changes. (`lib/src/` already
-  does this, one public type per file behind the barrel.)
-- **But keep a cohesive stateful unit whole.** The capture/session class (`TextSightCamera`, both
-  platforms) stays one file even when long, since splitting one stateful lifecycle across files
-  costs more than it saves. The native caps are relaxed for exactly this (SwiftLint's file and type
-  lengths in `ios/.swiftlint.yml`, detekt's `TooManyFunctions` in `android/detekt.yml`). Extract the
-  *standalone* helpers around the class, never the class itself.
-- **Group by responsibility into sub-dirs.** iOS folders are free (one module, no namespace shift):
-  `Enums/`, `Models/`, feature folders (`TextRecognizer/` + `Engines/`, `Factories/`). A Kotlin
-  sub-dir *is* a sub-package (it adds a `package` line + imports), so group the same way by
-  responsibility: `camera/`, `recognition/`, `permission/`, `readiness/`.
-- **Type-named dirs only for hand-written types.** `Enums/` / `Models/` earn their place on iOS
-  because those types are hand-written. On Android the enums and data models are
-  **Pigeon-generated** (all in `Messages.g.kt`, unmovable), so Android groups by responsibility
-  instead. Don't create empty `enums/` / `models/` packages there.
-- **Two things never leave the root package/dir:** the plugin entry class (`TextSightPlugin`, whose
-  FQN pinned by `pubspec.yaml`'s `pluginClass`/`package`) and Pigeon's generated `Messages.g.*` (the
-  generator owns its output path). Everything else is free to move into a responsibility sub-dir.
+- **Folders follow the architecture's concepts, one level deep.** Someone after the scan box opens
+  `Region/` on iOS or `region/` on Android. Twins share the folder name across platforms, so a
+  change on one side points at the other. A second level only holds a family behind one seam, like
+  iOS's `Recognition/Engines/`: the `TextRecognizer` protocol, its factory and both Vision backends.
+  **Why:** kind folders (`Enums/`, `Models/`) split one concept across several, so one change
+  touches them all, and a one-file folder is a click for nothing.
+- **Tests mirror the source folders**, in `test/`, `example/ios/RunnerTests/` and
+  `android/src/test/`. Shared doubles and the tests of root files sit at the test root.
+- **One shape per file, and in Dart one shape per folder.** Data (immutable values, enums, sealed
+  states) and logic (controllers, widgets, the platform seam) live apart: Dart's data folders are
+  named by role (`options/`, `results/`, `states/`) and its logic folders by concept (`camera/`,
+  `recognition/`, `platform/`). Natively, Pigeon generates nearly every data type into one file, so
+  the few hand-written ones (`RecognizedLineData`, `RecognitionConfig`) stay in their concept
+  folder rather than fill a one-file data folder.
+  **Why:** data files are short and settle early, logic files are where the work happens, and
+  keeping them apart makes both quicker to scan.
+- **One responsibility per file, and the filename names it.** A file holds one public type, or one
+  cohesive cluster of free functions. `FrameEncoding.kt` is the per-frame wire map, `FrameCrop.kt`
+  the YUV crop. Don't let helpers pile up at the bottom of a driver file. Extract them, so each
+  file's path says what it does.
+  **Why:** findability, and a one-responsibility diff when that concern changes.
+- **But keep a cohesive stateful unit whole.** The live camera's class stays one file even when
+  long (`TextSightCamera` on iOS, `CameraSession` for Android's CameraX half), since splitting one
+  stateful lifecycle across files costs more than it saves. The native caps are relaxed for exactly
+  this (SwiftLint's file and type lengths in `ios/.swiftlint.yml`, detekt's `TooManyFunctions` in
+  `android/detekt.yml`). Extract the *standalone* helpers around the class, never the class itself.
+  The one-shot isn't part of that unit: it shares only the recognizer, so it's `StillRecognizer`
+  on both platforms.
+- **The root holds the entry point, the generated contract and shared plumbing:** `TextSightPlugin`,
+  Pigeon's `Messages.g.*`, and code every concept leans on (Android's `EngineScope` and `Await`).
+  - Android: Flutter's generated registrant builds `com.lahaluhem.text_sight.TextSightPlugin` from
+    `pubspec.yaml`'s `package` and `pluginClass`, so the plugin can't move. `Messages.g.kt` goes
+    where `pigeons/text_sight.dart` points it.
+  - iOS: SPM compiles every file under `Sources/text_sight/` wherever it sits, and the registrant
+    only names the class, so the root is convention there, kept to mirror Android.
+- **Moves cost differently.** An iOS move is free (one module, no namespace). A Kotlin folder is a
+  package, so a move changes the file's `package` line and every import of it.
 
 ---
 
@@ -350,7 +350,7 @@ style.
 
 Use static dot shorthands wherever the context type is known. They resolve from the
 parameter / return / variable type, not from inference of arbitrary expressions. Drop
-the leading type name in *all* of these positions, not just the obvious enum case:
+the leading type name in *all* of these positions, not only the obvious enum case:
 
 - Enum values in patterns and arg slots:
   `recognitionLevel: .fast`, `case .accurate => …`, `crossAxisAlignment: .start`,
@@ -431,11 +431,11 @@ the enum via Dart 3's enhanced-enum syntax. Don't define parallel top-level
 ```dart
 // Prefer: the per-value datum lives on the value it describes.
 enum RetryPolicy {
-    none(attempts: 1),
-    standard(attempts: 3);
+  none(attempts: 1),
+  standard(attempts: 3);
 
-    final int attempts;
-    const RetryPolicy({required this.attempts});
+  final int attempts;
+  const RetryPolicy({required this.attempts});
 }
 ```
 
@@ -448,10 +448,9 @@ stays plain. Adding empty enum fields for symmetry is ceremony.
 **The harder test: could a caller want the datum without the variant?** If yes, it is its own
 field, and bundling it onto the enum is a guess about how people use the API rather than a fact
 about the type. `RecognitionLevel` carried `usesLanguageCorrection` on exactly that guess. Speed
-and lexicon correction turned out to be independent trade-offs (correction helps prose and hurts
-serial numbers, at either level), so the flag became its own `DarwinOptions` field and the enum
-went plain.
-The tell was in the dartdoc: it had to explain what the level *also implied*.
+and correction turned out to be independent trade-offs (correction helps prose and hurts serial
+numbers, at either level), so the flag became its own `DarwinOptions` field and the enum went
+plain. The tell was in the dartdoc, which had to explain what the level *also implied*.
 
 <a id="navigator-maybeof-over-of"></a>
 
@@ -488,19 +487,16 @@ context already infers:
 ```dart
 // Prefer:
 Column(
-children: [
-for (final line in capture.lines) Text(line.text),
-],
+  children: [
+    for (final line in capture.lines) Text(line.text),
+  ],
 )
 
 // Over:
 Column(
-children: capture.lines.map((line) => Text(line.text)).toList(),
+  children: capture.lines.map((line) => Text(line.text)).toList(),
 )
 ```
-
-Drop explicit generic type arguments when the surrounding context already pins them.
-keep them when inference would otherwise fall back to `dynamic`.
 
 <a id="library-pipeline-methods-over-hand-rolled-loops"></a>
 
@@ -534,8 +530,8 @@ case of "a pipeline wearing a loop's clothes":
 final text = Iterable.generate(length, (_) => alphabet[random.nextInt(alphabet.length)]).join();
 ```
 
-**Boundary:** building a widget `children:` list or any data literal → collection-for.
-Running a filter / flatten / reduce pipeline → these methods. A tell: if you seed an
+**Boundary:** building a widget `children:` list or any data literal is collection-for. Running a
+filter, flatten or reduce pipeline is these methods. A tell: if you seed an
 empty collection and mutate it in a loop, that's usually a pipeline wearing a loop's
 clothes. **Stay lazy, materialise deliberately.** Don't end a chain with a reflexive
 `.toList()`. Materialise only when the result is iterated more than once or an API
@@ -547,12 +543,12 @@ requires a `List`. When you do, `.toList(growable: false)` says it won't be muta
 
 The extensions (`Iterable<Future<T>>.wait` and the record forms `FutureRecord2`…
 `FutureRecord9`) live in `dart:async`'s `future_extensions.dart` and supersede the
-static call. Relevant whenever the controller fans out concurrent platform-channel calls
-(e.g. configure + start, or recognising a batch of images one-shot):
+static call. Relevant whenever code fans out concurrent platform-channel calls, like reading a
+batch of images one-shot:
 
-- **Fixed number of differently-typed futures → record form.** `(f1, f2).wait` returns
+- **A fixed number of differently-typed futures takes the record form.** `(f1, f2).wait` returns
   `Future<(T1, T2)>` and destructures directly.
-- **Dynamic number of same-typed futures → iterable form.** `iterable.wait` returns
+- **A varying number of same-typed futures takes the iterable form.** `iterable.wait` returns
   `Future<List<T>>`, but errors surface as `ParallelWaitError` carrying both per-slot
   values and per-slot errors, more useful than the first-error-wins of
   `Future.wait(iterable)`.
@@ -586,11 +582,11 @@ deliberate read-through visibility into private mutable state, which is rare her
 
 ### `part` / `part of` only when structurally needed
 
-Not a smell on its own. Legitimate uses: sealed-class cases across files (Dart 3
-requires the same library for sealed subtypes), and code-generation outputs. Here, the
-Pigeon-generated `messages.g.dart` and the `copy_with_extension_gen` `copyWith`s. Avoid
-`part`/`part of` for general code organisation, since imports/exports are explicit, parts
-hide dependencies and leak `_private` symbols across files within the library.
+Not a smell on its own. Legitimate uses: sealed-class cases across files (Dart 3 requires the
+same library for sealed subtypes), and generated code that has to be one (here, the
+`copy_with_extension_gen` output, `darwin_options.g.dart`). Avoid `part`/`part of` for general
+code organisation: imports and exports are explicit, while parts hide dependencies and leak
+`_private` symbols across files within the library.
 
 **`copyWith` is generated, never hand-written.** Annotate the value type with `@CopyWith()` and let
 the builder derive it from the fields, so a field added later cannot leave the copy behind. Why a
@@ -609,7 +605,7 @@ for the contract.
 Keep them to a line or two. Rationale that needs a paragraph belongs in
 [`APPENDIX.md`](./APPENDIX.md) behind a one-line pointer, not inline. Applies to KDoc and
 Swift doc comments too, and to plain `//` comments. It's a default, not a ceiling: genuinely
-subtle code can earn more, it just shouldn't be the habit.
+subtle code can earn more, it shouldn't be the habit.
 
 **Trim what's already there when you touch a file.** Editing a file makes its existing comments
 yours to tidy, so cut the over-long ones in the same pass rather than leaving them for a sweep that
@@ -633,10 +629,10 @@ When a file needs a symbol *only* for `[Name]` references in dartdoc (not in cod
 and hides intent. Use Dart's dartdoc-only directive instead:
 
 ```dart
-/// @docImport 'src/view/text_sight_view.dart';
+/// @docImport 'src/camera/text_sight_view.dart';
 library;
 
-import 'src/recognition/recognized_line.dart'; // Real code import.
+import 'src/results/recognized_line.dart'; // Real code import.
 ```
 
 **Why.** A regular `import` declares a runtime dependency. If the only reason is
@@ -671,12 +667,11 @@ of the shared lints and treated as non-negotiable. Apply by hand (or via the
   appears more than once (an overlay painter's chrome, a scan-box frame). When a one-off
   helper is genuinely warranted, annotate the occurrence with a single-line `// ignore:`
   carrying a reason.
-- **`prefer-correct-edge-insets-constructor`**: always pick the simplest valid
-  `EdgeInsets[Directional]` constructor: `EdgeInsets.all(0)` → `EdgeInsets.zero`, all
-  sides equal → `.all(v)`, `start == end && top == bottom` → `.symmetric(...)`, any side
-  zero → `.only(...)` listing only the non-zero sides. Applies even when mirroring an
-  upstream constant verbatim. If the upstream form is preserved for traceability, record
-  it in the constant's dartdoc alongside the simplified value.
+- **`prefer-correct-edge-insets-constructor`**: pick the simplest valid `EdgeInsets[Directional]`
+  constructor. `EdgeInsets.all(0)` is `EdgeInsets.zero`, equal sides are `.all(v)`,
+  `start == end && top == bottom` is `.symmetric(...)`, and a zero side means `.only(...)` with the
+  non-zero sides. Applies even when mirroring an upstream constant. If the upstream form is worth
+  keeping, record it in the constant's dartdoc next to the simplified value.
 
 ---
 
@@ -713,11 +708,11 @@ of the shared lints and treated as non-negotiable. Apply by hand (or via the
 
 ### Conventions
 
-- **Test the package, not its dependencies.** What Flutter, material_ui or cupertino_ui does by
-  itself (a sheet's drag, a wheel's physics) is theirs to test. Test what the package adds.
+- **Test the package, not its dependencies.** What Flutter, CameraX, ML Kit or Vision does by
+  itself is theirs to test. Test what the package adds.
 - **A test pins a behaviour a user would agree with.** A value that only carries it (a default, a
   log line) isn't one: compare with its source or the state before.
-- **A guarantee the design rests on counts too,** like a release build dropping the unused look.
+- **A guarantee the design rests on counts too,** like a frame cancelled mid-read never emitting.
 - **One check, one scenario.** A check another scenario makes goes, one 2 scenarios share gets its
   own, and each example row takes a branch no other row does.
 - **Assert what the user gets, not the string,** unless 2 messages on one screen mean different
@@ -747,27 +742,24 @@ like the DCM rules above.
   [`APPENDIX.md#no-bundling`](./APPENDIX.md#no-bundling).
 - **`guard … else { return }` for early exits, and never force-unwrap (`!`).** Optionals
   from the capture pipeline (`CMSampleBufferGetImageBuffer`, `topCandidates(1).first`)
-  are unwrapped with `guard let`. The per-frame backpressure check is the canonical
-  shape:
+  are unwrapped with `guard let`, like the frame callback:
 
   ```swift
   func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer,
-                      from connection: AVCaptureConnection) {
-    guard !isProcessing, let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
-    else { return }   // drop the frame; no queueing
-    isProcessing = true
-    // …perform the Vision request, then isProcessing = false
+                     from connection: AVCaptureConnection) {
+    guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+
+    handle(pixelBuffer)
   }
   ```
 
   Implicitly-unwrapped optionals (`var x: Foo!`) are out except where a framework
   contract forces them.
-- **Run Vision off the main thread, marshalling results back to main before the
-  `EventChannel` sink.** The sample-buffer delegate already runs on its own queue,
-  perform the `VNImageRequestHandler` there, then hop to `DispatchQueue.main` to emit. A
-  result sent from a background thread to a Flutter sink is a crash waiting to happen.
-- **`let` by default, `var` only for genuine mutable state** (the `isProcessing` flag,
-  the texture id). Prefer `struct` for value types crossing into Dart.
+- **Run Vision off the main thread, and hop back to main for the `EventChannel` sink.**
+  Recognition runs on the `FrameGate`'s consumer, then `emit` hops to `DispatchQueue.main`, the
+  only thread a Flutter sink takes calls on.
+- **`let` by default, `var` only for genuine mutable state** (the session flags, the texture id).
+  Prefer `struct` for value types crossing into Dart.
 - **Access control is explicit and minimal.** `public` only on the `FlutterPlugin`
   registration surface and what the channel genuinely needs. Default `internal`,
   `private` for helpers and stored pipeline state.
@@ -777,8 +769,8 @@ like the DCM rules above.
   error, so `do/catch` and propagate it to Dart.
 - **Name things in full**, same as Dart: `pixelBuffer` not `pb`, `recognizedLine` not
   `rl`. Apple-API initialisms already capitalised by the SDK (`VNRecognizedTextObservation`)
-  stay, and your own identifiers expand. Normalise Vision's bottom-left bounding boxes to
-  top-left **here**, in native code, with a named helper, not in Dart (see
+  stay, and your own identifiers expand. Turn Vision's bottom-left boxes top-left **here**, in
+  native code, with a named helper (`FrameRegion.toFrame`), not in Dart (see
   [`APPENDIX.md#coordinate-normalization`](./APPENDIX.md#coordinate-normalization)).
 
 ---
@@ -799,34 +791,32 @@ what it doesn't check below is applied by hand.
 - **ML Kit and CameraX dependencies live only in `android/build.gradle.kts`.** They never
   appear as Dart `pubspec.yaml` dependencies, and that's the no-bundling contract from the
   Android side ([`APPENDIX.md#no-bundling`](./APPENDIX.md#no-bundling)).
-- **Null-safety: prefer non-null types, and use `?.` / `?:` / `let`, never `!!`.** The
-  analyze entry point is the model:
+- **Null-safety: prefer non-null types, and use `?.` / `?:` / `let`, never `!!`.** For example:
 
   ```kotlin
   @OptIn(ExperimentalGetImage::class)
-  private fun analyze(proxy: ImageProxy) {
-      val mediaImage = proxy.image ?: return proxy.close()   // Elvis, not !!
-      val input = InputImage.fromMediaImage(mediaImage, proxy.imageInfo.rotationDegrees)
-      recognizer.process(input)
-          .addOnSuccessListener { visionText -> /* map → RecognizedLine[], emit */ }
-          .addOnCompleteListener { proxy.close() }   // MANDATORY, backpressure release
+  private fun analyze(imageProxy: ImageProxy) {
+      val mediaImage = imageProxy.image ?: return imageProxy.close() // Elvis, not !!
+
+      recognizer.process(InputImage.fromMediaImage(mediaImage, rotationDegrees))
+          .addOnSuccessListener(analysisExecutor) { visionText -> /* encode and emit */ }
+          .closeWhenSettled(imageProxy) // mandatory, see below
   }
   ```
 
-- **`imageProxy.close()` in `addOnCompleteListener` is mandatory.** With
-  `STRATEGY_KEEP_ONLY_LATEST`, the next frame is not delivered until the current proxy is
-  closed, since forgetting `close()` silently stalls the stream. Treat it as a correctness
-  invariant, not a style nicety (it's also called out in
-  [*Hard rules*](./.ai/AGENTS.md#hard-rules)).
+- **Every `ImageProxy` closes once its task settles (`closeWhenSettled`).** With
+  `STRATEGY_KEEP_ONLY_LATEST`, the next frame isn't delivered until the current proxy closes, so a
+  forgotten `close()` silently stalls the stream. It's a correctness invariant, not a style nicety
+  ([*Hard rules*](./.ai/AGENTS.md#hard-rules)).
 - **Run ML Kit off the platform main thread, marshalling results back to main for the
   `EventSink`.** Same reasoning as the Swift side.
 - **`val` by default, `data class` for value types.** Mutable `var` only for genuine
   state. Use scope functions (`let` / `apply` / `also` / `run`) idiomatically, but don't
   nest them into unreadable towers.
 - **Expression bodies for one-liners** (`fun foo() = …`), expand when a body needs
-  statements. Spell out domain terms (`recognizedLine`, not `rl`). ML Kit normalises rects
-  to pixel coords in the rotated image space, so convert to top-left `[0,1]` **here**, with
-  a named helper, before crossing into Dart
+  statements. Spell out domain terms (`recognizedLine`, not `rl`). ML Kit reports pixel boxes in
+  the upright image, so `encodeFrame` turns them into top-left `[0, 1]` **here**, before they
+  cross into Dart
   ([`APPENDIX.md#coordinate-normalization`](./APPENDIX.md#coordinate-normalization)).
 
 ---
@@ -837,16 +827,13 @@ what it doesn't check below is applied by hand.
 
 - **Say it once, then stop.** Docs carry the *why* and the surprising bits, with no restating of a
   point in three phrasings and no padding a section to look thorough.
-- **APPENDIX.md is the source of truth for rationale.** Hard rules, pitfalls, and
-  workflow stay in `.ai/AGENTS.md` and `.ai/CLAUDE.md`, and the "why we do it this way"
-  essays live in [`APPENDIX.md`](./APPENDIX.md).
+- **APPENDIX.md holds the rationale.** Hard rules, pitfalls and workflow stay in `.ai/AGENTS.md`
+  and `.ai/CLAUDE.md`, and the "why we do it this way" lives in [`APPENDIX.md`](./APPENDIX.md).
 - **Explicit `<a id="…">` anchors** sit above every APPENDIX (and CODESTYLE) heading.
   Link to sections via the anchor, not the heading text.
 - **Anchor stability is load-bearing.** When renaming a heading, keep the existing
   anchor. If you must change it, `rg '#<old-anchor>'` across the repo and update every
   caller in the same change.
-- **Bare `flutter` / `dart` in command examples, never `fvm flutter` / `fvm dart`.** FVM
-  is a local implementation detail, since `.fvmrc` pins the channel. Docs (this file,
-  README.md, AGENTS.md, CLAUDE.md, APPENDIX.md) stay tool-agnostic so external
-  contributors aren't forced into FVM. The maintainer's shell aliases `flutter` / `dart`
-  to the pinned toolchain for interactive use.
+- **Bare `flutter` / `dart` in command examples, never `fvm flutter` / `fvm dart`.** FVM is a
+  local detail (`.fvmrc` pins the channel), and docs stay tool-agnostic so contributors aren't
+  forced into it.

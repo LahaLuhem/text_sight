@@ -8,12 +8,11 @@ import 'package:text_sight/text_sight.dart';
 import '/features/core/data/constants/core_constants.dart';
 import '/features/core/data/recognition_result.dart';
 
-/// The region-of-interest knobs: whether recognition is restricted, and the normalized,
-/// top-left box it is restricted to (dragged directly on the preview).
+/// The scan box settings: whether it's on, and the `[0, 1]` box itself, dragged on the preview.
 typedef RoiConfig = ({bool restrict, Rect rect});
 
-/// Runs the same bundled still through the recognizer with whatever level and
-/// region-of-interest the knobs currently hold, so their effect can be compared.
+/// Reads the same bundled still with whatever level and scan box are set, so their effect can be
+/// compared.
 final class PlaygroundViewModel() extends ViewModel {
   static const _minRoiSize = 0.15;
 
@@ -24,7 +23,7 @@ final class PlaygroundViewModel() extends ViewModel {
   ));
   final _resultNotifier = ValueNotifier<RecognitionResult?>(null);
 
-  /// The active ROI rect for [config], or null when unrestricted (whole frame).
+  /// The box in use, or null for the whole frame.
   static Rect? roiOf(RoiConfig config) => config.restrict ? config.rect : null;
 
   ValueListenable<RecognitionLevel> get levelListenable => _levelNotifier;

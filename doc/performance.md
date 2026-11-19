@@ -30,8 +30,8 @@ small here, so those bars time a miss. Android reads 126 of 127.
 
 ## Live camera
 
-[`LIVE_SUMMARY.md`](../benchmark/reports/LIVE_SUMMARY.md) has the recognized frames per second for each
-level, on the whole frame and through the README's strip, both phones on the same page at once.
+[`LIVE_SUMMARY.md`](../benchmark/reports/LIVE_SUMMARY.md) has the recognized frames per second for
+each level, on the whole frame and through the README's strip, both phones on the same page at once.
 
 - **A scan box pays off.** Through the strip, iOS `fast` keeps up with the camera itself, and
   Android gets through up to twice the frames.

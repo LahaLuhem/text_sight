@@ -7,14 +7,11 @@ live in [AGENTS.md](./AGENTS.md). The full code-style guide lives in
 
 ## Role & context
 
-You're assisting with **text_sight**: a Flutter plugin for live, on-device text
-recognition: Apple Vision on iOS, ML Kit on Android, the text-scanning sibling to
-`mobile_scanner`. The whole point is that **iOS links zero third-party ML libraries**
-(no GoogleMLKit), so the no-bundling discipline is sacred. Treat the user as technical and
-direct. The package is published on pub.dev, so changes are visible to every downstream
-user. Breakage is expensive and slow to walk back (pub.dev never unpublishes a version, it
-only lets you retract one within 7 days of publishing, and a tag push triggers an automated
-publish).
+You're assisting with **text_sight**, a published Flutter plugin for on-device text recognition
+(Vision on iOS, ML Kit on Android). Its reason to exist is that **iOS links zero third-party ML
+libraries**, so the no-bundling rule is sacred. Treat the user as technical and direct. Breakage
+is expensive: pub.dev never unpublishes a version (it only allows a retraction within 7 days), and
+a tag push publishes automatically.
 
 ## Communication
 
@@ -26,28 +23,17 @@ publish).
 
 ## Technical choices: always ask first
 
-- **Do not silently pick between reasonable alternatives.** Whenever a task admits more
-  than one defensible approach (the iOS strategy, roll-your-own AVCapture+Vision vs
-  wrapping `DataScannerViewController`, Pigeon vs Golubets, bundled vs unbundled ML Kit on
-  Android, whether a symbol belongs in the `lib/text_sight.dart` barrel or stays under
-  `lib/src/`, the unified confidence contract, whether to add a dependency, etc.), **stop
-  and ask**. Recommendations in the question are expected. List the options with
-  trade-offs, say which you'd pick and why, then wait.
-- **"Small" choices count.** The bar isn't "is this architecturally significant", it's
-  "could a reasonable maintainer disagree with my pick". If yes, ask.
-- **Mark your recommendation with `★`.** When presenting options, prefix your preferred
-  pick(s) with `★` so the user can scan and reply by echoing or overriding (e.g. "go with
-  ★ for 1-4, change 5 to B").
-- **Exception:** obvious single-answer fixes (typo, clear bug with one correct patch, lint
-  error), just do them.
+The rule and the `★` convention are in [AGENTS.md](./AGENTS.md#guidelines-for-any-ai-agent). The
+bar isn't "is this architecturally significant" but "could a reasonable maintainer disagree with
+my pick". Obvious single-answer fixes (a typo, a clear bug with one correct patch, a lint error)
+need no question.
 
 ## Tool preferences
 
 - **Read / Edit / Grep / Glob** over `cat` / `sed` / `grep` / `find`. Always.
 - **Bash** only for things without a dedicated tool: `flutter`, `dart`, `git`, and the
   native toolchains when needed (`xcodebuild`, `gradlew`). The user's shell aliases
-  `flutter` / `dart` to whatever toolchain manager serves the `.fvmrc`-pinned channel,
-  invoke plain `flutter` / `dart`, not the manager directly.
+  `flutter` / `dart` to the `.fvmrc`-pinned toolchain, so invoke them plainly, not the manager.
 - **Lint with `dart analyze --fatal-infos --fatal-warnings .`**, as CI runs it: the shared lints
   promote many lints to `error:`, and those are the contract, not suggestions. The Swift/Kotlin
   sides are gated by detekt (`android/detekt.yml`) and SwiftLint (per-tree `.swiftlint.yml` under
@@ -64,13 +50,9 @@ publish).
 - **`lib/src/` edits** are private. Refactor freely as long as the public re-exports stay
   stable. `lib/src/platform/messages.g.dart` is **generated**, so change
   `pigeons/text_sight.dart` and regenerate, never hand-edit the output.
-- **Native edits (`ios/`, `android/`)** carry the no-bundling contract. Bundling ML Kit (or any lib
-  that duplicates a system framework) on the Apple side, or a non-gradle path to ML Kit, breaks
-  the package's reason to exist. See
-  [hard rules 1-3 in AGENTS.md](./AGENTS.md#hard-rules). The contract is *prefer-native*, not
-  *zero-dependency*: a small SPM lib that leaves less code here is allowed even where a native
-  route exists, so flag-and-ask rather than assume any new SPM dep is forbidden. The
-  frame-backpressure and off-main-thread invariants (hard rule 5) are the most common source of
+- **Native edits (`ios/`, `android/`)** carry the no-bundling contract
+  ([hard rules 1-3](./AGENTS.md#hard-rules)). A new SPM dependency is flag-and-ask, not forbidden.
+  The backpressure and off-main-thread invariants (hard rule 5) are the most common source of
   plugin bugs.
 - **`pigeons/text_sight.dart` edits** change the typed control-channel surface, so regenerate
   `messages.g.dart` in the same change and treat signature changes as public-API-class.
@@ -84,8 +66,8 @@ publish).
 
 ## Auto-memory conventions for this project
 
-- **`project` memories**: scope/constraints the user states aloud (e.g. "ship v0.1 before
-  the sprint ends", "minimum Flutter bumps to X on date Y", "DataScanner path is on hold").
+- **`project` memories**: scope or constraints the user states aloud ("minimum Flutter bumps to X
+  on date Y", "DataScanner path is on hold").
   Convert relative dates to absolute.
 - **`feedback` memories**: corrections AND validated non-obvious choices. Include `Why`
   and `How to apply` lines.
@@ -153,7 +135,7 @@ is **not** in the routine-edit list. All move together only when the user explic
   output.
 - **Never** delete files under `.fvm/`, `.dart_tool/`, or `pubspec.lock` without approval.
   These are tooling state, and deleting them forces a re-resolve.
-- **Destructive git** (`reset --hard`, `push --force`, `branch -D`, `clean -fd`) → ask first.
+- **Destructive git** (`reset --hard`, `push --force`, `branch -D`, `clean -fd`): ask first.
 
 ## Definition of done
 
@@ -167,11 +149,12 @@ is **not** in the routine-edit list. All move together only when the user explic
   `no-empty-block`, `newline-before-return`, `prefer-commenting-analyzer-ignores`,
   `avoid-returning-widgets`, `prefer-correct-edge-insets-constructor`. The `dcm` CLI
   (`dcm analyze lib`) covers them if installed.
-- **Native conventions hand-applied** per [`../CODESTYLE.md`](../CODESTYLE.md) (Swift 2-space
-  - system-frameworks-only, Kotlin 4-space + built-in-Kotlin + mandatory `imageProxy.close()`).
+- **Native conventions hand-applied** per [`../CODESTYLE.md`](../CODESTYLE.md): Swift 2-space with
+  system frameworks for recognition, Kotlin 4-space on built-in Kotlin, and every `ImageProxy`
+  closed through `closeWhenSettled`.
 - When native capture/recognition changed: build and run the example on **both** an Android
-  emulator and an iOS simulator, or explicitly call out what you did NOT verify (e.g.
-  "didn't exercise on iOS, only ran the Android emulator").
+  emulator and an iOS simulator, or call out what you did NOT verify ("didn't run iOS, only the
+  Android emulator").
 - **No-bundling verified** when the dependency surface could have shifted:
   `grep -rEiI 'mlkit|googlemlkit|mlimage' example/ios` returns no matches (grep, since rg skips
   the gitignored SPM manifest). The example uses Swift Package Manager (no `Podfile.lock`), and

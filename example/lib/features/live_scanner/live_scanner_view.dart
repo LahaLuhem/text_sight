@@ -107,7 +107,7 @@ class const _ScannerView({required final LiveScannerViewModel viewModel}) extend
           builder: (context, boxFit, _) => TextSightView(
             controller: viewModel.controller,
             fit: boxFit,
-            // Also rebuilt on the controller, so a toggled scan box shows even with recognition paused.
+            // Also rebuilt on the controller, so a toggled scan box shows while reading is paused.
             overlayBuilder: (context, capture, constraints) => ListenableBuilder(
               listenable: viewModel.controller,
               builder: (context, _) {
@@ -379,7 +379,7 @@ class const _PreparingModel({required final String message, final double? progre
   }
 }
 
-/// A centered icon + message, with an action button for the states the user can do something about.
+/// A centred icon and message, with a button for the states the user can act on.
 class const _MessageView({
   required final Widget icon,
   required final String message,

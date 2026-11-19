@@ -1,1 +1,1 @@
-"""Benchmark orchestration + reporting for the text_sight captures transport."""
+"""Runs text_sight's benchmarks and reports on them."""

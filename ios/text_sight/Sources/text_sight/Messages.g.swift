@@ -221,7 +221,7 @@ enum SessionPauseReasonMessage: Int, CaseIterable {
   case interrupted = 1
 }
 
-/// Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
+/// Transport twin of the scan box `Rect`, in `[0, 1]` from the top left.
 ///
 /// Generated class from Pigeon that represents data sent in messages.
 struct RegionOfInterestMessage: Hashable, CustomStringConvertible {
@@ -278,7 +278,7 @@ struct RegionOfInterestMessage: Hashable, CustomStringConvertible {
 /// Generated class from Pigeon that represents data sent in messages.
 struct TextSightOptionsMessage: Hashable, CustomStringConvertible {
   var level: RecognitionLevelMessage
-  /// Whether the recognizer fixes likely misreads against a lexicon. Vision only.
+  /// Whether the recognizer fixes likely misreads using a dictionary. Vision only.
   var usesLanguageCorrection: Bool
   var languages: [String]
   /// Smallest text to read, as a fraction of the frame height. ML Kit has no such dial, so Android
@@ -650,8 +650,8 @@ class MessagesPigeonCodec: FlutterStandardMessageCodec, @unchecked Sendable {
 }
 
 
-/// The typed control channel. Per-frame results stream over a plain
-/// EventChannel and the preview is a texture. Neither rides this API.
+/// The control channel. Per-frame results stream over a plain EventChannel and the preview is a
+/// texture, so neither rides here.
 ///
 /// Generated protocol from Pigeon that represents a handler of messages from Flutter.
 protocol TextSightHostApi {
@@ -666,26 +666,25 @@ protocol TextSightHostApi {
   func start() throws
   /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
   func pauseRecognition() throws
-  /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
+  /// Releases the camera and texture. Safe to call with nothing open.
   func dispose() async throws
   /// Reports the current camera-permission status without prompting.
   func checkCameraPermission() throws -> CameraPermissionStatusMessage
-  /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
+  /// Prompts if the user hasn't decided yet, and resolves to the answer.
   func requestCameraPermission() async throws -> CameraPermissionStatusMessage
-  /// Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
-  /// change mid-session, so it rides [initialize] instead.
+  /// Replaces the recognizer settings on an open session.
   func setOptions(options: TextSightOptionsMessage) throws
   /// Turns the camera torch on or off.
   func setTorchEnabled(enabled: Bool) throws
   /// What a per-line confidence means on this device. Fixed once the engine is picked, so the
   /// Dart side reads it once and caches.
   func confidenceScale() throws -> ConfidenceScaleMessage
-  /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
-  /// Google Play Services when needed) and returns the terminal readiness state.
+  /// Fetches the model if it's missing (Android's default, through Play Services) and returns how
+  /// that ended.
   func ensureModelReady() async throws -> [String: Any?]
-  /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
+  /// Reads text in the encoded image [bytes] (PNG, JPEG, …).
   func recognizeImage(bytes: FlutterStandardTypedData, options: TextSightOptionsMessage) async throws -> [String: Any?]
-  /// Recognizes text in the image at file [path], honouring [options].
+  /// Reads text in the image file at [path].
   func recognizePath(path: String, options: TextSightOptionsMessage) async throws -> [String: Any?]
 }
 
@@ -747,7 +746,7 @@ class TextSightHostApiSetup {
     } else {
       pauseRecognitionChannel.setMessageHandler(nil)
     }
-    /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
+    /// Releases the camera and texture. Safe to call with nothing open.
     let disposeChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.dispose\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       disposeChannel.setMessageHandler { _, reply in
@@ -777,7 +776,7 @@ class TextSightHostApiSetup {
     } else {
       checkCameraPermissionChannel.setMessageHandler(nil)
     }
-    /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
+    /// Prompts if the user hasn't decided yet, and resolves to the answer.
     let requestCameraPermissionChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.requestCameraPermission\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       requestCameraPermissionChannel.setMessageHandler { _, reply in
@@ -793,8 +792,7 @@ class TextSightHostApiSetup {
     } else {
       requestCameraPermissionChannel.setMessageHandler(nil)
     }
-    /// Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
-    /// change mid-session, so it rides [initialize] instead.
+    /// Replaces the recognizer settings on an open session.
     let setOptionsChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.setOptions\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       setOptionsChannel.setMessageHandler { message, reply in
@@ -841,8 +839,8 @@ class TextSightHostApiSetup {
     } else {
       confidenceScaleChannel.setMessageHandler(nil)
     }
-    /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
-    /// Google Play Services when needed) and returns the terminal readiness state.
+    /// Fetches the model if it's missing (Android's default, through Play Services) and returns how
+    /// that ended.
     let ensureModelReadyChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.ensureModelReady\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       ensureModelReadyChannel.setMessageHandler { _, reply in
@@ -858,7 +856,7 @@ class TextSightHostApiSetup {
     } else {
       ensureModelReadyChannel.setMessageHandler(nil)
     }
-    /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
+    /// Reads text in the encoded image [bytes] (PNG, JPEG, …).
     let recognizeImageChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.recognizeImage\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       recognizeImageChannel.setMessageHandler { message, reply in
@@ -877,7 +875,7 @@ class TextSightHostApiSetup {
     } else {
       recognizeImageChannel.setMessageHandler(nil)
     }
-    /// Recognizes text in the image at file [path], honouring [options].
+    /// Reads text in the image file at [path].
     let recognizePathChannel = FlutterBasicMessageChannel(name: "dev.flutter.pigeon.text_sight.TextSightHostApi.recognizePath\(channelSuffix)", binaryMessenger: binaryMessenger, codec: codec)
     if let api = api {
       recognizePathChannel.setMessageHandler { message, reply in

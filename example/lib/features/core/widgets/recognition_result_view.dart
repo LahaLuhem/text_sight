@@ -7,9 +7,7 @@ import 'confidence_scale_note.dart';
 import 'platform/platform_card.dart';
 import 'recognized_line_row.dart';
 
-/// Renders a [RecognitionResult]: an [idleHint] before the first run, the recognized lines (with
-/// a one-line summary) on success (or [emptyHint] when the capture has no lines), and the error
-/// message on failure. Shared by the one-shot and playground demos.
+/// Shows a [RecognitionResult], or [idleHint] before the first run.
 class const RecognitionResultView({
   required final RecognitionResult? result,
   required final String idleHint,
@@ -22,15 +20,12 @@ class const RecognitionResultView({
     if (result == null) return _MessageCard(idleHint);
 
     final (:capture, :error) = result;
-    if (error != null) return _MessageCard('Failed: $error');
-    if (capture != null) return _CaptureCard(capture: capture, emptyHint: emptyHint);
+    if (capture == null) return _MessageCard('Failed: $error');
 
-    return const _MessageCard('No text found.');
+    return _CaptureCard(capture: capture, emptyHint: emptyHint);
   }
 }
 
-/// The recognized lines plus a one-line summary (count, image size), or [emptyHint] when
-/// recognition succeeded but matched no lines.
 class const _CaptureCard({required final TextSightCapture capture, required final String emptyHint})
     extends StatelessWidget {
   @override
@@ -58,7 +53,6 @@ class const _CaptureCard({required final TextSightCapture capture, required fina
   );
 }
 
-/// A simple padded card for the idle hint and the failure message.
 class const _MessageCard(final String message) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(

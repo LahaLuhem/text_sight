@@ -1,10 +1,9 @@
-// Pigeon-only syntax (mutable data fields, undocumented transport twins) that never ships
+// Pigeon-only syntax (mutable fields, undocumented twins) that never ships.
 // ignore_for_file: prefer-match-file-name
 // ignore_for_file: avoid_positional_boolean_parameters
 
-// Pigeon schema: the dev-time transport behind the control API, never public. These message
-// classes are private twins of the public types, mapped by `TextSightPlatform`'s implementation.
-// Per-frame results ride a plain EventChannel instead, which is why no @EventChannelApi shows up.
+// The control channel's schema. Each message class is a private twin of a public type, mapped by
+// `PigeonTextSightPlatform`. Per-frame results ride a plain EventChannel, hence no @EventChannelApi.
 @ConfigurePigeon(
   PigeonOptions(
     dartPackageName: 'text_sight',
@@ -21,7 +20,7 @@ import 'package:pigeon/pigeon.dart';
 /// Transport twin of the public `RecognitionLevel`.
 enum RecognitionLevelMessage { fast, accurate }
 
-/// Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
+/// Transport twin of the scan box `Rect`, in `[0, 1]` from the top left.
 class RegionOfInterestMessage {
   new({required this.left, required this.top, required this.width, required this.height});
 
@@ -43,7 +42,7 @@ class TextSightOptionsMessage {
 
   RecognitionLevelMessage level;
 
-  /// Whether the recognizer fixes likely misreads against a lexicon. Vision only.
+  /// Whether the recognizer fixes likely misreads using a dictionary. Vision only.
   bool usesLanguageCorrection;
   List<String> languages;
 
@@ -106,8 +105,8 @@ class PreviewMessage {
   int quarterTurns;
 }
 
-/// The typed control channel. Per-frame results stream over a plain
-/// EventChannel and the preview is a texture. Neither rides this API.
+/// The control channel. Per-frame results stream over a plain EventChannel and the preview is a
+/// texture, so neither rides here.
 @HostApi()
 abstract class TextSightHostApi {
   /// Opens the camera with [options] at [resolution]. Returns the preview texture id.
@@ -125,22 +124,21 @@ abstract class TextSightHostApi {
   /// Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start].
   void pauseRecognition();
 
-  /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
+  /// Releases the camera and texture. Safe to call with nothing open.
   @async
   void dispose();
 
-  // Camera permission: the live camera path needs it, the static one-shot does not. The check is a
-  // synchronous status read, and the request is async because it drives the system prompt.
+  // Only the live camera needs permission. The check is a plain read, and the request is async
+  // because it waits on the system prompt.
 
   /// Reports the current camera-permission status without prompting.
   CameraPermissionStatusMessage checkCameraPermission();
 
-  /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
+  /// Prompts if the user hasn't decided yet, and resolves to the answer.
   @async
   CameraPermissionStatusMessage requestCameraPermission();
 
-  /// Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
-  /// change mid-session, so it rides [initialize] instead.
+  /// Replaces the recognizer settings on an open session.
   void setOptions(TextSightOptionsMessage options);
 
   /// Turns the camera torch on or off.
@@ -153,20 +151,19 @@ abstract class TextSightHostApi {
   // Readiness sits here because both drivers share the one model. Progress streams over
   // com.lahaluhem.text_sight/readiness, so this call only hands back the final state.
 
-  /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
-  /// Google Play Services when needed) and returns the terminal readiness state.
+  /// Fetches the model if it's missing (Android's default, through Play Services) and returns how
+  /// that ended.
   @async
   Map<String, Object?> ensureModelReady();
 
-  // Static one-shot driver: no session, texture, or permission. Returns the same self-describing
-  // per-frame map the captures EventChannel emits (decoded by `_decodeCapture`), so the result
-  // models need no Pigeon twin. `quarterTurns` is 0, a still is already upright.
+  // The one-shot: no session, texture or permission. It returns the same map a live frame sends,
+  // so the result models need no Pigeon twin.
 
-  /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
+  /// Reads text in the encoded image [bytes] (PNG, JPEG, …).
   @async
   Map<String, Object?> recognizeImage(Uint8List bytes, TextSightOptionsMessage options);
 
-  /// Recognizes text in the image at file [path], honouring [options].
+  /// Reads text in the image file at [path].
   @async
   Map<String, Object?> recognizePath(String path, TextSightOptionsMessage options);
 }

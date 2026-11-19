@@ -27,7 +27,7 @@ CANDIDATE_COLORS = {
     "packed_f64": "#ccb974",
 }
 
-# Ordered small -> large frame.
+# Smallest frame first.
 PROFILE_ORDER = ["sign", "receipt", "document", "dense"]
 
 # What every delta is measured against.

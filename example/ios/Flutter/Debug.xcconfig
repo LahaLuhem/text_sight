@@ -1,9 +1,7 @@
 #include "Generated.xcconfig"
 
-// App identity for the example. These defaults are the committed values: a lowercase bundle id and
-// no team, which is all the iOS Simulator needs (it does no code signing). To run on a *physical*
-// device, override them in an untracked LocalSigning.xcconfig (see this example's README). That keeps
-// per-developer signing out of the tracked Xcode project, so switching branches never fights you.
+// Committed defaults: lowercase bundle id, no team, which is all the Simulator needs (no signing).
+// To run on a physical device, override both in an untracked LocalSigning.xcconfig (see README).
 PRODUCT_BUNDLE_IDENTIFIER = com.lahaluhem.example.textSightExample
 DEVELOPMENT_TEAM =
 

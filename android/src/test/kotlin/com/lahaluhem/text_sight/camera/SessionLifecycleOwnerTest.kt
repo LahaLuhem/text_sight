@@ -10,10 +10,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/**
- * The headless owner must always reach DESTROYED, and its state is the session's intent capped
- * by the app's foreground state.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])
 class SessionLifecycleOwnerTest {

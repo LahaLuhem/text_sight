@@ -5,12 +5,12 @@ import 'dart:typed_data' show ByteData, Uint8List;
 import 'package:flutter/foundation.dart' show ValueListenable, visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
-// The example doubles as the plugin's own harness, and the federation seam is not on the barrel.
-// ignore: implementation_imports
-import 'package:text_sight/src/capture/preview_geometry.dart';
-// Same reason.
+// The example doubles as the plugin's own harness, and the platform seam isn't on the barrel.
 // ignore: implementation_imports
 import 'package:text_sight/src/platform/text_sight_platform.dart';
+// Same reason.
+// ignore: implementation_imports
+import 'package:text_sight/src/states/preview_geometry.dart';
 import 'package:text_sight/text_sight.dart';
 
 import 'constants/assets/assets.gen.dart';

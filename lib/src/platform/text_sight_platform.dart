@@ -2,24 +2,23 @@ import 'dart:typed_data' show Uint8List;
 
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-import '../capture/camera_permission_status.dart';
-import '../capture/capture_resolution.dart';
-import '../capture/preview_geometry.dart';
-import '../capture/text_sight_session_state.dart';
-import '../recognition/confidence_scale.dart';
-import '../recognition/text_sight_capture.dart';
-import '../recognition/text_sight_options.dart';
-import '../recognition/text_sight_readiness_state.dart';
+import '../options/capture_resolution.dart';
+import '../options/text_sight_options.dart';
+import '../results/confidence_scale.dart';
+import '../results/text_sight_capture.dart';
+import '../states/camera_permission_status.dart';
+import '../states/preview_geometry.dart';
+import '../states/text_sight_readiness_state.dart';
+import '../states/text_sight_session_state.dart';
 import 'pigeon_text_sight_platform.dart';
 
-/// The platform-facing contract both drivers delegate to: the federation seam.
+/// What the Dart side asks of each platform.
 ///
-/// Drivers talk only to [instance], never to the native channel, so splitting into per-platform
-/// packages later is mechanical, and Pigeon never appears here. Methods throw [UnimplementedError]
-/// by default rather than being abstract, so adding one is non-breaking. [instance] defaults to
-/// [PigeonTextSightPlatform].
+/// The controller and the one-shot only talk to [instance], never to Pigeon, so splitting into
+/// per-platform packages later is a move, not a rewrite. Methods throw [UnimplementedError] instead
+/// of being abstract, so adding one breaks no implementation.
 abstract class TextSightPlatform() extends PlatformInterface {
-  /// Constructs the interface, passing the verification token to [PlatformInterface].
+  /// Hands [PlatformInterface] the token it checks.
   this : super(token: _token);
 
   static final _token = Object();
@@ -29,8 +28,7 @@ abstract class TextSightPlatform() extends PlatformInterface {
   /// The active implementation, [PigeonTextSightPlatform] by default.
   static TextSightPlatform get instance => _instance;
 
-  /// Registers [value] as the platform implementation after verifying it `extends` this class
-  /// (the token guards against an `implements`-based fake).
+  /// Sets the implementation, which has to `extend` this class. The token checks that.
   static set instance(TextSightPlatform value) {
     PlatformInterface.verify(value, _token);
     _instance = value;
@@ -42,7 +40,7 @@ abstract class TextSightPlatform() extends PlatformInterface {
   Future<int> initialize(TextSightOptions options, CaptureResolution resolution) =>
       throw UnimplementedError('initialize() has not been implemented.');
 
-  /// Begins delivering frames to the recognizer and emitting on [captures].
+  /// Starts reading frames onto [captures].
   Future<void> start() => throw UnimplementedError('start() has not been implemented.');
 
   /// Pauses recognition but keeps the session open for a later [start].
@@ -73,7 +71,7 @@ abstract class TextSightPlatform() extends PlatformInterface {
   Future<void> updateTorchEnabled({required bool enabled}) =>
       throw UnimplementedError('updateTorchEnabled() has not been implemented.');
 
-  /// The live per-frame results stream, backed by a plain `EventChannel`.
+  /// Results, one per read frame.
   Stream<TextSightCapture> get captures =>
       throw UnimplementedError('captures has not been implemented.');
 
@@ -85,20 +83,18 @@ abstract class TextSightPlatform() extends PlatformInterface {
   Stream<PreviewGeometry> get previews =>
       throw UnimplementedError('previews has not been implemented.');
 
-  // Model readiness, mode-agnostic and shared by both drivers. Decoupled from the camera
-  // session: a still image and a live preview both need the model, neither needs the other.
+  // Model readiness, apart from the camera: the live camera and the one-shot both need the model,
+  // and neither needs the other.
 
   /// Ensures the recognition model is present and resolves to the terminal readiness state.
   Future<TextSightReadinessState> ensureModelReady() =>
       throw UnimplementedError('ensureModelReady() has not been implemented.');
 
-  /// The model-readiness state stream, backed by a plain `EventChannel`.
+  /// The model's readiness as it changes.
   Stream<TextSightReadinessState> get modelReadiness =>
       throw UnimplementedError('modelReadiness has not been implemented.');
 
-  // Static one-shot driver, no camera session, texture, or permission. Both return a capture
-  // whose `quarterTurns` is 0 (a still is upright), built from the same recognizer and models
-  // as the live path.
+  // The one-shot: no camera session, texture or permission.
 
   /// Recognizes text in the encoded still-image [bytes] using [options].
   Future<TextSightCapture> recognizeImage(Uint8List bytes, TextSightOptions options) =>

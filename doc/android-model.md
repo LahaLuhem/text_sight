@@ -39,7 +39,7 @@ TextSightModel.readiness.listen((state) {
 The [`example/`](../example/) scanner does exactly this: `ensureReady()` to gate, the stream for a
 real download bar.
 
-## Or just bundle it
+## Or bundle it
 
 Ship the model inside your APK instead. One line in your app's `android/gradle.properties`:
 

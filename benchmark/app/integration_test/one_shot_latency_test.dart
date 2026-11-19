@@ -26,8 +26,8 @@ void main() {
       );
 
       for (final level in RecognitionLevel.values) {
-        // Correction rides its own axis now: it trades latency against accuracy independently of
-        // the level, and what it costs on `fast` is the open question.
+        // Correction is its own axis: it trades speed for accuracy whatever the level, so it's
+        // measured at both.
         for (final corrected in const [false, true]) {
           final options = TextSightOptions(
             darwin: DarwinOptions(recognitionLevel: level, usesLanguageCorrection: corrected),
@@ -69,8 +69,8 @@ void main() {
 
     binding.reportData = {'output_path': _outputPath, 'records': records};
 
-    // Zero recognitions for one combination is data (see the class docs). Zero everywhere means the
-    // harness itself is broken, which is worth failing on.
+    // Zero lines for one combination can be real, small print under an engine's floor. Zero
+    // everywhere means the harness itself is broken, which is worth failing on.
     expect(
       records.any((record) => _linesOf(record) > 0),
       isTrue,
