@@ -123,14 +123,18 @@ await controller.updateOptions(
 await controller.updateTorchEnabled(enabled: true);
 ```
 
-Scanning small print? Turn the camera up. Set once, unlike the knobs above.
+Scanning small print? Put a box around it and turn the camera up. Both engines shrink a big frame
+before reading it, but a box is read at its own size, so it keeps more of what `high` captures.
 
 ```dart
-TextSightController(resolution: CaptureResolution.high);
+TextSightController(
+  resolution: CaptureResolution.high, // set once, unlike the knobs above
+  options: TextSightOptions(roi: Rect.fromLTWH(0.1, 0.4, 0.8, 0.2)),
+);
 ```
 
-`minimumTextHeight` is the iOS half, and it is already `0`, so nothing is being skipped for you to
-turn back on. That leaves pixels as the only lever, and text small enough still comes back empty.
+`minimumTextHeight` is the iOS half, and it's already `0`, so there's nothing to turn back on. Text
+small enough still comes back empty.
 
 ### Know what the camera is doing
 

@@ -36,8 +36,9 @@ final class const DarwinOptions({
 
   /// Smallest text to read, as a fraction of the frame height, in `[0, 1]`.
   ///
-  /// Higher is faster and blind to small print, `0` keeps every pixel. Always measured against the
-  /// frame, so narrowing [TextSightOptions.roi] never changes what is readable.
+  /// Higher is faster and blind to small print. `0` leaves the floor to Vision, which shrinks big
+  /// frames before reading them anyway. Measured against the frame, so [TextSightOptions.roi]
+  /// doesn't move it.
   final double minimumTextHeight = 0,
 }) {
   /// Creates Vision-only options. Every field has a live-oriented default.

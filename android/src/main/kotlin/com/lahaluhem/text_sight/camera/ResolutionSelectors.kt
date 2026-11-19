@@ -12,7 +12,10 @@ import com.lahaluhem.text_sight.CaptureResolutionMessage
  */
 private val captureAspect = AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY
 
-/** Medium misses little on a page. Low is CameraX's old default, high is for fine print. */
+/**
+ * Medium misses little on a page. Low is CameraX's old default. High sits just past the size ML Kit
+ * reads at, since it shrinks anything bigger.
+ */
 private fun CaptureResolutionMessage.target(): Size = when (this) {
     CaptureResolutionMessage.LOW -> Size(640, 480)
     CaptureResolutionMessage.MEDIUM -> Size(1600, 1200)

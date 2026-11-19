@@ -12,6 +12,9 @@ final class const TextSightOptions({
   /// A line counts if its centre's inside, and comes back whole even past the top or bottom edge.
   /// The sides still cut it. Live, a line on screen hangs on a little past the edge so it doesn't
   /// blink. Boxes are measured on the whole frame.
+  ///
+  /// Both engines shrink a big frame before reading it, but a box is read at its own size, so it
+  /// reads smaller text than the whole frame does.
   final Rect? roi,
 
   /// Settings only Apple Vision honours.

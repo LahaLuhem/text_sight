@@ -6,8 +6,7 @@ struct RecognitionConfig {
   let usesLanguageCorrection: Bool
   let languages: [String]
 
-  /// Smallest text to read, as a fraction of the **frame**. Vision shrinks the image to suit, so 0
-  /// keeps every pixel.
+  /// Smallest text to read, as a fraction of the **frame** height.
   let minimumTextHeight: Float
   let roi: RegionOfInterestMessage?
 

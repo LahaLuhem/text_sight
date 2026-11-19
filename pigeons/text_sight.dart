@@ -47,8 +47,8 @@ class TextSightOptionsMessage {
   bool usesLanguageCorrection;
   List<String> languages;
 
-  /// Smallest text to read, as a fraction of the scan box. Vision shrinks the image to suit, so 0
-  /// keeps every pixel. ML Kit has no such dial, so Android ignores it.
+  /// Smallest text to read, as a fraction of the frame height. ML Kit has no such dial, so Android
+  /// ignores it.
   double minimumTextHeight;
   RegionOfInterestMessage? roi;
 }
