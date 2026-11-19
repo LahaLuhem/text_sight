@@ -63,6 +63,14 @@ updates:
     ignore:
       - dependency-name: flutter_gen_runner
   - package-ecosystem: swift
+    directory: /benchmark/app/ios
+    schedule:
+      interval: weekly
+    groups:
+      swift:
+        patterns: ['*']
+        update-types: [minor, patch]
+  - package-ecosystem: swift
     directory: /example/ios
     schedule:
       interval: weekly
