@@ -275,7 +275,7 @@ enum class SessionPauseReasonMessage(val raw: Int) {
 }
 
 /**
- * Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
+ * Transport twin of the scan box `Rect`, in `[0, 1]` from the top left.
  *
  * Generated class from Pigeon that represents data sent in messages.
  */
@@ -334,7 +334,7 @@ data class RegionOfInterestMessage (
  */
 data class TextSightOptionsMessage (
   val level: RecognitionLevelMessage,
-  /** Whether the recognizer fixes likely misreads against a lexicon. Vision only. */
+  /** Whether the recognizer fixes likely misreads using a dictionary. Vision only. */
   val usesLanguageCorrection: Boolean,
   val languages: List<String>,
   /**
@@ -727,8 +727,8 @@ private open class MessagesPigeonCodec : StandardMessageCodec() {
 
 
 /**
- * The typed control channel. Per-frame results stream over a plain
- * EventChannel and the preview is a texture. Neither rides this API.
+ * The control channel. Per-frame results stream over a plain EventChannel and the preview is a
+ * texture, so neither rides here.
  *
  * Generated interface from Pigeon that represents a handler of messages from Flutter.
  */
@@ -748,16 +748,13 @@ interface TextSightHostApi {
   fun start()
   /** Pauses recognition, keeping the session open for a later [start]. Not `@async`, as [start]. */
   fun pauseRecognition()
-  /** Releases the camera and texture. Idempotent, so calling it with nothing open is fine. */
+  /** Releases the camera and texture. Safe to call with nothing open. */
   suspend fun dispose()
   /** Reports the current camera-permission status without prompting. */
   fun checkCameraPermission(): CameraPermissionStatusMessage
-  /** Prompts for camera permission when it has not yet been decided, resolving to the resulting status. */
+  /** Prompts if the user hasn't decided yet, and resolves to the answer. */
   suspend fun requestCameraPermission(): CameraPermissionStatusMessage
-  /**
-   * Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
-   * change mid-session, so it rides [initialize] instead.
-   */
+  /** Replaces the recognizer settings on an open session. */
   fun setOptions(options: TextSightOptionsMessage)
   /** Turns the camera torch on or off. */
   fun setTorchEnabled(enabled: Boolean)
@@ -767,13 +764,13 @@ interface TextSightHostApi {
    */
   fun confidenceScale(): ConfidenceScaleMessage
   /**
-   * Ensures the recognition model is present (fetching the unbundled ML Kit model via
-   * Google Play Services when needed) and returns the terminal readiness state.
+   * Fetches the model if it's missing (Android's default, through Play Services) and returns how
+   * that ended.
    */
   suspend fun ensureModelReady(): Map<String, Any?>
-  /** Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options]. */
+  /** Reads text in the encoded image [bytes] (PNG, JPEG, …). */
   suspend fun recognizeImage(bytes: ByteArray, options: TextSightOptionsMessage): Map<String, Any?>
-  /** Recognizes text in the image at file [path], honouring [options]. */
+  /** Reads text in the image file at [path]. */
   suspend fun recognizePath(path: String, options: TextSightOptionsMessage): Map<String, Any?>
 
   companion object {

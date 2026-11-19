@@ -1,10 +1,11 @@
+# text_sight example
+
 ## Running on a physical iOS device
 
-The iOS Simulator needs no code signing, and `flutter run` works as-is. It has no camera, so the app
-substitutes one (see below). Real capture still needs a **physical device**, which needs an Apple
-Development Team and a bundle identifier your team can register. That is
-per-developer state, so it must not land in the committed Xcode project. Instead, create an
-untracked override.
+The iOS Simulator needs no code signing, so `flutter run` works as is, and the app stands in for
+its missing camera (see below). Real capture needs a **physical device**, and that needs an Apple
+Development Team and a bundle id your team can register. Both are per-developer, so they stay out
+of the committed Xcode project.
 
 Create `ios/Flutter/LocalSigning.xcconfig` (gitignored) with your own values:
 
@@ -22,7 +23,7 @@ onto the device.
   avoids.
 - Apple App IDs are globally unique **and case-insensitive**: if your chosen id (or a case-variant
   of it) is already registered to another team, you'll get "cannot be registered… not available".
-  Just pick a different, unique string.
+  Pick a different string.
 
 ## The live scanner on the iOS Simulator
 
@@ -61,7 +62,7 @@ fixed image prove nothing about live tracking. So the sample is redrawn every ti
 drift and tilt, the way the Android emulator's virtual scene sways, and each redrawn frame is
 recognized on its own. The boxes you see are then genuinely chasing a moving image.
 
-The motion lives in `SwayingFrames`, tuned by four constants in one place. Composing and encoding a
+The motion lives in `SwayingFrames`, tuned by the constants at its top. Composing and encoding a
 frame measures about 8 ms, so the recognizer is what limits the rate, not the drawing.
 
 ### Why the confidence colours may be missing
@@ -74,7 +75,7 @@ the chips render plain, and a line under the results says why.
 That is `ConfidenceScale.isRankable`, which the demo reads once through `EngineConfidence` and
 branches on, and it is the pattern to copy. The recognition level is not the knob: the scale
 follows the backend, which follows the OS version. `fast` and `accurate` are both flat on iOS 18+,
-just at different constants.
+each at its own constant.
 
 ### Faking the states that need hardware
 

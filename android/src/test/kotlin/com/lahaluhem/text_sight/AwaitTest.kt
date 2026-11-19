@@ -22,10 +22,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * The two suspend bridges in `Await.kt`.
- *
- * Robolectric because Play Services static-initializes against the framework. Failures assert on
- * message, not identity: coroutine stack-trace recovery hands the caller a copy.
+ * Robolectric, because Play Services sets itself up against the framework when it loads. Failures
+ * compare messages, not identity, since coroutines hand the caller a copy of the exception.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])

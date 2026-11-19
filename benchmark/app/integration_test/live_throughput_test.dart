@@ -36,9 +36,9 @@ void main() {
           for (final roi in const [null, _strip]) (level: level, corrected: corrected, roi: roi),
     ];
 
-    // Burn the device in first, or whichever candidate runs first reads ~75% high. A Sony XQ-BQ52
-    // holds ~8 captures/s for ~40 s, falls off a thermal cliff, then sits flat at ~4.5, so the
-    // window has to outlast the cliff rather than just the cold frames.
+    // Burn the device in first, or whichever candidate runs first reads high. A phone can hold a
+    // rate for a while and then fall off a thermal cliff, so this has to outlast the cliff, not
+    // just the cold frames.
     await controller.start();
     await Future<void>.delayed(_warmUpWindow);
     await controller.pauseRecognition();

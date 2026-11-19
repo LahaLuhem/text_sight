@@ -1,12 +1,11 @@
 # `text_sight` benchmarks
 
-Reproducible benchmarks used to decide perf questions with data, not vibes. Specifically:
-**is changing the per-frame result wire representation worth it?**
+Reproducible benchmarks, so perf questions get settled with data: whether the per-frame wire format
+is worth changing, what a call costs on a phone, and how many frames live recognition gets through.
 
-> **Layers built:** the Dart codec micro-benchmark (emits JSON), the on-device
-> scenario layer (`app/`, driven by `flutter drive`), and the Python `report`
-> layer (charts + summaries, under `python/`). There is **no `compare` layer**:
-> no before/after transport exists to diff yet.
+> The Dart codec micro-benchmark and the on-device scenarios (`app/`, driven by `flutter drive`)
+> emit JSON, and the Python layer (`python/`) turns it into charts and summaries. There's no
+> `compare` layer, since there's no before/after transport to diff yet.
 
 ## Two layers, two questions
 
@@ -63,7 +62,7 @@ benchmark/
 │   ├── integration_test/      the scenarios (+ support/: page rendering, record shape)
 │   └── test_driver/           perf_driver.dart, writes reportData to JSON
 ├── python/                    uv-managed orchestrator: build · run · report (+ tests)
-├── reports/                   committed charts (PNG) + SUMMARY.md
+├── reports/                   committed charts (PNG) and summaries
 ├── build/                     AOT exes (gitignored)
 └── results-local/             per-machine run outputs (gitignored)
 ```
@@ -83,7 +82,7 @@ uv sync                                   # one-time: create .venv, install + lo
 
 uv run python run.py build                # AOT-compile (deterministic warmup, unlike `dart run`)
 uv run python run.py run --iterations 10  # execute, writes results-local/current/codec_roundtrip.json
-uv run python run.py report ../results-local/current/codec_roundtrip.json   # charts + SUMMARY.md -> reports/
+uv run python run.py report ../results-local/current/codec_roundtrip.json   # charts + SUMMARY.md into reports/
 
 uv run ruff check . && uv run pytest      # lint + test the orchestrator
 ```
@@ -126,9 +125,9 @@ uv run python run.py report ../results-local/current/codec_on_device_ios.json --
 ```
 
 Pass `--out`, or it overwrites the committed host charts. It exists to check one published claim:
-the README quotes decode as a fraction of a 60 fps frame budget, but the committed numbers are
-host-measured and a phone CPU is slower. `SUMMARY.md` works that fraction out from the phone's own
-worst frame, so the claim in the root README can be read off a run instead of done by hand.
+[`doc/performance.md`](../doc/performance.md) quotes decode as a fraction of a 60 fps frame, and a
+phone CPU is slower than the host the committed charts came from. `SUMMARY.md` works that fraction
+out from the phone's own worst frame, so the claim can be read off a run instead of done by hand.
 
 The device run only does the profiles, no sweep, so `report` draws the profile chart and says which
 two it skipped. A chart with nothing behind it is never written, and `SUMMARY.md` names the gap.
@@ -148,7 +147,9 @@ next fresh install. iOS simulators are skipped outright, since they have no came
 imply precision these numbers do not have.
 
 **Warm the phone up first, or the sweep lies.** A cool phone boosts, so whichever candidate runs
-first looks fastest.
+first looks fastest. A Sony XQ-BQ52 holds about 8 cap/s for 40 s, then falls off a thermal cliff to
+about 4.5, and without the burn-in its first candidate read about 75% high. The burn-in is sized to
+outlast that cliff.
 
 | S24, one scene | spread over the four candidates |
 |---|---|
@@ -156,7 +157,7 @@ first looks fastest.
 | warm, `--reverse` | 5.1 to 5.5 cap/s, flat |
 
 Both knobs are no-ops on Android, so flat is the right answer. Run it twice and keep the second, or
-pass `--reverse` and check the two agree. A longer burn-in probably isn't the fix, what happens
+pass `--reverse` and check the two agree. A longer burn-in probably isn't the fix. What happens
 between runs is the likelier cause.
 
 The Dart binary also runs standalone (a median table prints to stdout):
@@ -167,10 +168,9 @@ benchmark/build/codec_roundtrip --iterations 1 \
   --git-sha "$(git rev-parse --short HEAD)" --package-version 0.0.0
 ```
 
-`report` writes to the committed `reports/` by default. Pass `--out` for an
-ad-hoc snapshot. **Capture N≥10 (ideally 30) on a quiet machine before
-committing the canonical charts**. `reports/` is a deliberate, maintainer-only
-refresh, like the sibling suite.
+`report` writes to the committed `reports/` by default. Pass `--out` for an ad-hoc snapshot.
+**Capture N≥10 (ideally 30) on a quiet machine before committing the canonical charts**, since
+`reports/` is a deliberate, maintainer-only refresh.
 
 ## Methodology
 

@@ -22,7 +22,7 @@ def test_render_contains_header_scope_and_capture(sample_records: list[dict[str,
 
 def test_render_profile_table_has_baseline_and_delta(sample_records: list[dict[str, Any]]) -> None:
     out = render_summary_markdown(flatten(sample_records), [], sample_records, [])
-    # map_std is the baseline -> its delta cells are 0%, and packed_f32 improves on it.
+    # map_std is the baseline, so its delta cells are 0%, and packed_f32 improves on it.
     assert "| document | `map_std` | 30.00 | 9384 | 0% | 0% |" in out
     assert "`packed_f32`" in out
     assert "-85%" in out  # 4.4 vs 30.0 decode

@@ -3,37 +3,32 @@ import 'dart:ui' show Locale, Rect, Size;
 
 import 'package:flutter/services.dart';
 
-import '../capture/camera_permission_status.dart';
-import '../capture/capture_resolution.dart';
-import '../capture/preview_geometry.dart';
-import '../capture/text_sight_session_state.dart';
-import '../recognition/confidence_scale.dart';
-import '../recognition/recognition_level.dart';
-import '../recognition/recognized_line.dart';
-import '../recognition/text_sight_capture.dart';
-import '../recognition/text_sight_options.dart';
-import '../recognition/text_sight_readiness_state.dart';
+import '../options/capture_resolution.dart';
+import '../options/recognition_level.dart';
+import '../options/text_sight_options.dart';
+import '../results/confidence_scale.dart';
+import '../results/recognized_line.dart';
+import '../results/text_sight_capture.dart';
+import '../states/camera_permission_status.dart';
+import '../states/preview_geometry.dart';
+import '../states/text_sight_readiness_state.dart';
+import '../states/text_sight_session_state.dart';
 import 'messages.g.dart';
 import 'text_sight_platform.dart';
 
-/// The default [TextSightPlatform]: Pigeon for control calls and native's pushes, a plain
-/// `EventChannel` for the per-frame results.
+/// The default [TextSightPlatform]: Pigeon for calls and native's pushes, a plain `EventChannel`
+/// for the per-frame results.
 ///
-/// The one place public types meet their transport twins, decoding self-describing frame maps
-/// into [TextSightCapture]s. A federated platform package could replace it.
+/// The one place public types meet their Pigeon twins.
 final class PigeonTextSightPlatform() extends TextSightPlatform implements TextSightFlutterApi {
-  /// Registers as the FlutterApi handler. A handler registration only, no platform call, so
-  /// constructing one in a test needs no mock.
+  /// Only registers as the handler for native's pushes, with no platform call, so a test can build
+  /// one without mocks.
   this {
     TextSightFlutterApi.setUp(this);
   }
 
-  /// Per-frame results coming up from native. The name is mirrored verbatim by
-  /// the native `EventChannel` registration on each platform.
+  // Each name must match its native `EventChannel` exactly.
   static const _capturesChannel = EventChannel('com.lahaluhem.text_sight/captures');
-
-  /// Model readiness coming up from native, the name mirrored verbatim by the
-  /// `EventChannel` registration on each platform.
   static const _readinessChannel = EventChannel('com.lahaluhem.text_sight/readiness');
 
   final _hostApi = TextSightHostApi();
@@ -77,7 +72,7 @@ final class PigeonTextSightPlatform() extends TextSightPlatform implements TextS
   @override
   Future<void> updateTorchEnabled({required bool enabled}) => _hostApi.setTorchEnabled(enabled);
 
-  /// Read once and cached: the engine is chosen at plugin registration and never changes.
+  /// Cached, since native picks the engine once, when the plugin registers.
   late final Future<ConfidenceScale> _confidenceScale = _hostApi.confidenceScale().then(
     (message) => message._toPublic(),
   );
@@ -120,7 +115,6 @@ final class PigeonTextSightPlatform() extends TextSightPlatform implements TextS
       _decodeCapture(await _hostApi.recognizePath(path, options._toMessage()));
 }
 
-/// Maps the public recognizer config to its Pigeon transport twin.
 extension on TextSightOptions {
   TextSightOptionsMessage _toMessage() => TextSightOptionsMessage(
     level: darwin.recognitionLevel._toMessage(),
@@ -154,7 +148,6 @@ extension on ConfidenceScaleMessage {
   };
 }
 
-/// Maps a session-state twin back to its public case.
 extension on SessionStateMessage {
   TextSightSessionState _toPublic() => switch (this) {
     SessionIdleMessage() => const SessionIdle(),
@@ -174,7 +167,6 @@ extension on SessionPauseReasonMessage {
   };
 }
 
-/// Maps the Pigeon permission-status twin back to the public enum.
 extension on CameraPermissionStatusMessage {
   CameraPermissionStatus _toPublic() => switch (this) {
     .granted => .granted,
@@ -192,8 +184,6 @@ extension on Iterable<Locale> {
   List<String> _toLanguageTags() => map((locale) => locale.toLanguageTag()).toList(growable: false);
 }
 
-/// Decodes one per-frame [PigeonTextSightPlatform.captures] event, a
-/// self-describing map, into a [TextSightCapture].
 TextSightCapture _decodeCapture(Object? event) {
   final frameMap = event! as Map<Object?, Object?>;
   final rawLines = frameMap['lines']! as List<Object?>;
@@ -203,14 +193,13 @@ TextSightCapture _decodeCapture(Object? event) {
       (frameMap['imageWidth']! as num).toDouble(),
       (frameMap['imageHeight']! as num).toDouble(),
     ),
-    // Absent on an already-upright source (e.g. the static one-shot), so it defaults to no rotation.
+    // Absent on a source that's already upright, like a still.
     quarterTurns: (frameMap['quarterTurns'] as num?)?.toInt() ?? 0,
     lines: rawLines.map(_decodeLine).toList(growable: false),
   );
 }
 
-/// Decodes one line entry into a [RecognizedLine]. `elements` stays `null` in v1
-/// (reserved: the wire carries the slot for a future additive change).
+/// Skips `elements`, which native never fills yet.
 RecognizedLine _decodeLine(Object? rawLine) {
   final lineMap = rawLine! as Map<Object?, Object?>;
 
@@ -226,10 +215,7 @@ RecognizedLine _decodeLine(Object? rawLine) {
   );
 }
 
-/// Decodes one model-readiness event, a self-describing map, into a
-/// [TextSightReadinessState]. Shared by the [PigeonTextSightPlatform.modelReadiness]
-/// stream and the terminal map [PigeonTextSightPlatform.ensureModelReady] returns. Each
-/// native side emits exactly this shape.
+/// The stream and [PigeonTextSightPlatform.ensureModelReady] send the same map.
 TextSightReadinessState _decodeReadiness(Object? event) {
   final stateMap = event! as Map<Object?, Object?>;
 
@@ -240,13 +226,11 @@ TextSightReadinessState _decodeReadiness(Object? event) {
       reason: _decodeUnavailableReason(stateMap['reason'] as String?),
       details: stateMap['details'] as String?,
     ),
-    // Both ends of this channel are ours, so an unknown tag means a prep that did not complete.
+    // Both ends of this channel are ours, so an unknown tag means a prepare that didn't finish.
     _ => const ModelUnavailable(reason: ModelUnavailableReason.downloadFailed),
   };
 }
 
-/// Maps the wire tag to its [ModelUnavailableReason], defaulting to
-/// [ModelUnavailableReason.downloadFailed] for anything unrecognized.
 ModelUnavailableReason _decodeUnavailableReason(String? tag) => switch (tag) {
   'playServicesUnavailable' => ModelUnavailableReason.playServicesUnavailable,
   _ => ModelUnavailableReason.downloadFailed,

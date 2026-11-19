@@ -21,7 +21,7 @@ def load_records(path: str | Path) -> list[dict[str, Any]]:
 def flatten(records: list[dict[str, Any]]) -> pl.DataFrame:
     """One row per record, summary scalars hoisted to columns.
 
-    `wire_bytes` is deterministic per cell; timings vary per iteration, so callers take a median.
+    `wire_bytes` is the same on every run of a cell. Timings vary, so callers take a median.
     """
     rows = [
         {

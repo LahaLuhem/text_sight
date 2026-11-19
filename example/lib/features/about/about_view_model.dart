@@ -1,5 +1,5 @@
 import 'package:pmvvm/pmvvm.dart';
 
-/// The "under the hood" screen is static content, with no observable state. The pair is kept
-/// for layout consistency with every other feature.
+/// Static content, so nothing to observe. Kept so every feature has the same view and view-model
+/// pair.
 final class AboutViewModel() extends ViewModel;

@@ -31,28 +31,29 @@ class const AboutView({super.key}) extends StatelessWidget {
             icon: PlatformIcon(PlatformIcons.checkMarkShield),
             title: 'Zero third-party ML on iOS',
             body:
-                'iOS uses Apple Vision, a system framework, so the iOS build links no GoogleMLKit, '
-                'and none of the arm64 / Swift Package Manager warnings that come from running '
-                'ML Kit on iOS. ML Kit lives only in the Android Gradle build. No recognition '
-                'library ever enters your Dart dependencies.',
+                'iOS uses Apple Vision, which ships with the system, so the iOS build links no '
+                'GoogleMLKit and skips the arm64 and Swift Package Manager trouble ML Kit brings '
+                'there. ML Kit lives only in the Android Gradle build, and no recognition library '
+                'enters your Dart dependencies.',
           ),
-          const Gap(12),
+          const Gap(8),
           const _NuanceCard(
             icon: PlatformIcon(PlatformIcons.deviceMobile),
             title: 'A native engine per platform',
             body:
-                'iOS recognizes with Apple Vision (the Swift RecognizeTextRequest, iOS 18+); '
-                'Android with ML Kit Text Recognition v2 (Latin). One Dart API drives both.',
+                'iOS reads with Apple Vision: the Swift RecognizeTextRequest on iOS 18+, and the '
+                'older VNRecognizeTextRequest below that. Android reads with ML Kit Text '
+                'Recognition v2 (Latin). One Dart API drives both.',
           ),
-          const Gap(12),
+          const Gap(8),
           const _NuanceCard(
             icon: PlatformIcon(PlatformIcons.fullScreen),
             title: 'One coordinate contract',
             body:
-                'Bounding boxes are normalized [0,1] with a top-left origin on both platforms, '
-                'converted natively, so an overlay painter never branches on platform.',
+                'Boxes are fractions [0, 1] of the image, measured from the top left on both '
+                'platforms, so an overlay painter never checks which one it runs on.',
           ),
-          const Gap(12),
+          const Gap(8),
           const _NuanceCard(
             icon: PlatformIcon(PlatformIcons.gaugeFilled),
             title: 'Confidence, with a caveat',
@@ -61,7 +62,7 @@ class const AboutView({super.key}) extends StatelessWidget {
                 'next to others from the same engine. Ask TextSightEngine.confidenceScale what '
                 'you are holding before you rank or threshold.',
           ),
-          const Gap(12),
+          const Gap(8),
           _NuanceCard(
             icon: Icon(
               context.platformIcon(
@@ -93,7 +94,7 @@ class const _NuanceCard({
       padding: const .all(16),
       child: Row(
         crossAxisAlignment: .start,
-        spacing: 12,
+        spacing: 16,
         children: [
           icon,
           Expanded(

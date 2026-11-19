@@ -3,12 +3,12 @@
 
 complexity:
   TooManyFunctions:
-    # The plugin entrypoint and the camera/recognition controller legitimately expose many small
-    # functions, and the Dart side enforces no function-count cap either.
+    # The plugin has to implement Pigeon's whole host API plus Flutter's callbacks, and Dart caps no
+    # function count either.
     active: false
   LongParameterList:
-    # The per-frame encoder helpers take the frame geometry positionally on the hot path, so param
-    # count isn't enforced on the Dart side.
+    # The camera classes take their collaborators in the constructor, and previewGeometry takes the
+    # frame as plain numbers. Dart caps no parameter count either.
     active: false
 
 naming:

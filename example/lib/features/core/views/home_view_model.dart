@@ -1,6 +1,5 @@
 import 'package:pmvvm/pmvvm.dart';
 
-/// The landing hub has no observable state. Navigation is the only behaviour, and
-/// `Navigator.push` lives in the view. The pair is kept for layout consistency with
-/// every other feature.
+/// Nothing to observe, since navigating is all the hub does and that lives in the view. Kept so
+/// every feature has the same view and view-model pair.
 final class HomeViewModel() extends ViewModel;

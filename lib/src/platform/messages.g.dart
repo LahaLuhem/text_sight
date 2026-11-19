@@ -120,7 +120,7 @@ enum CameraPermissionStatusMessage { granted, denied, permanentlyDenied }
 /// Transport twin of the public `SessionPauseReason`.
 enum SessionPauseReasonMessage { appBackgrounded, interrupted }
 
-/// Transport twin of the public `Rect` region-of-interest (normalized [0,1] top-left).
+/// Transport twin of the scan box `Rect`, in `[0, 1]` from the top left.
 class RegionOfInterestMessage {
   RegionOfInterestMessage({
     required this.left,
@@ -192,7 +192,7 @@ class TextSightOptionsMessage {
 
   RecognitionLevelMessage level;
 
-  /// Whether the recognizer fixes likely misreads against a lexicon. Vision only.
+  /// Whether the recognizer fixes likely misreads using a dictionary. Vision only.
   bool usesLanguageCorrection;
 
   List<String> languages;
@@ -558,8 +558,8 @@ class _PigeonCodec extends StandardMessageCodec {
   }
 }
 
-/// The typed control channel. Per-frame results stream over a plain
-/// EventChannel and the preview is a texture. Neither rides this API.
+/// The control channel. Per-frame results stream over a plain EventChannel and the preview is a
+/// texture, so neither rides here.
 class TextSightHostApi {
   /// Constructor for [TextSightHostApi]. The [binaryMessenger] named argument is
   /// available for dependency injection. If it is left null, the default
@@ -633,7 +633,7 @@ class TextSightHostApi {
     _extractReplyValueOrThrow(pigeonVar_replyList, pigeonVar_channelName, isNullValid: true);
   }
 
-  /// Releases the camera and texture. Idempotent, so calling it with nothing open is fine.
+  /// Releases the camera and texture. Safe to call with nothing open.
   Future<void> dispose() async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.dispose$pigeonVar_messageChannelSuffix';
@@ -666,7 +666,7 @@ class TextSightHostApi {
     return pigeonVar_replyValue! as CameraPermissionStatusMessage;
   }
 
-  /// Prompts for camera permission when it has not yet been decided, resolving to the resulting status.
+  /// Prompts if the user hasn't decided yet, and resolves to the answer.
   Future<CameraPermissionStatusMessage> requestCameraPermission() async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.requestCameraPermission$pigeonVar_messageChannelSuffix';
@@ -685,8 +685,7 @@ class TextSightHostApi {
     return pigeonVar_replyValue! as CameraPermissionStatusMessage;
   }
 
-  /// Replaces the recognizer settings on an open session. Resolution is not in here, it cannot
-  /// change mid-session, so it rides [initialize] instead.
+  /// Replaces the recognizer settings on an open session.
   Future<void> setOptions(TextSightOptionsMessage options) async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.setOptions$pigeonVar_messageChannelSuffix';
@@ -734,8 +733,8 @@ class TextSightHostApi {
     return pigeonVar_replyValue! as ConfidenceScaleMessage;
   }
 
-  /// Ensures the recognition model is present (fetching the unbundled ML Kit model via
-  /// Google Play Services when needed) and returns the terminal readiness state.
+  /// Fetches the model if it's missing (Android's default, through Play Services) and returns how
+  /// that ended.
   Future<Map<String, Object?>> ensureModelReady() async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.ensureModelReady$pigeonVar_messageChannelSuffix';
@@ -754,7 +753,7 @@ class TextSightHostApi {
     return (pigeonVar_replyValue! as Map<Object?, Object?>).cast<String, Object?>();
   }
 
-  /// Recognizes text in the encoded image [bytes] (PNG/JPEG/…), honouring [options].
+  /// Reads text in the encoded image [bytes] (PNG, JPEG, …).
   Future<Map<String, Object?>> recognizeImage(
     Uint8List bytes,
     TextSightOptionsMessage options,
@@ -776,7 +775,7 @@ class TextSightHostApi {
     return (pigeonVar_replyValue! as Map<Object?, Object?>).cast<String, Object?>();
   }
 
-  /// Recognizes text in the image at file [path], honouring [options].
+  /// Reads text in the image file at [path].
   Future<Map<String, Object?>> recognizePath(String path, TextSightOptionsMessage options) async {
     final pigeonVar_channelName =
         'dev.flutter.pigeon.text_sight.TextSightHostApi.recognizePath$pigeonVar_messageChannelSuffix';

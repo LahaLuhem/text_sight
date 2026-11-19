@@ -10,7 +10,7 @@ import '/features/core/data/constants/core_constants.dart';
 import '/features/core/widgets/core_widgets.dart';
 import 'playground_view_model.dart';
 
-/// Recognizer-config playground: tune level + region-of-interest on a still and compare.
+/// Tune the level and the scan box on a still, and compare what comes back.
 class const PlaygroundView({super.key}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MVVM.builder(
@@ -56,7 +56,7 @@ class const PlaygroundView({super.key}) extends StatelessWidget {
   );
 }
 
-/// The sample image with the draggable region-of-interest box drawn over it.
+/// The sample with the draggable scan box over it.
 class const _SamplePreview({required final PlaygroundViewModel viewModel}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
@@ -77,7 +77,6 @@ class const _SamplePreview({required final PlaygroundViewModel viewModel}) exten
   );
 }
 
-/// The recognition-level segmented control.
 class const _LevelControl({required final PlaygroundViewModel viewModel}) extends StatelessWidget {
   static final _levels = RecognitionLevel.values.toSet();
 
@@ -100,7 +99,7 @@ class const _LevelControl({required final PlaygroundViewModel viewModel}) extend
   );
 }
 
-/// The region-of-interest toggle, with a hint pointing at the draggable box while it is active.
+/// The scan box switch, with a hint about dragging it while it's on.
 class const _RoiControls({required final PlaygroundViewModel viewModel}) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder(
@@ -130,9 +129,8 @@ class const _RoiControls({required final PlaygroundViewModel viewModel}) extends
   );
 }
 
-/// The sample image with a directly-manipulated region-of-interest box: drag the interior to move
-/// it, drag a corner handle to resize. Inert (just the image) while recognition is unrestricted.
-/// The box itself is view-model-owned state. Only the in-progress drag is view-local.
+/// Drag inside the box to move it, or a corner to resize it. The box lives in the view model, only
+/// the drag in progress lives here.
 class const _RoiEditor({
   required final RoiConfig config,
   required final Color color,
@@ -143,9 +141,8 @@ class const _RoiEditor({
 }
 
 class _RoiEditorState() extends State<_RoiEditor> {
-  /// The drag in progress: the grabbed corner (null ⇒ moving the whole box), with the box and
-  /// pointer captured at touch-down. Pure presentation state, observed by nothing but the
-  /// gesture handlers (the box is painted from the view model), so it never triggers a rebuild.
+  /// The grabbed corner (null when moving the whole box), with the box and pointer at touch-down.
+  /// Only the gesture handlers read it, so it never rebuilds anything.
   ({_Corner? corner, Rect startRect, Offset startPointer})? _drag;
 
   /// Slop around a corner, in logical pixels, that still grabs its resize handle.
@@ -174,8 +171,8 @@ class _RoiEditorState() extends State<_RoiEditor> {
     },
   );
 
-  /// Hit-tests the touch-down point, done here rather than in `onPanStart`, because by the time a pan is
-  /// recognized the finger has drifted off a small corner handle, so the resize grab would miss.
+  /// Hit-tests at touch-down, not in `onPanStart`: by the time a pan is recognized, the finger has
+  /// drifted off a small corner handle.
   void _onPanDown(Offset localPosition, Size size) {
     final rect = PlaygroundViewModel.roiOf(widget.config);
     if (rect == null) return; // Unrestricted: the box is hidden and inert.
@@ -234,7 +231,7 @@ class _RoiEditorState() extends State<_RoiEditor> {
       Offset(point.dx.clamp(0.0, 1.0), point.dy.clamp(0.0, 1.0));
 }
 
-/// A corner of the region-of-interest box, identifying which resize handle a drag grabbed.
+/// Which corner handle a drag grabbed.
 enum _Corner() {
   topLeft,
   topRight,
@@ -242,8 +239,7 @@ enum _Corner() {
   bottomRight,
 }
 
-/// Strokes the active region-of-interest over the sample image, with a dot at each draggable
-/// corner. Draws nothing when [roi] is null (recognition unrestricted).
+/// Strokes the scan box, with a dot at each draggable corner. Draws nothing when [roi] is null.
 class _RoiPainter(final Rect? roi, final Color color) extends CustomPainter {
   static const _handleRadius = 6.0;
 

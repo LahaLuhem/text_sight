@@ -9,9 +9,9 @@ import androidx.lifecycle.ProcessLifecycleOwner
 /**
  * A [LifecycleOwner] driven manually so CameraX can bind without an Activity.
  *
- * Its state is the session's intent capped by the app's foreground state: backgrounding drops a
- * resumed session to CREATED (CameraX closes the camera), foregrounding lifts it back. Every real
- * change of [status] is reported through [onStatusChanged].
+ * Its state is what the session wants, capped by whether the app is in front: backgrounding drops
+ * a resumed session to CREATED (CameraX closes the camera), and coming back lifts it again.
+ * [onStatusChanged] hears every real change of [status].
  */
 internal class SessionLifecycleOwner(
     private val processLifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle,

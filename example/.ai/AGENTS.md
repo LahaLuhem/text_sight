@@ -7,8 +7,8 @@ code style (MVVM, naming, widget composition, …) lives in
 
 ## Scope
 
-- Runnable showcase of `text_sight`, exercising live camera OCR and the static
-  one-shot recognizer against a real device, and demonstrates recommended usage.
+- A runnable showcase of `text_sight`: live camera OCR and the one-shot recognizer on a real
+  device, used the recommended way.
 - **The camera is faked on the iOS Simulator**, which has no capture hardware.
   `main()` calls `FakeCameraPlatform.installWhenSimulated()`, which swaps
   `TextSightPlatform.instance` for a stand-in and delegates the one-shot and model paths to
@@ -17,7 +17,7 @@ code style (MVVM, naming, widget composition, …) lives in
   sample is redrawn each tick with a small drift by `SwayingFrames`, so the fallback exercises live
   tracking instead of a fixed scene. Recognition is always real. It is a no-op on a device and on
   Android, so those still exercise the plugin end to end. This is the one place the example imports
-  from the package's `src/`, since the federation seam is not on the public barrel.
+  from the package's `src/`, since the platform seam isn't on the public barrel.
 - **Confidence tiers are conditional.** `EngineConfidence` resolves
   `TextSightEngine.confidenceScale` once at startup, and `ConfidenceChip`, `ConfidenceScaleNote`
   and the live overlay's box strokes all branch on `isRankable`. Vision on iOS 18+ is coarse, so

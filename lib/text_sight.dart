@@ -5,19 +5,19 @@
 /// when the on-device model is ready.
 library;
 
-export 'src/capture/camera_permission_status.dart';
-export 'src/capture/capture_resolution.dart';
-export 'src/capture/text_sight.dart';
-export 'src/capture/text_sight_controller.dart';
-export 'src/capture/text_sight_engine.dart';
-export 'src/capture/text_sight_model.dart';
-export 'src/capture/text_sight_session_state.dart';
-export 'src/recognition/confidence_scale.dart';
-export 'src/recognition/darwin_options.dart';
-export 'src/recognition/recognition_level.dart';
-export 'src/recognition/recognized_element.dart';
-export 'src/recognition/recognized_line.dart';
-export 'src/recognition/text_sight_capture.dart';
-export 'src/recognition/text_sight_options.dart';
-export 'src/recognition/text_sight_readiness_state.dart';
-export 'src/view/text_sight_view.dart';
+export 'src/camera/text_sight_controller.dart';
+export 'src/camera/text_sight_view.dart';
+export 'src/options/capture_resolution.dart';
+export 'src/options/darwin_options.dart';
+export 'src/options/recognition_level.dart';
+export 'src/options/text_sight_options.dart';
+export 'src/recognition/text_sight.dart';
+export 'src/recognition/text_sight_engine.dart';
+export 'src/recognition/text_sight_model.dart';
+export 'src/results/confidence_scale.dart';
+export 'src/results/recognized_element.dart';
+export 'src/results/recognized_line.dart';
+export 'src/results/text_sight_capture.dart';
+export 'src/states/camera_permission_status.dart';
+export 'src/states/text_sight_readiness_state.dart';
+export 'src/states/text_sight_session_state.dart';

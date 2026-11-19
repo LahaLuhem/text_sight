@@ -24,9 +24,8 @@ import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 /**
- * The main-thread and producer-lifetime contracts on [CameraSession]. CameraX's `LiveData`
- * observers and the lifecycle registry reject other threads, and the injected dispatcher is the
- * single place that guarantees it, so a regression is someone dropping the `withContext`.
+ * The injected dispatcher is the one thing keeping [CameraSession] on main, so a regression is
+ * someone dropping the `withContext`.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(manifest = Config.NONE, sdk = [34])

@@ -69,7 +69,7 @@ class const _DemoTile({
 }) extends StatelessWidget {
   @override
   Widget build(BuildContext context) => PlatformCard(
-    margin: const .symmetric(horizontal: 16, vertical: 4),
+    margin: const .symmetric(horizontal: 16, vertical: 8),
     child: PlatformListTile(
       leading: icon,
       title: Text(title),

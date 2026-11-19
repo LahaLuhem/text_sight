@@ -23,6 +23,9 @@ import com.lahaluhem.text_sight.SessionFailedMessage
 import com.lahaluhem.text_sight.SessionIdleMessage
 import com.lahaluhem.text_sight.SessionStateMessage
 import com.lahaluhem.text_sight.await
+import com.lahaluhem.text_sight.frames.analysisResolutionSelector
+import com.lahaluhem.text_sight.frames.previewGeometry
+import com.lahaluhem.text_sight.frames.previewResolutionSelector
 import io.flutter.view.TextureRegistry
 import java.util.concurrent.Executor
 import kotlinx.coroutines.CoroutineDispatcher
@@ -30,15 +33,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * The CameraX half of a live session: provider, use-case binding, preview texture, torch.
+ * The CameraX half of a live session: binding, preview texture, torch.
  *
- * **Main-confined:** CameraX's `LiveData` observers and [SessionLifecycleOwner]'s registry both
- * reject other threads. The suspending entry points establish that once via [mainDispatcher], so no
- * call site re-establishes it. The synchronous ones must already be on main, which every Flutter
- * lifecycle callback is. Recognition lives in [TextSightCamera].
- *
- * Every session transition goes out through [onSessionState], derived on main from the owner's
- * status and CameraX's camera state ([deriveSessionState]).
+ * Main thread only, since CameraX's `LiveData` observers and [SessionLifecycleOwner]'s registry
+ * both reject other threads. The suspending calls hop there through [mainDispatcher]. The others
+ * come from Flutter's callbacks, which already run on main.
  */
 internal class CameraSession(
     private val context: Context,
@@ -50,8 +49,7 @@ internal class CameraSession(
     private val onSessionState: (SessionStateMessage) -> Unit = {},
     private val onPreview: (PreviewMessage) -> Unit = {},
 ) {
-    // Resumes the provider future on whatever thread CameraX completed it on. mainDispatcher is
-    // what puts the LiveData work back on main, so this deliberately does not hop.
+    // No hop here, since [mainDispatcher] already puts the work back on main.
     private val directExecutor = Executor(Runnable::run)
     private val mainHandler = Handler(Looper.getMainLooper())
     private val displayManager = context.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
@@ -69,11 +67,8 @@ internal class CameraSession(
     private var torchEnabled = false
 
     /**
-     * Keeps [ImageAnalysis]'s target rotation in-step with the live display rotation, so the
-     * reported quarter-turns ([androidx.camera.core.ImageProxy] rotationDegrees / 90) track the
-     * device in every orientation. The headless session has no Activity to do this automatically,
-     * so without it the rotation hint is stuck at the bind-time default, and only portrait looks
-     * right.
+     * Keeps [ImageAnalysis]'s target rotation in step with the display. There's no Activity to do
+     * it, so the hint would stay at its bind-time value and only portrait would come out right.
      */
     private val displayListener = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) = Unit
@@ -251,8 +246,8 @@ internal class CameraSession(
         )
         camera = bound
 
-        // The torch resets whenever the camera closes (backgrounding included), so re-assert the
-        // stored intent every time this camera reaches OPEN.
+        // The torch goes off whenever the camera closes, backgrounding included, so turn it back on
+        // at every OPEN.
         bound.cameraInfo.cameraState.removeObservers(lifecycleOwner)
         bound.cameraInfo.cameraState.observe(lifecycleOwner) { state ->
             if (state.type == CameraState.Type.OPEN && torchEnabled) {

@@ -1,7 +1,7 @@
 # `text_sight` device benchmark host
 
 A minimal Flutter app whose only job is to host the on-device benchmark scenarios under
-[`integration_test/`](integration_test/). Modelled on the maintainer's `list_smith` benchmark app.
+[`integration_test/`](integration_test/).
 
 Scenarios run in profile mode via `flutter drive`, which keeps the VM service the driver needs
 (release mode disables it). Each scenario piles records into `binding.reportData`, and
@@ -33,7 +33,7 @@ flutter drive \
   --dart-define=ITERATIONS=3 \
   --dart-define=OUTPUT=../results-local/current/one_shot_latency/iterations.json \
   --dart-define=GIT_SHA="$(git rev-parse --short HEAD)" \
-  --dart-define=PKG_VERSION=0.2.0
+  --dart-define=PKG_VERSION="$(sed -n 's/^version: //p' ../../pubspec.yaml)"
 ```
 
 Run it once per device. Records carry a `platform` field, so iOS and Android results can be merged
@@ -47,7 +47,7 @@ and compared.
 | `codec_on_device_test.dart` | the codec micro-benchmark on phone silicon, same payloads and candidates as `micro/` | no |
 | `live_throughput_test.dart` | recognized frames per second and the gap between them, per level | **yes** |
 
-`one_shot_latency` is honestly *one-shot API latency as an app sees it*: image decode, inference,
+`one_shot_latency` is *one-shot API latency as an app sees it*: image decode, inference,
 native encode and transport, all inside one number. It is not pure inference time. Splitting those
 apart needs native timestamps, which is a separate job.
 

@@ -1,6 +1,5 @@
-Example-app code style.
-Library-package style lives in [`../CODESTYLE.md`](../CODESTYLE.md).
-project facts and scope live in [`.ai/AGENTS.md`](./.ai/AGENTS.md).
+Example-app code style. Library style lives in [`../CODESTYLE.md`](../CODESTYLE.md), project
+facts and scope in [`.ai/AGENTS.md`](./.ai/AGENTS.md).
 
 Each heading below carries an explicit `<a id="…">` anchor. Link by anchor, not by
 heading text, so renames don't break callers.
@@ -84,9 +83,8 @@ All observable VM state is exposed as `ValueListenable<T>`, backed by a private
   always move in lockstep. Promote the record to a top-level `typedef` so the public
   listenable's type does not fail the `library_private_types_in_public_api` lint.
 - **Dispose every notifier in `dispose()`** before `super.dispose()`.
-- **VM-internal state stays plain.** Fields no widget observes (e.g. a
-  `StreamSubscription`, a cached `Stopwatch`) are plain Dart fields, with no notifier
-  ceremony.
+- **VM-internal state stays plain.** Fields no widget observes (a `StreamSubscription`, a
+  cached `Stopwatch`) are plain Dart fields, with no notifier ceremony.
 
 ---
 
@@ -103,15 +101,15 @@ the identifier with a **modal verb** (`should`, `can`, `may`, `would`, `must`) t
 make the read-site speak plain English. The bare-noun form (`useAccurate`,
 `showConfidence`) reads as a noun and forces the reader to mentally add the verb.
 
-- ★ Default to `should` for user preferences and UI toggle state, since it is declarative,
-  expresses the intent the user is encoding (`shouldUseAccurate`, `shouldShowConfidence`).
+- Default to `should` for user preferences and UI toggle state, since it states the intent the
+  user is encoding (`shouldUseAccurate`, `shouldShowConfidence`).
 - Reach for `can` when the bool gates a capability rather than a preference
   (`canUseTorch`), `may` when it gates permission, `would` for hypothetical intent in
   unrun branches.
 
 This applies to the field, its notifier, and its listenable getter together. They
 refer to the same concept, so the modal-prefix stays consistent across the trio.
-Callback method names (e.g. `onTorchToggled`) describe the **event** and continue to
+Callback method names (like `onTorchToggled`) describe the **event** and continue to
 match the UI label, so they keep the bare-noun form even when they mutate a `shouldXxx`
 field, since the event and the state describe different things.
 
@@ -155,12 +153,11 @@ onChanged: (value) => viewModel.onTorchToggled(value: value),
 
 ## ViewModel member ordering
 
-Apply this ordering to every `ViewModel` subclass. It lets a reader scan dependencies
-→ construction → state → lifecycle entry → reads → writes → teardown without
-backtracking.
+Apply this ordering to every `ViewModel` subclass. It lets a reader scan dependencies,
+construction, state, lifecycle entry, reads, writes and teardown without backtracking.
 
 1. **External-ref fields**: DI / services / package controllers held by reference
-   (e.g. a `TextSightController`).
+   (like a `TextSightController`).
 2. **Constructors**: unnamed first, then factories. Constructors assign to the
    external-ref fields.
 3. **State fields**: notifiers, controllers, `late` subscriptions. Static class-level
@@ -221,8 +218,8 @@ with extra children, padding wrappers, or string tricks.
 All spacing values (`Gap`, `spacing:`, `Padding`, `EdgeInsets`, margins) follow an
 8-pixel grid.
 
-- **Default ladder: `8 → 16 → 24 → 32 …`**: multiples of 8 for any spacing ≥ 8.
-- **Sub-8 escape hatch: `2`, `4`, `8`.** Used only when an 8-grid value would be too
+- **Default ladder: `8`, `16`, `24`, `32` …**, multiples of 8 for any spacing ≥ 8.
+- **Sub-8 escape hatch: `2` and `4`.** Used only when an 8-grid value would be too
   generous (tight typography, internal row padding, list-card vertical margin). Other
   sub-8 values (3, 5, 6, 7) are effectively never right.
 - **`12` is rare** and almost always a sign of splitting the difference between 8 and
@@ -265,8 +262,8 @@ iOS-only (Android's Material `Scaffold` masks them):
   `CupertinoDynamicColor.resolve(..., context)`, so Android gets the Material hue and
   iOS gets the matching dark-mode-resolved `CupertinoColors.system*`. Methods take a
   `BuildContext`, so they can't be `const`. Drop `const` on widgets that consume them.
-  The demo uses this for the confidence-tier palette (high/medium/low → green/orange/red)
-  and the bounding-box stroke.
+  The demo uses this for the confidence-tier palette (green, orange and red for high, medium
+  and low) and the bounding-box stroke.
 - **Import `platform_adaptive_widgets` and `platform_icons` wholesale, no `show`.**
   They *are* the adaptive default this example showcases. Reserve `show` for two cases:
   (1) `material_ui` / `flutter/cupertino` imports, where the narrow list is a deliberate

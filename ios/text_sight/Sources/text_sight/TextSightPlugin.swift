@@ -1,17 +1,16 @@
 import Flutter
 
-/// The text_sight iOS plugin.
-///
-/// Wires up the Pigeon control channel, the captures `EventChannel` and the preview texture, then
-/// hands the real work to `TextSightCamera`. Imports stay system-only, which is the no-bundling
-/// contract. The control methods are `internal` because Pigeon's generated types are, so a `public`
-/// signature would not compile.
+/// Wires up the Pigeon channel, the captures `EventChannel` and the preview texture, then hands the
+/// work to `TextSightCamera` (live) and `StillRecognizer` (one-shot). The control methods are
+/// `internal` because Pigeon's generated types are, so a `public` signature wouldn't compile.
 public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
   private let camera: TextSightCamera
+  private let stills: StillRecognizer
   private let modelReadiness: TextSightModelReadiness
 
-  init(camera: TextSightCamera, modelReadiness: TextSightModelReadiness) {
+  init(camera: TextSightCamera, stills: StillRecognizer, modelReadiness: TextSightModelReadiness) {
     self.camera = camera
+    self.stills = stills
     self.modelReadiness = modelReadiness
     super.init()
   }
@@ -19,14 +18,18 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
   public static func register(with registrar: FlutterPluginRegistrar) {
     let messenger = registrar.messenger()
     let flutterApi = TextSightFlutterApi(binaryMessenger: messenger)
+    // One recognizer for both drivers. It takes its config with each call, so sharing it is safe.
+    let recognizer = TextRecognizerFactory.make()
     // A failed send means no Dart handler is attached.
     let camera = TextSightCamera(
       textureRegistry: registrar.textures(),
+      recognizer: recognizer,
       onSessionState: { state in try? await flutterApi.onSessionStateChanged(state: state) },
       onPreview: { preview in try? await flutterApi.onPreviewChanged(preview: preview) }
     )
     let modelReadiness = TextSightModelReadiness()
-    let plugin = TextSightPlugin(camera: camera, modelReadiness: modelReadiness)
+    let plugin = TextSightPlugin(camera: camera, stills: StillRecognizer(recognizer: recognizer),
+                                 modelReadiness: modelReadiness)
 
     TextSightHostApiSetup.setUp(binaryMessenger: messenger, api: plugin)
 
@@ -91,12 +94,12 @@ public final class TextSightPlugin: NSObject, FlutterPlugin, TextSightHostApi {
 
   func recognizeImage(bytes: FlutterStandardTypedData,
                       options: TextSightOptionsMessage) async throws -> [String: Any?] {
-    try await camera.recognizeImage(bytes: bytes, options: options)
+    try await stills.recognizeImage(bytes: bytes, options: options)
   }
 
   func recognizePath(path: String,
                      options: TextSightOptionsMessage) async throws -> [String: Any?] {
-    try await camera.recognizePath(path: path, options: options)
+    try await stills.recognizePath(path: path, options: options)
   }
 }
 

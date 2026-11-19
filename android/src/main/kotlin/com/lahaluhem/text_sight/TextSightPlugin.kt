@@ -1,23 +1,26 @@
 package com.lahaluhem.text_sight
 
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.TextRecognizer
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.lahaluhem.text_sight.camera.CameraPermission
 import com.lahaluhem.text_sight.camera.TextSightCamera
-import com.lahaluhem.text_sight.permission.CameraPermissionRequester
-import com.lahaluhem.text_sight.readiness.TextSightModelReadiness
+import com.lahaluhem.text_sight.recognition.StillRecognizer
+import com.lahaluhem.text_sight.recognition.TextSightModelReadiness
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.EventChannel
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 /**
- * The text_sight Android plugin.
- *
- * Wires the Pigeon control channel ([TextSightHostApi]), the per-frame captures
- * [EventChannel], and the preview texture, delegating capture and recognition to
- * [TextSightCamera]. No recognition library crosses into the Dart pubspec. ML Kit
- * and CameraX are declared only in build.gradle.kts (the no-bundling contract).
+ * Wires up the Pigeon channel, the captures [EventChannel] and the preview texture, then hands the
+ * work to [TextSightCamera] (live) and [StillRecognizer] (one-shot). ML Kit and CameraX come in
+ * through build.gradle.kts only, never the Dart pubspec.
  */
-// Instantiated reflectively by Flutter's generated registrant (declared as `pluginClass` in
-// pubspec.yaml), never referenced from Kotlin, so the IDE's "never used" report is a false positive.
+// Flutter's generated registrant builds it by reflection (it's `pluginClass` in pubspec.yaml), so
+// the IDE's "never used" is wrong.
 @Suppress("unused")
 class TextSightPlugin :
     FlutterPlugin,
@@ -25,9 +28,13 @@ class TextSightPlugin :
     TextSightHostApi {
     private val engine = EngineScope()
 
+    // One ML Kit client and analysis thread for both drivers.
+    private var recognizer: TextRecognizer? = null
+    private var analysisExecutor: ExecutorService? = null
     private var camera: TextSightCamera? = null
+    private var stills: StillRecognizer? = null
     private var modelReadiness: TextSightModelReadiness? = null
-    private var permissions: CameraPermissionRequester? = null
+    private var permissions: CameraPermission? = null
     private var activityBinding: ActivityPluginBinding? = null
 
     override fun onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -35,18 +42,24 @@ class TextSightPlugin :
 
         val flutterApi = TextSightFlutterApi(binding.binaryMessenger)
         val capturesChannel = EventChannel(binding.binaryMessenger, CAPTURES_CHANNEL_NAME)
+        val client = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+            .also { recognizer = it }
+        val executor = Executors.newSingleThreadExecutor().also { analysisExecutor = it }
         camera = TextSightCamera(
             binding.applicationContext,
             binding.textureRegistry,
             capturesChannel,
+            client,
+            executor,
             onSessionState = { state -> notifyDart { flutterApi.onSessionStateChanged(state) } },
             onPreview = { preview -> notifyDart { flutterApi.onPreviewChanged(preview) } },
         )
+        stills = StillRecognizer(client, executor)
 
         val readinessChannel = EventChannel(binding.binaryMessenger, READINESS_CHANNEL_NAME)
         modelReadiness = TextSightModelReadiness(binding.applicationContext, readinessChannel)
 
-        permissions = CameraPermissionRequester(binding.applicationContext)
+        permissions = CameraPermission(binding.applicationContext)
     }
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
@@ -55,7 +68,12 @@ class TextSightPlugin :
         engine.cancel()
 
         camera?.dispose()
+        recognizer?.close()
+        analysisExecutor?.shutdown()
         camera = null
+        stills = null
+        recognizer = null
+        analysisExecutor = null
         modelReadiness = null
         permissions = null
     }
@@ -119,18 +137,18 @@ class TextSightPlugin :
         bytes: ByteArray,
         options: TextSightOptionsMessage,
     ): Map<String, Any?> {
-        val activeCamera = camera ?: throw detachedError()
+        val activeStills = stills ?: throw detachedError()
 
-        return engine.run { activeCamera.recognizeImage(bytes, options) }
+        return engine.run { activeStills.recognizeImage(bytes, options) }
     }
 
     override suspend fun recognizePath(
         path: String,
         options: TextSightOptionsMessage,
     ): Map<String, Any?> {
-        val activeCamera = camera ?: throw detachedError()
+        val activeStills = stills ?: throw detachedError()
 
-        return engine.run { activeCamera.recognizePath(path, options) }
+        return engine.run { activeStills.recognizePath(path, options) }
     }
 
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
@@ -157,9 +175,8 @@ class TextSightPlugin :
         }
     }
 
-    // The runtime permission request needs a foreground Activity and a result listener. Both arrive
-    // and depart with the ActivityAware lifecycle. The capture pipeline binds to a headless
-    // LifecycleOwner, so the camera is unaffected by Activity attach/detach.
+    // Asking for permission needs a foreground Activity and a result listener, which come and go
+    // with it. The camera binds to its own LifecycleOwner, so Activity changes don't touch it.
     private fun bindActivity(binding: ActivityPluginBinding) {
         val activePermissions = permissions ?: return
 
