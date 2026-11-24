@@ -681,7 +681,7 @@ of the shared lints and treated as non-negotiable. Apply by hand (or via the
 
 - **Assertions use [`package:checks`](https://pub.dev/packages/checks), not `expect` / matchers.**
   `check(actual).equals(…)` / `.isA<T>()` / `.deepEquals(…)` / `.isCloseTo(value, epsilon)` /
-  `.isNull()` / `await check(future).completes()` read more fluently and give better failure
+  `.isNull` / `await check(future).completes()` read more fluently and give better failure
   messages. **Caveat:** the collection checks live on `Subject<Iterable<T>>` and `Subject` is
   invariant, so to use them on a `List` narrow the subject to `Iterable` first,
   `check(x).isA<Iterable<Object?>>().deepEquals(…)` (for a dynamic `Object?`) or

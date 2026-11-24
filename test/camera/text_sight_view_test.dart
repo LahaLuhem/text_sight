@@ -93,7 +93,7 @@ void main() {
     platform.previewPushes.add(_portrait);
     await tester.pump();
 
-    check(tester.takeException()).isNull();
+    check(tester.takeException()).isNull;
     // Past the placeholder, so the check above isn't vacuous.
     check(find.byType(Texture).evaluate()).length.equals(1);
   });

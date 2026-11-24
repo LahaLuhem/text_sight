@@ -29,7 +29,7 @@ void main() {
         final first = await sway.frameAt(Duration.zero);
         final next = await sway.frameAt(FakeCameraPlatform.sampleInterval);
 
-        check(listEquals(first, next)).isFalse();
+        check(listEquals(first, next)).isFalse;
       });
 
   Bdd(drift)
