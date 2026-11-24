@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart' show CupertinoColors, CupertinoDynamicColor;
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoColors, CupertinoDynamicColor;
 import 'package:flutter/widgets.dart' show BuildContext, Color;
 import 'package:material_ui/material_ui.dart' show Colors;
 import 'package:platform_adaptive_widgets/platform_adaptive_widgets.dart';
