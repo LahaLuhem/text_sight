@@ -16,8 +16,8 @@ void main() {
     await tester.pumpWidget(const _Host(child: ConfidenceChip(confidence: 1)));
 
     final chip = tester.widget<PlatformChip>(find.byType(PlatformChip));
-    check(chip.side).isNull();
-    check(chip.backgroundColor).isNull();
+    check(chip.side).isNull;
+    check(chip.backgroundColor).isNull;
   });
 
   testWidgets('An unresolved scale shows no note either, since nothing is known yet', (

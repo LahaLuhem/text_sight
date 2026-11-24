@@ -39,15 +39,15 @@ void main() {
         const paused = SessionPaused(reason: SessionPauseReason.interrupted, details: 'call');
 
         check(paused).not(
-          (it) => it.equals(
+          .it()..equals(
             const SessionPaused(reason: SessionPauseReason.appBackgrounded, details: 'call'),
           ),
         );
         check(paused)
-            .not((it) => it.equals(const SessionPaused(reason: SessionPauseReason.interrupted)));
+            .not(.it()..equals(const SessionPaused(reason: SessionPauseReason.interrupted)));
         // Same details, different case: equality is per case, not per payload.
         check<TextSightSessionState>(paused)
-            .not((it) => it.equals(const SessionFailed(details: 'call')));
+            .not(.it()..equals(const SessionFailed(details: 'call')));
       });
 
   Bdd(equality)
@@ -63,7 +63,7 @@ void main() {
         check(idle).equals(const SessionIdle());
         check(idle.hashCode).equals(const SessionIdle().hashCode);
         check(active).equals(const SessionActive());
-        check<TextSightSessionState>(idle).not((it) => it.equals(active));
+        check<TextSightSessionState>(idle).not(.it()..equals(active));
       });
 
   Bdd(equality)

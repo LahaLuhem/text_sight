@@ -86,7 +86,7 @@ void main() {
 
         final options = _sentOptions(call);
         check(options.level).equals(RecognitionLevelMessage.fast);
-        check(options.usesLanguageCorrection).isTrue();
+        check(options.usesLanguageCorrection).isTrue;
       });
 
   Bdd(control)
@@ -206,7 +206,7 @@ void main() {
 
         await platform.updateOptions(const TextSightOptions());
 
-        check(_sentOptions(call).roi).isNull();
+        check(_sentOptions(call).roi).isNull;
       });
 
   Bdd(control)
@@ -290,7 +290,7 @@ void main() {
 
         final status = await platform.requestCameraPermission();
 
-        check(call.received.isCompleted).isTrue();
+        check(call.received.isCompleted).isTrue;
         check(status).equals(CameraPermissionStatus.granted);
       });
 
@@ -381,7 +381,7 @@ void main() {
 
         final capture = await platform.captures.first;
 
-        check<Iterable<Object?>>(capture.lines).isEmpty();
+        check<Iterable<Object?>>(capture.lines).isEmpty;
         check(capture.imageSize).equals(Size(imageWidth.toDouble(), imageHeight.toDouble()));
         check(capture.quarterTurns).equals(0);
       });
@@ -506,9 +506,9 @@ void main() {
 
         final unavailable = check(state).isA<ModelUnavailable>();
         unavailable
-            .has((s) => s.reason, 'reason')
+            .has('reason', (s) => s.reason)
             .equals(ctx.example.val('reason') as ModelUnavailableReason);
-        unavailable.has((s) => s.details, 'details').equals(ctx.example.val('details') as String?);
+        unavailable.has('details', (s) => s.details).equals(ctx.example.val('details') as String?);
       });
 
   Bdd(readiness)
@@ -528,7 +528,7 @@ void main() {
 
         check(state)
             .isA<ModelDownloading>()
-            .has((s) => s.progress, 'progress')
+            .has('progress', (s) => s.progress)
             .equals(ctx.example.val('progress') as double?);
       });
 

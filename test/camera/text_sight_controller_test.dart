@@ -57,12 +57,12 @@ void main() {
         controller.addListener(() => notifications++);
 
         await controller.start();
-        check(controller.isRecognizing).isTrue();
+        check(controller.isRecognizing).isTrue;
         check(notifications).equals(1);
 
         await controller.pauseRecognition();
 
-        check(controller.isRecognizing).isFalse();
+        check(controller.isRecognizing).isFalse;
         check(platform.log).contains('pauseRecognition');
         check(notifications).equals(2);
       });
@@ -224,7 +224,7 @@ void main() {
         platform.states.add(const SessionFailed());
 
         check(controller.sessionState).equals(const SessionIdle());
-        check(platform.states.hasListener).isFalse();
+        check(platform.states.hasListener).isFalse;
       });
 
   Bdd(preview)
