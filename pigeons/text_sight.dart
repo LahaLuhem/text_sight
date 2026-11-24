@@ -1,6 +1,5 @@
 // Pigeon-only syntax (mutable fields, undocumented twins) that never ships.
 // ignore_for_file: prefer-match-file-name
-// ignore_for_file: avoid_positional_boolean_parameters
 
 // The control channel's schema. Each message class is a private twin of a public type, mapped by
 // `PigeonTextSightPlatform`. Per-frame results ride a plain EventChannel, hence no @EventChannelApi.
