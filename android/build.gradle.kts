@@ -93,9 +93,9 @@ dependencies {
     // bundled, so it stays on the classpath.
     implementation("com.google.android.gms:play-services-base:18.11.1")
 
-    implementation("androidx.camera:camera-core:1.6.1")
-    implementation("androidx.camera:camera-camera2:1.6.1")
-    implementation("androidx.camera:camera-lifecycle:1.6.1")
+    implementation("androidx.camera:camera-core:1.7.0")
+    implementation("androidx.camera:camera-camera2:1.7.0")
+    implementation("androidx.camera:camera-lifecycle:1.7.0")
 
     // Cuts the box out of camera frames for ML Kit, which has no region setting.
     implementation("io.github.crow-misia.libyuv:libyuv-android:0.44.0")
@@ -118,7 +118,7 @@ dependencies {
     // Also the jar testOptions loads as the Java agent.
     testImplementation("org.mockito:mockito-core:5.24.0")
     // Real android.graphics types on the JVM, so the geometry tests use them as they are.
-    testImplementation("org.robolectric:robolectric:4.18")
+    testImplementation("org.robolectric:robolectric:4.18.1")
     // Kotlin-friendly mock/whenever, for ML Kit's Text graph and the camera's image planes.
     testImplementation("org.mockito.kotlin:mockito-kotlin:6.4.0")
     // Robolectric's runner is JUnit 4, and the vintage engine runs it on the JUnit Platform.
